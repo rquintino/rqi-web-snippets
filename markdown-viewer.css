@@ -66,7 +66,7 @@ textarea:focus{outline:none}
 @keyframes slideInRight{from{transform:translateX(-100%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes slideOutLeft{from{transform:translateX(0);opacity:1}to{transform:translateX(-100%);opacity:0}}
 .input-pane{transition:transform .3s ease,opacity .3s ease}
-.input-toggle-btn{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:var(--header-bg);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:4px;cursor:pointer;z-index:10;font-size:14px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:background-color .2s}
+.input-toggle-btn{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:var(--header-bg);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:4px;cursor:pointer;z-index:10;font-size:28px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;transition:background-color .2s}
 .input-toggle-btn:hover{background:var(--hover-bg)}
 .toast{position:fixed;bottom:20px;right:20px;background:var(--toast-bg);color:var(--toast-text);padding:12px 20px;border-radius:4px;font-size:14px;z-index:1000;transition:all .3s ease}
 .version{position:fixed;bottom:5px;right:5px;font-size:10px;color:var(--text);opacity:.5;z-index:1000}
