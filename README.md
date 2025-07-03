@@ -1,4 +1,4 @@
-# RQI Web Snippets
+# Rui Quintino (with 🤖) Web Snippets Playground
 
 [![Run Tests](https://github.com/rquintino/rqi-web-snippets/actions/workflows/test.yml/badge.svg)](https://github.com/rquintino/rqi-web-snippets/actions/workflows/test.yml)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://rquintino.github.io/rqi-web-snippets/)
