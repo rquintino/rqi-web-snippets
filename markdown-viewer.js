@@ -180,14 +180,16 @@ function markdownViewer() {
             let toc = '<ul>';
             
             headings.forEach((heading, index) => {
-                // Create id for the heading if it doesn't have one
+                // Create secure, unique id for the heading if it doesn't have one
                 if (!heading.id) {
-                    heading.id = `heading-${index}`;
+                    // Generate a more secure ID using timestamp and index to prevent conflicts
+                    const timestamp = Date.now();
+                    heading.id = `heading-${timestamp}-${index}`;
                 }
                 
                 const level = parseInt(heading.tagName.substring(1));
-                const text = heading.textContent;
-                const id = heading.id;
+                const text = DOMPurify.sanitize(heading.textContent);
+                const id = CSS.escape(heading.id);
                 
                 toc += `<li class="toc-h${level}"><a href="#" data-target="${id}" @click.prevent="scrollToHeading('${id}')">${text}</a></li>`;
             });

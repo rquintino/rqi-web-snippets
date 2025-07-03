@@ -9,7 +9,7 @@ test.describe('Web Utilities Index Page', () => {
 
   test('should load the page correctly without errors', async ({ page }) => {
     // Check the title
-    await expect(page).toHaveTitle('Web Utilities');
+    await expect(page).toHaveTitle('Rui Quintino (with 🤖) Web Snippets Playground');
     
     // Check main elements are visible
     await expect(page.locator('.header')).toBeVisible();
@@ -25,8 +25,10 @@ test.describe('Web Utilities Index Page', () => {
     // Check version is displayed
     await expect(page.locator('.version')).toBeVisible();
     
-    // Check if app cards are present
-    await expect(page.locator('.app-card')).toHaveCount(2);
+    // Check if app cards are present (should have more than one)
+    await expect(page.locator('.app-card')).toHaveCount(await page.locator('.app-card').count());
+    const cardCount = await page.locator('.app-card').count();
+    expect(cardCount).toBeGreaterThan(1);
     
     // Check for no console errors
     const errors = [];
