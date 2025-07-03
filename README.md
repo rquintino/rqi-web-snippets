@@ -1,5 +1,15 @@
 # RQI Web Snippets
 
+[![Run Tests](https://github.com/rquintino/rqi-web-snippets/actions/workflows/test.yml/badge.svg)](https://github.com/rquintino/rqi-web-snippets/actions/workflows/test.yml)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://rquintino.github.io/rqi-web-snippets/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub last commit](https://img.shields.io/github/last-commit/rquintino/rqi-web-snippets)](https://github.com/rquintino/rqi-web-snippets/commits)
+
+[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Alpine.js](https://img.shields.io/badge/Alpine.js-8BC34A?style=flat&logo=alpine.js&logoColor=white)](https://alpinejs.dev/)
+[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white)](https://playwright.dev/)
+
 A collection of standalone web utilities and applications, each designed to be simple, safe and immediately usable without setup.
 
 ## Live Demo
