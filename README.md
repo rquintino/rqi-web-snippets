@@ -2,6 +2,12 @@
 
 A collection of standalone web utilities and applications, each designed to be simple, safe and immediately usable without setup.
 
+## Live Demo
+
+**🌐 Access all tools online: [https://rquintino.github.io/rqi-web-snippets/](https://rquintino.github.io/rqi-web-snippets/)**
+
+All assets and utilities in this repository are published and available online via GitHub Pages.
+
 ## GitHub Copilot Integration
 
 This repository includes special instructions for GitHub Copilot in the `.github/copilot-instructions.md` file. These instructions help the AI coding assistant understand the repository structure, coding conventions, and development guidelines when contributing to this project.
@@ -25,6 +31,8 @@ This repository includes special instructions for GitHub Copilot in the `.github
 1. Simply clone the repository
 2. Open any utility's HTML file in a modern web browser
 3. No build steps, no dependencies to install (except for playwright for tests)
+
+Alternatively, you can access all utilities directly through the GitHub Pages site: [https://rquintino.github.io/rqi-web-snippets/](https://rquintino.github.io/rqi-web-snippets/)
 
 ## Development
 
