@@ -61,7 +61,10 @@ function foundationModelApp() {
 
         startTrainingLoop() {
             this.trainingInterval = setInterval(() => {
-                this.trainingProgress += 1;
+                // Only increment if not yet complete
+                if (this.trainingProgress < 100) {
+                    this.trainingProgress += 1;
+                }
                 
                 if (this.trainingProgress <= 25) {
                     this.gpuScalingPhase = true;
@@ -72,10 +75,12 @@ function foundationModelApp() {
                 }
                 
                 if (this.trainingProgress >= 100) {
+                    // Cap the progress at exactly 100
+                    this.trainingProgress = 100;
                     this.isComplete = true;
                     this.isTraining = false;
                     
-                    if (this.trainingProgress === 100) {
+                    if (!this.showGreeting) {
                         this.setCompletedAIModel();
                     }
                     
