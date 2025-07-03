@@ -26,6 +26,7 @@
     <!-- 
     Functional Requirements:
     - Three-pane layout: Input, TOC, and Preview
+    - Collapsible input pane to focus on TOC and preview
     - Drag & drop markdown file support
     - Table of Contents generated from headings
     - Synchronized scrolling between TOC and preview
@@ -59,9 +60,17 @@
         </button>
 
         <!-- Main Layout -->
-        <div class="markdown-container">
+        <div class="markdown-container" :class="{ 'input-collapsed': isInputCollapsed }">
+            <!-- Toggle Input Pane Buttons -->
+            <button x-show="isInputCollapsed" @click="toggleInputPane()" class="input-toggle-btn" title="Show Input Pane">
+                <span>▶</span>
+            </button>
+            <button x-show="!isInputCollapsed" @click="toggleInputPane()" class="input-toggle-btn" title="Collapse Input Pane">
+                <span>◀</span>
+            </button>
+            
             <!-- Input Pane -->
-            <div class="input-pane">
+            <div class="input-pane" x-show="!isInputCollapsed" x-transition:enter="slide-in-right" x-transition:leave="slide-out-left">
                 <div class="pane-header">Markdown Input</div>
                 <textarea x-model="markdownText" @input="updatePreview()"
                     placeholder="Type or drag & drop markdown here..." spellcheck="false"></textarea>
@@ -87,7 +96,7 @@
         <div class="toast" x-show="showToast" x-transition x-text="toastMessage"></div>
     </div>
 
-    <div class="version">v2025-07-03.8</div>
+    <div class="version">v2025-07-03.13</div>
 
     <script src="markdown-viewer.js"></script>
     <script src="shared/footer.js"></script>

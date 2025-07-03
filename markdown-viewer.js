@@ -12,6 +12,7 @@
  * - handleDrop: Process dropped markdown files
  * - toggleTheme: Switch between dark and light mode
  * - toggleFullscreen: Toggle fullscreen mode
+ * - toggleInputPane: Toggle the visibility of the input pane
  * - copyHtml: Copy formatted HTML to clipboard
  */
 
@@ -66,6 +67,7 @@ function markdownViewer() {
         isDragging: false,
         showToast: false,
         toastMessage: '',
+        isInputCollapsed: false,
         
         init() {
             // Set initial theme
@@ -282,6 +284,10 @@ function markdownViewer() {
                     this.isFullscreen = false;
                 }
             }
+        },
+        
+        toggleInputPane() {
+            this.isInputCollapsed = !this.isInputCollapsed;
         },
         
         copyHtml() {
