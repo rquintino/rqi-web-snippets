@@ -230,6 +230,12 @@
                 <div class="app-description">Interactive visualization of AI foundation model training process</div>
             </a>
             
+            <a href="markdown-viewer.html" class="app-card">
+                <div class="app-icon">📝</div>
+                <div class="app-title">Markdown Viewer</div>
+                <div class="app-description">Three-pane markdown viewer with TOC and live preview</div>
+            </a>
+            
             <!-- Add more app cards here as they are created -->
         </div>
     </div>
@@ -238,11 +244,11 @@
         <div class="container">
             <p></p>
         </div>
-    </footer>    <div class="version">v2025-07-03.3</div>
+    </footer>    <div class="version">v2025-07-03.7</div>
 
     <script>
         // Version information
-        const VERSION = "2025-07-03.3";
+        const VERSION = "2025-07-03.7";
         document.querySelector('.version').textContent = `v${VERSION}`;
 
         // DOM elements
@@ -312,10 +318,27 @@
             let matched = false;
             [titleEl, descEl].forEach(el => {
                 if (el && regex.test(el.textContent)) {
-                    el.innerHTML = el.textContent.replace(regex, '<mark>$1</mark>');
+                    // Safer approach: clear and create new elements
+                    const text = el.textContent;
+                    el.textContent = ''; // Clear existing content
+                    
+                    // Split by matches and create elements
+                    const parts = text.split(regex);
+                    parts.forEach((part, i) => {
+                        if (i % 2 === 0) {
+                            // Non-matching part
+                            if (part) el.appendChild(document.createTextNode(part));
+                        } else {
+                            // Matching part - create mark element
+                            const mark = document.createElement('mark');
+                            mark.textContent = part;
+                            el.appendChild(mark);
+                        }
+                    });
+                    
                     matched = true;
                 } else if (el) {
-                    el.innerHTML = el.textContent;
+                    el.textContent = el.textContent; // Safe reset
                 }
             });
             if (matched) matchedCards.push(card);
