@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foundation Model Training</title>
+    <link rel="stylesheet" href="foundation-model-training.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <!--
+    Foundation Model Training Visualization
+    
+    Features:
+    - Animated 3-step training pipeline visualization
+    - Dynamic GPU cluster scaling animation
+    - Real-time progress tracking with calendar
+    - Interactive network background animations
+    - AI model completion with personality greetings
+    - Company showcase with latest AI models
+    - Responsive dark theme design
+    - 30-day training simulation
+    
+    Technical Implementation:
+    - Canvas-based network animation with floating nodes
+    - Real-time progress bars and status updates
+    - GPU scaling from 0 to 10,000 units
+    - Calendar progression through January
+    - Random AI model selection on completion
+    - Smooth transitions and color changes
+    - Full-screen responsive layout
+    -->
+    
+    <div class="app-container" x-data="foundationModelApp()">
+        <!-- Home Button -->
+        <a href="index.html" class="home-btn">🏠</a>
+        
+        <!-- Full Screen Toggle -->
+        <button @click="toggleFullscreen()" class="control-btn fullscreen-btn">
+            <span x-text="isFullscreen ? '🗗' : '🗖'"></span>
+        </button>
+        
+        <!-- Dark/Light Toggle -->
+        <button @click="toggleTheme()" class="control-btn theme-btn">
+            <span x-text="isDark ? '☀️' : '🌙'"></span>
+        </button>
+
+        <!-- Header -->
+        <div class="header">
+            <h1>How Foundation Models Are Trained</h1>
+            <p>The Multi-Billion Dollar Process Behind GenAI</p>
+        </div>
+
+        <!-- Main Training Pipeline -->
+        <div class="training-pipeline">
+            
+            <!-- Step 1: Data Collection -->
+            <div class="pipeline-step data-collection">
+                <div class="step-header">
+                    <div class="step-icon">🌐</div>
+                    <h3>1. Massive Data Collection</h3>
+                </div>
+                
+                <div class="data-types">
+                    <div class="data-type">
+                        <div class="data-emoji">📄</div>
+                        <div class="data-label">Text</div>
+                    </div>
+                    <div class="data-type">
+                        <div class="data-emoji">💻</div>
+                        <div class="data-label">Code</div>
+                    </div>
+                    <div class="data-type">
+                        <div class="data-emoji">🖼️</div>
+                        <div class="data-label">Images</div>
+                    </div>
+                    <div class="data-type">
+                        <div class="data-emoji">🎵</div>
+                        <div class="data-label">Audio</div>
+                    </div>
+                    <div class="data-type">
+                        <div class="data-emoji">🎬</div>
+                        <div class="data-label">Video</div>
+                    </div>
+                    <div class="data-type">
+                        <div class="data-emoji">📊</div>
+                        <div class="data-label">Data</div>
+                    </div>
+                </div>
+                
+                <div class="step-stats">
+                    <div class="stat-value">Trillions</div>
+                    <div class="stat-label">of tokens</div>
+                </div>
+            </div>
+
+            <!-- Step 2: Training Process -->
+            <div class="pipeline-step training-process">
+                <div class="step-header">
+                    <div class="step-icon">⚡</div>
+                    <h3>2. Neural Network Training</h3>
+                </div>
+                
+                <div class="training-canvas-container">
+                    <canvas class="network-canvas" x-ref="trainingCanvas"></canvas>
+                    
+                    <!-- GPU Cluster -->
+                    <div class="gpu-cluster">
+                        <template x-for="i in 16" :key="i">
+                            <div class="gpu-unit" 
+                                 :class="{ 
+                                     'active': (trainingProgress * 16 / 25) > (i-1) && trainingProgress < 100,
+                                     'training': !gpuScalingPhase && (trainingProgress * 16 / 25) > (i-1) && trainingProgress < 100
+                                 }"
+                                 :style="`animation-delay: ${(i-1) * 50}ms`">
+                                💻
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Calendar -->
+                    <div class="calendar-overlay">
+                        <div class="calendar-month" x-text="getMonthName()"></div>
+                        <div class="calendar-day" x-text="currentDay"></div>
+                    </div>
+                    
+                    <!-- GPU Count -->
+                    <div class="gpu-count-overlay">
+                        <div class="gpu-count-label">GPUs</div>
+                        <div class="gpu-count-value" x-text="getGpuCount()"></div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" 
+                                 :class="trainingProgress >= 100 ? 'complete' : ''"
+                                 :style="`width: ${trainingProgress}%`"></div>
+                        </div>
+                        <div class="progress-label" 
+                             :class="trainingProgress >= 100 ? 'complete' : ''"
+                             x-text="getProgressLabel()"></div>
+                    </div>
+                </div>
+                
+                <div class="step-stats">
+                    <div class="stat-value" 
+                         :class="trainingProgress >= 100 ? 'complete' : ''"
+                         x-text="trainingProgress >= 100 ? 'Complete' : `Day ${currentDay}/30`"></div>
+                    <div class="stat-label" 
+                         x-text="trainingProgress >= 100 ? 'Model ready for deployment' : '10,000 GPUs working 24/7'"></div>
+                </div>
+            </div>
+
+            <!-- Step 3: Final Model -->
+            <div class="pipeline-step final-model" 
+                 :class="trainingProgress > 95 ? 'complete' : ''">
+                <div class="step-header">
+                    <div class="step-icon" x-text="trainingProgress > 95 ? '✅' : '⭕'"></div>
+                    <h3>3. Foundation Model</h3>
+                </div>
+                
+                <div class="model-canvas-container" 
+                     :class="trainingProgress > 95 ? 'active' : ''">
+                    <canvas class="network-canvas" x-ref="modelCanvas"></canvas>
+                    <div class="model-bot-icon">🤖</div>
+                    <div class="model-name" x-show="trainingProgress >= 100 && aiModel.name" x-text="aiModel.name"></div>
+                </div>
+                
+                <div class="step-stats">
+                    <div class="stat-value" x-text="trainingProgress > 95 ? 'Ready' : 'Waiting...'"></div>
+                    <div class="stat-label" x-text="trainingProgress > 95 ? 'for deployment' : 'for training completion'"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flow Arrows -->
+        <div class="flow-arrows">
+            <div class="arrow">→</div>
+            <div class="arrow">→</div>
+        </div>
+
+        <!-- Tech Companies Section -->
+        <div class="companies-section">
+            <h3>Leading AI Companies</h3>
+            
+            <div class="companies-grid">
+                <template x-for="company in companies" :key="company.name">
+                    <div class="company-card">
+                        <div class="company-icon" :style="`background-color: ${company.color}`">
+                            🏢
+                        </div>
+                        <div class="company-name" x-text="company.name"></div>
+                        <div class="company-tagline" x-text="company.tagline"></div>
+                        <div class="company-models">
+                            <template x-for="model in company.models" :key="model">
+                                <div class="model-chip" x-text="model"></div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- AI Model Greeting -->
+        <div class="ai-greeting" x-show="showGreeting" x-transition>
+            <div class="greeting-icon">🤖</div>
+            <div class="greeting-text" x-text="aiModel.greeting"></div>
+        </div>
+
+        <!-- Version -->
+        <div class="version">v2025-07-03.1</div>
+    </div>
+
+    <script src="foundation-model-training.js"></script>
+    <script src="shared/footer.js"></script>
+</body>
+</html>

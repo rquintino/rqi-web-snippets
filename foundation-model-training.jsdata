@@ -1,0 +1,44 @@
+[
+    {
+        "id": "openai",
+        "name": "OpenAI",
+        "tagline": "Ensuring AGI benefits all of humanity",
+        "models": ["GPT-4.1", "GPT-4o", "GPT-4.5"],
+        "color": "#10b981"
+    },
+    {
+        "id": "anthropic",
+        "name": "Anthropic",
+        "tagline": "AI safety and research company",
+        "models": ["Claude 4 Opus", "Claude 4 Sonnet", "Claude 3.7"],
+        "color": "#f97316"
+    },
+    {
+        "id": "meta",
+        "name": "Meta",
+        "tagline": "Democratizing AI through open source",
+        "models": ["Llama 4 Scout", "Llama 4 Maverick", "Llama 3.3"],
+        "color": "#3b82f6"
+    },
+    {
+        "id": "google",
+        "name": "Google",
+        "tagline": "Organizing the world's information with AI",
+        "models": ["Gemini 2.5 Pro", "Gemini 2.0 Flash", "Gemini 2.5 Flash"],
+        "color": "#ef4444"
+    },
+    {
+        "id": "mistral",
+        "name": "Mistral AI",
+        "tagline": "European AI innovation",
+        "models": ["Mistral Large 2", "Mistral Medium", "Mistral 8x7B"],
+        "color": "#0ea5e9"
+    },
+    {
+        "id": "cohere",
+        "name": "Cohere",
+        "tagline": "Creating practical AI tools",
+        "models": ["Command R+", "Command R", "Embed V3"],
+        "color": "#8b5cf6"
+    }
+]

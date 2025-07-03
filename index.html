@@ -159,6 +159,43 @@
             40% { transform: translateY(-5px); }
             60% { transform: translateY(-3px); }
         }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .app-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .app-title {
+            font-size: 1.25rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .app-description {
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
     </style>
 </head>
 <body>
@@ -180,20 +217,20 @@
     </div>
 
     <div class="container">
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 justify-content-center">
-            <div class="col">
-                <div class="card">
-                    <a href="typing-speed-test.html" class="card-link">
-                        <div class="card-body text-center">
-                            <div class="icon">
-                                <i class="bi bi-keyboard"></i>
-                            </div>
-                            <h5 class="card-title">Typing Speed Test</h5>
-                            <p class="card-text">Test and improve your typing speed with this interactive typing test application.</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
+        <div class="app-grid">
+            <a href="typing-speed-test.html" class="app-card">
+                <div class="app-icon">⌨️</div>
+                <div class="app-title">Typing Speed Test</div>
+                <div class="app-description">Test and improve your typing speed with this interactive tool</div>
+            </a>
+            
+            <a href="foundation-model-training.html" class="app-card">
+                <div class="app-icon">🤖</div>
+                <div class="app-title">Foundation Model Training</div>
+                <div class="app-description">Interactive visualization of AI foundation model training process</div>
+            </a>
+            
+            <!-- Add more app cards here as they are created -->
         </div>
     </div>
 
@@ -201,11 +238,11 @@
         <div class="container">
             <p>Simple web utilities - No setup required</p>
         </div>
-    </footer>    <div class="version">v2025-07-03.2</div>
+    </footer>    <div class="version">v2025-07-03.3</div>
 
     <script>
         // Version information
-        const VERSION = "2025-07-03.2";
+        const VERSION = "2025-07-03.3";
         document.querySelector('.version').textContent = `v${VERSION}`;
 
         // DOM elements
@@ -247,9 +284,9 @@
     // --- Utility Search Feature ---
     const searchBar = document.getElementById('utility-search-bar');
     const searchInput = document.getElementById('utility-search-input');
-    const cardSelector = '.card';
-    const cardTitleSelector = '.card-title';
-    const cardDescSelector = '.card-text';
+    const cardSelector = '.app-card';
+    const cardTitleSelector = '.app-title';
+    const cardDescSelector = '.app-description';
     let searchActive = false;
     let searchString = '';
     let lastKeyTime = 0;
@@ -383,14 +420,26 @@
             e.preventDefault();
         } else if (e.key === 'Enter') {
             if (matchedCards[selectedIdx]) {
-                const cardLink = matchedCards[selectedIdx].querySelector('a.card-link');
-                if (cardLink) {
-                    window.location.href = cardLink.href;
+                // The app-card is itself an <a> tag
+                if (matchedCards[selectedIdx].tagName === 'A') {
+                    window.location.href = matchedCards[selectedIdx].href;
+                } else {
+                    // Fallback to looking for a nested link
+                    const cardLink = matchedCards[selectedIdx].querySelector('a.card-link');
+                    if (cardLink) {
+                        window.location.href = cardLink.href;
+                    }
                 }
             } else if (matchedCards.length === 1) {
-                const cardLink = matchedCards[0].querySelector('a.card-link');
-                if (cardLink) {
-                    window.location.href = cardLink.href;
+                // The app-card is itself an <a> tag
+                if (matchedCards[0].tagName === 'A') {
+                    window.location.href = matchedCards[0].href;
+                } else {
+                    // Fallback to looking for a nested link
+                    const cardLink = matchedCards[0].querySelector('a.card-link');
+                    if (cardLink) {
+                        window.location.href = cardLink.href;
+                    }
                 }
             }
         }
