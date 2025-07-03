@@ -36,9 +36,6 @@ npm run test:debug   # Run tests in debug mode
 
 This repository includes special instructions for GitHub Copilot in the `.github/copilot-instructions.md` file. These instructions help the AI coding assistant understand the repository structure, coding conventions, and development guidelines when contributing to this project.
 
-## License
-
-ISC
 
 ## Author
 
