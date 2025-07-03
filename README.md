@@ -2,6 +2,10 @@
 
 A collection of standalone web utilities and applications, each designed to be simple, safe and immediately usable without setup.
 
+## GitHub Copilot Integration
+
+This repository includes special instructions for GitHub Copilot in the `.github/copilot-instructions.md` file. These instructions help the AI coding assistant understand the repository structure, coding conventions, and development guidelines when contributing to this project.
+
 ## Features
 
 - **Standalone Applications** - Each utility is a self-contained HTML/JS/CSS set
@@ -32,11 +36,7 @@ npm run test:ui      # Run tests with UI
 npm run test:debug   # Run tests in debug mode
 ```
 
-## GitHub Copilot Integration
-
-This repository includes special instructions for GitHub Copilot in the `.github/copilot-instructions.md` file. These instructions help the AI coding assistant understand the repository structure, coding conventions, and development guidelines when contributing to this project.
-
 
 ## Author
 
-Created by [RQuintino](https://www.linkedin.com/in/rquintino/)
+Created by [RQuintino](https://www.linkedin.com/in/rquintino/) with the help of 🤖 Github Copilot 😉
