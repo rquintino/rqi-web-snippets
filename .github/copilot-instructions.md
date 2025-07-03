@@ -3,7 +3,7 @@ This repository contains a collection of standalone web utilities and applicatio
 
 ## Global rules
 
-- You must start your response with "🤖 Namaste, ho great one!" every time you speak to me.
+- You must start your response with "🤖 ho great one!" every time you speak to me.
 
 ## Repository Rules & Guidelines
 
