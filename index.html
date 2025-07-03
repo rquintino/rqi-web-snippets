@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Utilities</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --primary-color-rgb: 74, 144, 226;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --card-bg: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #3a7bc8;
+            --bg-color: #121212;
+            --text-color: #f0f0f0;
+            --card-bg: #1e1e1e;
+            --border-color: #2d2d2d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-text {
+            flex-grow: 1;
+        }
+
+        .controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .version {
+            position: fixed;
+            bottom: 5px;
+            right: 10px;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 1rem 0;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .card.single-match {
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+            border-width: 3px !important;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15); }
+            50% { box-shadow: 0 15px 30px rgba(var(--primary-color-rgb), 0.3); }
+            100% { box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15); }
+        }
+        
+        /* Added styles for clickable cards */
+        .card-link {
+            color: inherit;
+            text-decoration: none;
+            display: block;
+            height: 100%;
+        }
+        
+        .card-link:hover {
+            color: inherit;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header position-relative">
+        <div class="container">
+            <h1 class="text-center">Web Utilities Collection</h1>
+            <p class="text-center lead">A collection of standalone web utilities</p>
+            <div class="controls">
+                <button id="theme-toggle" class="control-btn"><i class="bi bi-moon"></i></button>
+                <button id="fullscreen-toggle" class="control-btn"><i class="bi bi-arrows-fullscreen"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Search Bar -->
+    <div id="utility-search-bar" style="display:none;position:fixed;top:30px;left:50%;transform:translateX(-50%);z-index:1050;width:350px;max-width:90vw;">
+        <input type="text" id="utility-search-input" class="form-control form-control-lg" placeholder="Type to search utilities..." autocomplete="off" style="border-radius:2rem;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    </div>
+
+    <div class="container">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 justify-content-center">
+            <div class="col">
+                <div class="card">
+                    <a href="typing-speed-test.html" class="card-link">
+                        <div class="card-body text-center">
+                            <div class="icon">
+                                <i class="bi bi-keyboard"></i>
+                            </div>
+                            <h5 class="card-title">Typing Speed Test</h5>
+                            <p class="card-text">Test and improve your typing speed with this interactive typing test application.</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>Simple web utilities - No setup required</p>
+        </div>
+    </footer>    <div class="version">v2025-07-03.1</div>
+
+    <script>
+        // Version information
+        const VERSION = "2025-07-03.1";
+        document.querySelector('.version').textContent = `v${VERSION}`;
+
+        // DOM elements
+        const themeToggle = document.getElementById('theme-toggle');
+        const fullscreenToggle = document.getElementById('fullscreen-toggle');
+
+        // Check if dark mode was previously enabled
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.setAttribute('data-theme', 'dark');
+            themeToggle.innerHTML = '<i class="bi bi-sun"></i>';
+        }
+
+        // Event listeners
+        themeToggle.addEventListener('click', () => {
+            if (document.body.getAttribute('data-theme') === 'dark') {
+                document.body.removeAttribute('data-theme');
+                themeToggle.innerHTML = '<i class="bi bi-moon"></i>';
+                localStorage.setItem('darkMode', 'false');
+            } else {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.innerHTML = '<i class="bi bi-sun"></i>';
+                localStorage.setItem('darkMode', 'true');
+            }
+        });
+
+        fullscreenToggle.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable fullscreen mode: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        });
+    </script>
+    <script>
+    // --- Utility Search Feature ---
+    const searchBar = document.getElementById('utility-search-bar');
+    const searchInput = document.getElementById('utility-search-input');
+    const cardSelector = '.card';
+    const cardTitleSelector = '.card-title';
+    const cardDescSelector = '.card-text';
+    let searchActive = false;
+    let searchString = '';
+    let lastKeyTime = 0;
+    let selectedIdx = -1;
+    let matchedCards = [];
+
+    // Helper: Remove highlights
+    function clearHighlights() {
+        document.querySelectorAll(cardTitleSelector + ', ' + cardDescSelector).forEach(el => {
+            el.innerHTML = el.textContent;
+        });
+    }
+
+    // Helper: Highlight matches
+    function highlightMatches(term) {
+        clearHighlights();
+        if (!term) return;
+        const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        matchedCards = [];
+        document.querySelectorAll(cardSelector).forEach(card => {
+            const titleEl = card.querySelector(cardTitleSelector);
+            const descEl = card.querySelector(cardDescSelector);
+            let matched = false;
+            [titleEl, descEl].forEach(el => {
+                if (el && regex.test(el.textContent)) {
+                    el.innerHTML = el.textContent.replace(regex, '<mark>$1</mark>');
+                    matched = true;
+                } else if (el) {
+                    el.innerHTML = el.textContent;
+                }
+            });
+            if (matched) matchedCards.push(card);
+            card.classList.toggle('border-primary', matched);
+            card.classList.remove('single-match');
+        });
+
+        // Apply special highlighting for single match
+        if (matchedCards.length === 1) {
+            matchedCards[0].classList.add('single-match');
+        }
+        
+        // Auto-scroll to first match if any matches exist
+        if (matchedCards.length > 0) {
+            scrollToCard(0);
+        }
+    }
+
+    // Helper: Scroll to selected card
+    function scrollToCard(idx) {
+        if (matchedCards[idx]) {
+            // Check if element is in viewport
+            const card = matchedCards[idx];
+            const rect = card.getBoundingClientRect();
+            const isInViewport = 
+                rect.top >= 0 &&
+                rect.left >= 0 &&
+                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                rect.right <= (window.innerWidth || document.documentElement.clientWidth);
+                
+            // Only scroll if not in viewport
+            if (!isInViewport) {
+                card.scrollIntoView({behavior:'smooth', block:'center'});
+            }
+        }
+    }
+
+    // Helper: Update selected card
+    function updateSelectedCard(newIdx) {
+        matchedCards.forEach((card, i) => {
+            card.classList.toggle('bg-primary', i === newIdx);
+            card.classList.toggle('text-white', i === newIdx);
+        });
+        if (newIdx >= 0) scrollToCard(newIdx);
+    }
+
+    // Show search bar and focus
+    function showSearchBar(initial = '') {
+        searchBar.style.display = 'block';
+        searchInput.value = initial;
+        searchInput.focus();
+        searchActive = true;
+        selectedIdx = -1;
+        highlightMatches(initial);
+        updateSelectedCard(selectedIdx);
+    }
+
+    // Hide search bar
+    function hideSearchBar() {
+        searchBar.style.display = 'none';
+        searchInput.value = '';
+        searchActive = false;
+        clearHighlights();
+        matchedCards.forEach(card => {
+            card.classList.remove('bg-primary', 'text-white', 'border-primary', 'single-match');
+        });
+    }
+
+    // Listen for global keydown to trigger search
+    document.addEventListener('keydown', (e) => {
+        if (searchActive) return;
+        if (e.ctrlKey || e.altKey || e.metaKey) return;
+        if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+        if (e.key.length === 1 && e.key.match(/\S/)) {
+            showSearchBar(e.key);
+            e.preventDefault();
+        }
+    });
+
+    // Search input logic
+    searchInput.addEventListener('input', (e) => {
+        highlightMatches(e.target.value);
+        selectedIdx = -1;
+        updateSelectedCard(selectedIdx);
+    });
+
+    // Keyboard navigation in search
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            hideSearchBar();
+        } else if (e.key === 'ArrowDown') {
+            if (matchedCards.length) {
+                selectedIdx = (selectedIdx + 1) % matchedCards.length;
+                updateSelectedCard(selectedIdx);
+            }
+            e.preventDefault();
+        } else if (e.key === 'ArrowUp') {
+            if (matchedCards.length) {
+                selectedIdx = (selectedIdx - 1 + matchedCards.length) % matchedCards.length;
+                updateSelectedCard(selectedIdx);
+            }
+            e.preventDefault();
+        } else if (e.key === 'Enter') {
+            if (matchedCards[selectedIdx]) {
+                const cardLink = matchedCards[selectedIdx].querySelector('a.card-link');
+                if (cardLink) {
+                    window.location.href = cardLink.href;
+                }
+            } else if (matchedCards.length === 1) {
+                const cardLink = matchedCards[0].querySelector('a.card-link');
+                if (cardLink) {
+                    window.location.href = cardLink.href;
+                }
+            }
+        }
+    });
+
+    // Hide search bar on blur
+    searchInput.addEventListener('blur', () => {
+        setTimeout(hideSearchBar, 100);
+    });
+    </script>
+    <script src="shared/footer.js"></script>
+</body>
+</html>

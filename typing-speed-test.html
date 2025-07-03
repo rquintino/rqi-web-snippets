@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Speed Test - Active WPM</title>
+    
+    <!-- 
+    Functional Requirements:
+    - Typing speed test that measures WPM from first keypress to word completion
+    - Each word has background color based on relative typing speed
+    - Current word WPM and average WPM display
+    - Incorrect characters remain red after word completion
+    - Modern, minimalistic UI similar to Monkeytype
+    - Dark/Light mode toggle
+    - Fullscreen toggle
+    - Stats tracking and local storage
+    - Real-time WPM calculation per word
+    - Word-by-word performance visualization
+    -->
+    
+    <link rel="stylesheet" href="typing-speed-test.css">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        /* ... existing styles ... */
+        
+        .penalty-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--error);
+            color: white;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .penalty-icon {
+            font-size: 1.2rem;
+        }
+        
+        .penalty-count {
+            font-weight: bold;
+        }
+        
+        .wpm-penalty {
+            color: var(--error);
+            animation: wpmPenalty 1s ease-out;
+        }
+        
+        @keyframes wpmPenalty {
+            0% { color: var(--error); }
+            100% { color: var(--text-primary); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .best-score-celebrate {
+            animation: bestScoreCelebrate 1.2s cubic-bezier(.23,1.02,.64,1.01);
+            box-shadow:0 0 0 6px var(--accent),0 0 32px 8px #fff8;
+            background:linear-gradient(90deg,var(--accent),#fffbe6 60%,var(--accent));
+            color:#222!important;
+            transform:scale(1.18);
+        }
+        
+        @keyframes bestScoreCelebrate {
+            0%{transform:scale(1);box-shadow:none;}
+            20%{transform:scale(1.22);box-shadow:0 0 0 12px var(--accent),0 0 32px 8px #fff8;}
+            60%{transform:scale(1.18);}
+            100%{transform:scale(1);box-shadow:none;}
+        }
+        
+        /* ... existing styles ... */
+    </style>
+</head>
+<body x-data="typingApp()" x-init="init()">
+    <div class="header">
+        <h1 style="margin: 0; font-size: 1.5rem; color: var(--accent);">Typing Speed Test</h1>
+        <div class="controls">
+            <button class="icon-btn" @click="window.location.href='index.html'" title="Home">
+                🏠
+            </button>
+            <button class="icon-btn" @click="toggleDarkMode()" title="Toggle theme">
+                <span x-show="!isDarkMode">🌙</span>
+                <span x-show="isDarkMode">☀️</span>
+            </button>
+            <button class="icon-btn" @click="toggleFullscreen()" title="Toggle fullscreen">
+                ⛶
+            </button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="stats" x-show="!showResults">
+            <div class="stat">
+                <div class="stat-value" :class="{ 'wpm-penalty': showWpmPenalty }" x-text="Math.round(currentWordWpm)"></div>
+                <div class="stat-label">Current Word</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" :class="{ 'wpm-penalty': showWpmPenalty }" x-text="Math.round(averageWpm)"></div>
+                <div class="stat-label">Average WPM</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" x-text="accuracy + '%' "></div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" x-text="bestScore !== null ? Math.round(bestScore) : '-' "></div>
+                <div class="stat-label">Best WPM</div>
+            </div>
+            <div class="stat">
+                <button class="icon-btn" @click="resetBestScore()" title="Reset Best Score" style="font-size:1.2rem;">🔄</button>
+            </div>
+        </div>
+        <div class="dict-select-bar">            
+            <div class="dict-select-wrapper">
+                <select id="dict-select" x-model="selectedDictionary" @change="changeDictionary($event)" class="dict-select">
+                    <option value="english-100">English-100</option>
+                    <option value="english-200">English-200</option>
+                    <option value="portuguese-200">Portuguese-200</option>
+                </select>
+                <span class="dict-arrow">▼</span>
+            </div>
+            <div class="penalty-indicator" x-show="errorPenalties > 0" title="WPM Penalties">
+                <span class="penalty-icon">⚠️</span>
+                <span class="penalty-count" x-text="errorPenalties"></span>
+            </div>
+        </div>
+        <div class="text-display" x-show="!showResults" @click="$refs.input.focus()">
+            <template x-for="(word, wordIndex) in words" :key="wordIndex">
+                <span 
+                    class="word" 
+                    :class="{
+                        'current': wordIndex === currentWordIndex,
+                        'typed': wordIndex < currentWordIndex,
+                        'error': wordErrors[wordIndex]
+                    }"
+                    :style="`background-color: ${getWordBackgroundColor(wordIndex)}`"
+                    :data-wpm-class="getWordWpmClass(wordIndex)"
+                    @mouseenter="showWordTooltip(wordIndex, $event)"
+                    @mouseleave="hideWordTooltip()"
+                >
+                    <template x-for="(char, charIndex) in word.split('')" :key="charIndex">
+                        <span 
+                            class="char"
+                            :class="getCharClass(wordIndex, charIndex)"
+                            x-text="char"
+                        ></span>
+                    </template>
+                    <template x-if="wordIndex === currentWordIndex && currentCharIndex > word.length">
+                        <template x-for="(char, index) in typedWord.slice(word.length).split('')" :key="'extra-' + index">
+                            <span class="char extra incorrect" x-text="char"></span>
+                        </template>
+                    </template>
+                </span>
+            </template>
+        </div>
+        <input 
+            type="text" 
+            x-ref="input" 
+            class="input-field"
+            @input="handleInput($event)"
+            @keydown="handleKeydown($event)"
+            x-model="typedWord"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+        >
+        <button class="restart-btn" @click="restart()">
+            <span x-show="!started">Start Typing</span>
+            <span x-show="started && !showResults">Restart</span>
+            <span x-show="showResults">Try Again</span>
+        </button>
+        <div class="chart-container" style="position:relative;">
+            <canvas id="wpmChart" width="320" height="240" style="max-width:100%;background:var(--bg-secondary);border-radius:1rem;"></canvas>
+            <button class="icon-btn" @click="showChartModalHandler()" title="Expand chart" style="position:absolute;top:0.5rem;right:0.5rem;font-size:1.2rem;z-index:2;">🔍</button>
+        </div>
+        <div class="results" x-show="showResults" x-cloak>
+            <h3>Test Complete!</h3>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" x-text="Math.round(finalWpm)"></div>
+                    <div class="stat-label">Final WPM</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" x-text="finalAccuracy + '%' "></div>
+                    <div class="stat-label">Final Accuracy</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" x-text="bestScore !== null ? Math.round(bestScore) : '-' "></div>
+                    <div class="stat-label">Best WPM</div>
+                </div>
+                <div class="stat">
+                    <button class="icon-btn" @click="resetBestScore()" title="Reset Best Score" style="font-size:1.2rem;">🔄</button>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2rem;margin-bottom:1rem;">
+                <h4 style="margin:0;">Word Performance</h4>
+                <div class="sort-controls">
+                    <select x-model="wordSortOrder" class="dict-select" style="width:auto;">
+                        <option value="wpm-asc">WPM (Low to High)</option>
+                        <option value="wpm-desc">WPM (High to Low)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="word-stats">
+                <template x-for="(stat, index) in sortedWordStats" :key="index">
+                    <div class="word-stat" :style="`color: ${getWordColor(stat.wpm)}`">
+                        <span x-text="stat.word"></span>
+                        <span x-text="Math.round(stat.wpm) + ' wpm'"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+    
+    <div class="version">v2024-12-19.11</div>
+    
+    <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
+    
+    <!-- Chart Modal -->
+    <div x-show="showChartModal" x-transition.opacity x-cloak class="modal-overlay">
+        <div class="modal-panel">
+            <button class="icon-btn" @click="hideChartModalHandler()" title="Close" style="position:absolute;top:1rem;right:1rem;font-size:2rem;">✖️</button>
+            <canvas id="wpmChartModal" width="900" height="600" style="max-width:80vw;max-height:70vh;background:var(--bg-secondary);border-radius:1rem;"></canvas>
+        </div>
+    </div>
+    
+    <!-- Confetti and celebration overlay for new best score -->
+    <canvas id="confetti-canvas" width="1200" height="800" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2000;"></canvas>
+    
+    <script src="typing-speed-test.jsdata"></script>
+    <script src="typing-speed-test.js"></script>
+    <script src="shared/footer.js"></script>
+</body>
+</html> 

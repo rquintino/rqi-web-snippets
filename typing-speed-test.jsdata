@@ -1,0 +1,65 @@
+// typing-speed-test.jsdata
+// Word lists for Typing Speed Test
+// Exposed as window.typingWordLists for use in the app
+window.typingWordLists = {
+    'english-100': [
+        'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'I',
+        'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at',
+        'this', 'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her', 'she',
+        'or', 'an', 'will', 'my', 'one', 'all', 'would', 'there', 'their', 'what',
+        'so', 'up', 'out', 'if', 'about', 'who', 'get', 'which', 'go', 'me',
+        'when', 'make', 'can', 'like', 'time', 'no', 'just', 'him', 'know', 'take',
+        'people', 'into', 'year', 'your', 'good', 'some', 'could', 'them', 'see', 'other',
+        'than', 'then', 'now', 'look', 'only', 'come', 'its', 'over', 'think', 'also',
+        'back', 'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 'way',
+        'even', 'new', 'want', 'because', 'any', 'these', 'give', 'day', 'most', 'us'
+    ],
+    'english-200': [
+        // 200 common English words (first 100 same as above, next 100 added)
+        'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'I',
+        'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at',
+        'this', 'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her', 'she',
+        'or', 'an', 'will', 'my', 'one', 'all', 'would', 'there', 'their', 'what',
+        'so', 'up', 'out', 'if', 'about', 'who', 'get', 'which', 'go', 'me',
+        'when', 'make', 'can', 'like', 'time', 'no', 'just', 'him', 'know', 'take',
+        'people', 'into', 'year', 'your', 'good', 'some', 'could', 'them', 'see', 'other',
+        'than', 'then', 'now', 'look', 'only', 'come', 'its', 'over', 'think', 'also',
+        'back', 'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 'way',
+        'even', 'new', 'want', 'because', 'any', 'these', 'give', 'day', 'most', 'us',
+        'man', 'find', 'here', 'thing', 'give', 'many', 'well', 'tell', 'one', 'very',
+        'her', 'even', 'back', 'any', 'good', 'woman', 'through', 'us', 'life', 'child',
+        'there', 'work', 'down', 'may', 'after', 'should', 'call', 'world', 'over', 'school',
+        'still', 'try', 'last', 'ask', 'need', 'too', 'feel', 'three', 'when', 'state',
+        'never', 'become', 'between', 'high', 'really', 'something', 'most', 'another', 'much', 'family',
+        'own', 'out', 'leave', 'put', 'old', 'while', 'mean', 'on', 'keep', 'student',
+        'why', 'let', 'great', 'same', 'big', 'group', 'begin', 'seem', 'country', 'help',
+        'talk', 'where', 'turn', 'problem', 'every', 'start', 'hand', 'might', 'American', 'show'
+    ],
+    'portuguese-200': [
+        // 200 common Portuguese words
+        'a', 'o', 'e', 'de', 'que', 'do', 'da', 'em', 'um', 'para',
+        'é', 'com', 'não', 'uma', 'os', 'no', 'se', 'na', 'por', 'mais',
+        'as', 'dos', 'como', 'mas', 'foi', 'ao', 'ele', 'das', 'tem', 'à',
+        'seu', 'sua', 'ou', 'ser', 'quando', 'muito', 'há', 'nos', 'já', 'está',
+        'eu', 'também', 'só', 'pelo', 'pela', 'até', 'isso', 'ela', 'entre', 'era',
+        'depois', 'sem', 'mesmo', 'aos', 'ter', 'seus', 'quem', 'nas', 'me', 'esse',
+        'eles', 'estão', 'você', 'tinha', 'foram', 'essa', 'num', 'nem', 'suas', 'meu',
+        'às', 'minha', 'têm', 'numa', 'pelos', 'elas', 'havia', 'seja', 'qual', 'será',
+        'nós', 'tenho', 'lhe', 'deles', 'essas', 'esses', 'pelas', 'este', 'dele', 'tu',
+        'te', 'vocês', 'vos', 'lhes', 'meus', 'minhas', 'teu', 'tua', 'teus', 'tuas',
+        'nosso', 'nossa', 'nossos', 'nossas', 'dela', 'delas', 'esta', 'estes', 'estas', 'aquele',
+        'aquela', 'aqueles', 'aquelas', 'isto', 'isso', 'aquilo', 'está', 'estão', 'estive', 'esteve',
+        'estivemos', 'estiveram', 'estava', 'estávamos', 'estavam', 'estivera', 'estivéramos', 'esteja', 'estejamos', 'estejam',
+        'estivesse', 'estivéssemos', 'estivessem', 'estiver', 'estivermos', 'estiverem', 'hei', 'há', 'havemos', 'hão',
+        'houve', 'houvemos', 'houveram', 'houvera', 'houvéramos', 'haja', 'hajamos', 'hajam', 'houvesse', 'houvéssemos',
+        'houvessem', 'houver', 'houvermos', 'houverem', 'houverei', 'houverá', 'houveremos', 'houverão', 'houveria', 'houveríamos',
+        'houveriam', 'sou', 'somos', 'são', 'era', 'éramos', 'eram', 'fui', 'foi', 'fomos',
+        'foram', 'fora', 'fôramos', 'seja', 'sejamos', 'sejam', 'fosse', 'fôssemos', 'fossem', 'for',
+        'formos', 'forem', 'serei', 'será', 'seremos', 'serão', 'seria', 'seríamos', 'seriam', 'tenho',
+        'tem', 'temos', 'tém', 'tinha', 'tínhamos', 'tinham', 'tive', 'teve', 'tivemos', 'tiveram',
+        'tivera', 'tivéramos', 'tenha', 'tenhamos', 'tenham', 'tivesse', 'tivéssemos', 'tivessem', 'tiver', 'tivermos',
+        'tiverem', 'terei', 'terá', 'teremos', 'terão', 'teria', 'teríamos', 'teriam'
+    ]
+};
+// For backward compatibility
+window.typingWordList = window.typingWordLists['english-100']; 
