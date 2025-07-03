@@ -34,7 +34,9 @@ This repository includes special instructions for GitHub Copilot in the `.github
 
 ## Available Utilities
 
-- **Typing Speed Test** - Measure and improve your typing speed with real-time WPM calculation
+- **Typing Speed Test** - Measure and improve your typing speed with real-time WPM calculation and word-by-word performance visualization
+- **Markdown Viewer** - Three-pane markdown editor with live preview, table of contents, drag & drop file support, and HTML export
+- **Foundation Model Training** - Interactive visualization of AI model training pipeline with animated GPU scaling and training simulation
 
 ## Usage
 
