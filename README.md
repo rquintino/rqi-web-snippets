@@ -10,6 +10,7 @@ A collection of standalone web utilities and applications, each designed to be s
 - **Automated Testing** - Playwright tests for each application
 - **Privacy-Focused** - No data collection, only local storage when needed
 - **Mobile Friendly** - Responsive design for all devices
+- **GitHub Copilot Ready** - Includes AI instructions for GitHub Copilot coding agent
 
 ## Available Utilities
 
@@ -30,6 +31,10 @@ npm test             # Run all tests
 npm run test:ui      # Run tests with UI
 npm run test:debug   # Run tests in debug mode
 ```
+
+## GitHub Copilot Integration
+
+This repository includes special instructions for GitHub Copilot in the `.github/copilot-instructions.md` file. These instructions help the AI coding assistant understand the repository structure, coding conventions, and development guidelines when contributing to this project.
 
 ## License
 

@@ -8,9 +8,9 @@
     "test:debug": "playwright test --debug"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "author": "Rui Quintino",
+  "license": "MIT",
+  "description": "A collection of standalone web utilities and applications",
   "devDependencies": {
     "@playwright/test": "^1.52.0"
   }
