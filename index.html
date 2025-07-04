@@ -14,6 +14,7 @@
             --text-color: #333333;
             --card-bg: #f8f9fa;
             --border-color: #dee2e6;
+            --thumbnail-bg: #f5f5f5;
         }
 
         [data-theme="dark"] {
@@ -22,6 +23,7 @@
             --text-color: #f0f0f0;
             --card-bg: #1e1e1e;
             --border-color: #2d2d2d;
+            --thumbnail-bg: #2a2a2a;
         }
 
         body {
@@ -162,7 +164,7 @@
 
         .app-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1.5rem;
         }
 
@@ -170,19 +172,40 @@
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 0.5rem;
-            padding: 1.5rem;
-            text-align: center;
+            overflow: hidden;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            text-decoration: none;
+            color: var(--text-color);
         }
 
         .app-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            color: var(--text-color);
+        }
+
+        .app-screenshot {
+            width: 100%;
+            height: 180px;
+            object-fit: contain;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--thumbnail-bg);
+        }
+
+        .app-content {
+            padding: 1.5rem;
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .app-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
             color: var(--primary-color);
         }
 
@@ -195,6 +218,7 @@
         .app-description {
             font-size: 0.9rem;
             color: var(--text-color);
+            flex-grow: 1;
         }
     </style>
 </head>
@@ -219,21 +243,30 @@
     <div class="container">
         <div class="app-grid">
             <a href="typing-speed-test.html" class="app-card">
-                <div class="app-icon">⌨️</div>
-                <div class="app-title">Typing Speed Test</div>
-                <div class="app-description">Test and improve your typing speed with this interactive tool</div>
+                <img src="typing-speed-test.jpeg" alt="Typing Speed Test Screenshot" class="app-screenshot">
+                <div class="app-content">
+                    <div class="app-icon">⌨️</div>
+                    <div class="app-title">Typing Speed Test</div>
+                    <div class="app-description">Test and improve your typing speed with this interactive tool</div>
+                </div>
             </a>
             
             <a href="foundation-model-training.html" class="app-card">
-                <div class="app-icon">🤖</div>
-                <div class="app-title">Foundation Model Training</div>
-                <div class="app-description">Interactive visualization of AI foundation model training process</div>
+                <img src="foundation-model-training.jpeg" alt="Foundation Model Training Screenshot" class="app-screenshot">
+                <div class="app-content">
+                    <div class="app-icon">🤖</div>
+                    <div class="app-title">Foundation Model Training</div>
+                    <div class="app-description">Interactive visualization of AI foundation model training process</div>
+                </div>
             </a>
             
             <a href="markdown-viewer.html" class="app-card">
-                <div class="app-icon">📝</div>
-                <div class="app-title">Markdown Viewer</div>
-                <div class="app-description">Three-pane markdown viewer with TOC and live preview</div>
+                <img src="markdown-viewer.jpeg" alt="Markdown Viewer Screenshot" class="app-screenshot">
+                <div class="app-content">
+                    <div class="app-icon">📝</div>
+                    <div class="app-title">Markdown Viewer</div>
+                    <div class="app-description">Three-pane markdown viewer with TOC and live preview</div>
+                </div>
             </a>
             
             <!-- Add more app cards here as they are created -->
@@ -244,16 +277,16 @@
         <div class="container">
             <p></p>
         </div>
-    </footer>    <div class="version">v2025-07-03.7</div>
+    </footer>    <div class="version">v2025-07-04.1</div>
 
     <script>
         // Version information
-        const VERSION = "2025-07-03.7";
+        const VERSION = "2025-07-04.1";
         document.querySelector('.version').textContent = `v${VERSION}`;
 
-        // DOM elements
-        const themeToggle = document.getElementById('theme-toggle');
-        const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    // DOM elements
+    const themeToggle = document.getElementById('theme-toggle');
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
 
         // Check if dark mode was previously enabled
         if (localStorage.getItem('darkMode') === 'true') {
