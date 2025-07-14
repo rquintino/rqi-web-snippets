@@ -126,6 +126,12 @@
                 </select>
                 <span class="dict-arrow">▼</span>
             </div>
+            <button class="toggle-btn" 
+                   @click="toggleBlindMode()" 
+                   :class="{ 'active': blindModeSelected }" 
+                   title="In Blind Mode, words are masked as you type, forcing you to read ahead. Feedback is only shown at the end of the test.">
+                <span x-text="blindModeSelected ? '👁️‍🗨️ Blind Mode' : '👁️ Blind Mode'"></span>
+            </button>
             <div class="penalty-indicator" x-show="errorPenalties > 0" title="WPM Penalties">
                 <span class="penalty-icon">⚠️</span>
                 <span class="penalty-count" x-text="errorPenalties"></span>
@@ -220,7 +226,7 @@
         </div>
     </div>
     
-    <div class="version">v2024-12-19.11</div>
+    <div class="version">v2025-07-11.8</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     

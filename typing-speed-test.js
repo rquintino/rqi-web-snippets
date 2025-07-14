@@ -58,6 +58,103 @@ function typingApp() {
     let audioContext = null;
     let errorPenalties = 0;
     
+    // IndexedDB helper functions
+    const dbName = 'typingSpeedTestDB';
+    const dbVersion = 1;
+    const storeName = 'settings';
+    
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName, dbVersion);
+            
+            request.onerror = (event) => {
+                console.warn('IndexedDB error:', event.target.error);
+                reject(event.target.error);
+            };
+            
+            request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName, { keyPath: 'id' });
+                }
+            };
+        });
+    }
+    
+    async function saveToIndexedDB(key, value) {
+        try {
+            const db = await openDB();
+            const transaction = db.transaction(storeName, 'readwrite');
+            const store = transaction.objectStore(storeName);
+            
+            return new Promise((resolve, reject) => {
+                const request = store.put({ id: key, value });
+                
+                request.onsuccess = () => resolve(true);
+                request.onerror = (event) => {
+                    console.warn('Failed to save to IndexedDB:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        } catch (error) {
+            console.warn('IndexedDB save error:', error);
+            return false;
+        }
+    }
+    
+    async function getFromIndexedDB(key) {
+        try {
+            const db = await openDB();
+            const transaction = db.transaction(storeName, 'readonly');
+            const store = transaction.objectStore(storeName);
+            
+            return new Promise((resolve, reject) => {
+                const request = store.get(key);
+                
+                request.onsuccess = () => {
+                    if (request.result) {
+                        resolve(request.result.value);
+                    } else {
+                        resolve(null);
+                    }
+                };
+                
+                request.onerror = (event) => {
+                    console.warn('Failed to read from IndexedDB:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        } catch (error) {
+            console.warn('IndexedDB read error:', error);
+            return null;
+        }
+    }
+    
+    async function removeFromIndexedDB(key) {
+        try {
+            const db = await openDB();
+            const transaction = db.transaction(storeName, 'readwrite');
+            const store = transaction.objectStore(storeName);
+            
+            return new Promise((resolve, reject) => {
+                const request = store.delete(key);
+                
+                request.onsuccess = () => resolve(true);
+                request.onerror = (event) => {
+                    console.warn('Failed to delete from IndexedDB:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        } catch (error) {
+            console.warn('IndexedDB delete error:', error);
+            return false;
+        }
+    }
+    
     // Create error sound using Web Audio API
     function playErrorSound() {
         if (!audioContext) {
@@ -402,6 +499,8 @@ function typingApp() {
         isDarkMode: true,
         errorPenalties: 0,
         showWpmPenalty: false,
+        blindMode: false,
+        blindModeSelected: false,
         
         // Timing variables
         wordStartTime: null,
@@ -448,18 +547,43 @@ function typingApp() {
             });
         },
         
-        init() {
-            // Set default dictionary
+        async init() {
+            // Load saved settings from IndexedDB
+            try {
+                // Load blind mode setting
+                const blindModeSetting = await getFromIndexedDB('typing-blind-mode');
+                if (blindModeSetting !== null) {
+                    this.blindMode = blindModeSetting === 'true';
+                    this.blindModeSelected = blindModeSetting === 'true';
+                }
+                
+                // Load dark mode setting
+                const darkModeSetting = await getFromIndexedDB('typing-dark-mode');
+                if (darkModeSetting !== null) {
+                    this.isDarkMode = darkModeSetting === 'true';
+                }
+                
+                // Load selected dictionary
+                const savedDictionary = await getFromIndexedDB('typing-selected-dictionary');
+                if (savedDictionary !== null) {
+                    this.selectedDictionary = savedDictionary;
+                }
+            } catch (error) {
+                console.warn('Failed to load settings:', error);
+            }
+            
+            // Set dictionary from saved setting
             if (window.typingWordLists && window.typingWordLists[this.selectedDictionary]) {
                 window.typingWordList = window.typingWordLists[this.selectedDictionary];
             }
+            
             this.generateWords();
             this.$refs.input.focus();
             document.body.classList.toggle('light-mode', !this.isDarkMode);
             wpmChartData = [];
             window.typingAppInstance = this;
             setTimeout(() => updateWpmChart(this.isDarkMode), 100);
-            this.loadBestScore();
+            await this.loadBestScore();
             // Modal chart event binding
             this.$watch('showChartModal', value => {
                 if (value) {
@@ -475,10 +599,10 @@ function typingApp() {
             });
         },
         
-        loadBestScore() {
+        async loadBestScore() {
             try {
                 const storageKey = `typing-best-wpm-${this.selectedDictionary}`;
-                const stored = localStorage.getItem(storageKey);
+                const stored = await getFromIndexedDB(storageKey);
                 this.bestScore = stored ? parseFloat(stored) : null;
                 if (isNaN(this.bestScore)) this.bestScore = null;
             } catch (error) {
@@ -487,10 +611,10 @@ function typingApp() {
             }
         },
         
-        saveBestScore(newScore) {
+        async saveBestScore(newScore) {
             try {
                 const storageKey = `typing-best-wpm-${this.selectedDictionary}`;
-                localStorage.setItem(storageKey, newScore.toString());
+                await saveToIndexedDB(storageKey, newScore.toString());
                 this.bestScore = newScore;
             } catch (error) {
                 console.warn('Failed to save best score:', error);
@@ -713,26 +837,39 @@ function typingApp() {
         getCharClass(wordIndex, charIndex) {
             const classes = [];
             
-            if (wordIndex === this.currentWordIndex) {
-                // Currently typing this word
-                if (charIndex < this.typedWord.length) {
-                    if (this.typedWord[charIndex] === this.words[wordIndex][charIndex]) {
-                        classes.push('correct');
-                    } else {
-                        classes.push('incorrect');
-                    }
+            // If blind mode is active, handle differently
+            if (this.blindMode) {
+                // Current word that's being typed
+                if (wordIndex === this.currentWordIndex && this.typedWord.length > 0) {
+                    classes.push('masked');
+                } 
+                // Already typed words in blind mode
+                else if (wordIndex < this.currentWordIndex) {
+                    classes.push('masked');
                 }
-            } else if (wordIndex < this.currentWordIndex) {
-                // Word already completed
-                const charState = this.wordCharStates[wordIndex]?.[charIndex];
-                if (charState === true) {
-                    classes.push('correct');
-                } else if (charState === false) {
-                    classes.push('incorrect');
-                } else {
-                    // If no state stored, check if the word was typed correctly overall
-                    if (!this.wordErrors[wordIndex]) {
+            } else {
+                // Normal mode handling
+                if (wordIndex === this.currentWordIndex) {
+                    // Currently typing this word
+                    if (charIndex < this.typedWord.length) {
+                        if (this.typedWord[charIndex] === this.words[wordIndex][charIndex]) {
+                            classes.push('correct');
+                        } else {
+                            classes.push('incorrect');
+                        }
+                    }
+                } else if (wordIndex < this.currentWordIndex) {
+                    // Word already completed
+                    const charState = this.wordCharStates[wordIndex]?.[charIndex];
+                    if (charState === true) {
                         classes.push('correct');
+                    } else if (charState === false) {
+                        classes.push('incorrect');
+                    } else {
+                        // If no state stored, check if the word was typed correctly overall
+                        if (!this.wordErrors[wordIndex]) {
+                            classes.push('correct');
+                        }
                     }
                 }
             }
@@ -810,23 +947,44 @@ function typingApp() {
                 clearInterval(this.wpmUpdateTimer);
                 this.wpmUpdateTimer = null;
             }
+            
+            // If blind mode was active, save the setting for display and future restoration
+            const wasBlindMode = this.blindMode;
+            
+            // Store blind mode setting in IndexedDB
+            try {
+                await saveToIndexedDB('typing-blind-mode', wasBlindMode.toString());
+            } catch (error) {
+                console.warn('Failed to save blind mode setting:', error);
+            }
+            
+            // Create a separate property to track UI state for blind mode
+            // This will make the button appear active even when blind mode is disabled for results
+            this.blindModeSelected = wasBlindMode;
+            
+            // If blind mode was active, temporarily disable it to show results
+            if (wasBlindMode) {
+                this.blindMode = false;
+            }
+            
             this.showResults = true;
             this.finalWpm = this.averageWpm;
             this.finalAccuracy = this.accuracy;
             let isNewBest = false;
             if (typeof this.finalWpm === 'number' && (!this.bestScore || this.finalWpm > this.bestScore)) {
-                this.saveBestScore(this.finalWpm);
+                await this.saveBestScore(this.finalWpm);
                 isNewBest = true;
             }
             if (isNewBest) setTimeout(celebrateBestScore, 350);
         },
         
-        restart() {
+        async restart() {
             // Clear the WPM timer
             if (this.wpmUpdateTimer) {
                 clearInterval(this.wpmUpdateTimer);
                 this.wpmUpdateTimer = null;
             }
+            
             this.words = [];
             this.currentWordIndex = 0;
             this.currentCharIndex = 0;
@@ -842,6 +1000,24 @@ function typingApp() {
             this.wordTimes = {};
             this.wordCharStates = {};
             this.errorPenalties = 0;
+            
+            // Restore blind mode from blindModeSelected or IndexedDB if needed
+            try {
+                if (this.blindModeSelected !== undefined) {
+                    // Use the selected state we already have
+                    this.blindMode = this.blindModeSelected;
+                } else {
+                    // Fall back to IndexedDB if for some reason blindModeSelected is not set
+                    const savedBlindMode = await getFromIndexedDB('typing-blind-mode');
+                    if (savedBlindMode !== null) {
+                        this.blindMode = savedBlindMode === 'true';
+                        this.blindModeSelected = this.blindMode;
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to restore blind mode setting:', error);
+            }
+            
             this.generateWords();
             this.$refs.input.focus();
             wpmChartData = [];
@@ -849,8 +1025,33 @@ function typingApp() {
             this.loadBestScore();
         },
         
-        toggleDarkMode() {
+        async toggleBlindMode() {
+            this.blindMode = !this.blindMode;
+            this.blindModeSelected = this.blindMode;
+            
+            // Save setting to IndexedDB
+            try {
+                await saveToIndexedDB('typing-blind-mode', this.blindMode.toString());
+            } catch (error) {
+                console.warn('Failed to save blind mode setting:', error);
+            }
+            
+            // Return focus to the input field
+            this.$nextTick(() => {
+                this.$refs.input.focus();
+            });
+        },
+        
+        async toggleDarkMode() {
             this.isDarkMode = !this.isDarkMode;
+            
+            // Save setting to IndexedDB
+            try {
+                await saveToIndexedDB('typing-dark-mode', this.isDarkMode.toString());
+            } catch (error) {
+                console.warn('Failed to save dark mode setting:', error);
+            }
+            
             document.body.classList.toggle('light-mode', !this.isDarkMode);
             setTimeout(() => updateWpmChart(this.isDarkMode), 100);
         },
@@ -886,24 +1087,32 @@ function typingApp() {
         hideWordTooltip() {
             this.tooltip.visible = false;
         },
-        resetBestScore() {
+        async resetBestScore() {
             try {
                 const storageKey = `typing-best-wpm-${this.selectedDictionary}`;
-                localStorage.removeItem(storageKey);
+                await removeFromIndexedDB(storageKey);
                 this.bestScore = null;
             } catch (error) {
                 console.warn('Failed to reset best score:', error);
             }
         },
-        changeDictionary(event) {
+        async changeDictionary(event) {
             this.selectedDictionary = event.target.value;
+            
+            // Save selected dictionary to IndexedDB
+            try {
+                await saveToIndexedDB('typing-selected-dictionary', this.selectedDictionary);
+            } catch (error) {
+                console.warn('Failed to save dictionary setting:', error);
+            }
+            
             if (window.typingWordLists && window.typingWordLists[this.selectedDictionary]) {
                 window.typingWordList = window.typingWordLists[this.selectedDictionary];
-                this.loadBestScore(); // Load the best score for the new dictionary
+                await this.loadBestScore(); // Load the best score for the new dictionary
                 this.restart();
             }
         },
         showChartModalHandler,
         hideChartModalHandler
     };
-} 
+}

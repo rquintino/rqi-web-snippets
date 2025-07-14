@@ -42,5 +42,9 @@ body.light-mode .word-tooltip{background:#fffbe6;color:#323437;border-color:#d4a
 .dict-arrow{position:absolute;right:.9rem;pointer-events:none;color:var(--accent);font-size:1.1rem;top:50%;transform:translateY(-50%)}
 body.light-mode .dict-select{background:#fffbe6;color:#d4a017;border-color:#d4a017}
 body.light-mode .dict-arrow{color:#d4a017}
+.toggle-btn{display:flex;align-items:center;background:var(--bg-secondary);color:var(--text-primary);border:2px solid var(--text-secondary);padding:.4rem 1rem;border-radius:.5rem;cursor:pointer;font-family:inherit;transition:all .2s;font-size:1rem}
+.toggle-btn:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-btn.active{background:var(--accent);color:var(--bg-primary);border-color:var(--accent)}
+.char.masked{color:transparent}
 .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center}
 .modal-panel{position:relative;background:var(--bg-secondary);border-radius:1.5rem;padding:2rem;box-shadow:0 4px 32px #0008;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center} 
