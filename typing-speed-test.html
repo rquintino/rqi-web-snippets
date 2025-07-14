@@ -120,9 +120,9 @@
         <div class="dict-select-bar">            
             <div class="dict-select-wrapper">
                 <select id="dict-select" x-model="selectedDictionary" @change="changeDictionary($event)" class="dict-select">
-                    <option value="english-100">English-100</option>
-                    <option value="english-200">English-200</option>
-                    <option value="portuguese-200">Portuguese-200</option>
+                    <template x-for="(wordList, key) in availableDictionaries" :key="key">
+                        <option :value="key" x-text="key"></option>
+                    </template>
                 </select>
                 <span class="dict-arrow">▼</span>
             </div>
@@ -226,7 +226,7 @@
         </div>
     </div>
     
-    <div class="version">v2025-07-11.8</div>
+    <div class="version">v2025-07-14.2</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     

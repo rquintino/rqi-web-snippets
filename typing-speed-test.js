@@ -526,6 +526,7 @@ function typingApp() {
         
         // Dictionary selection
         selectedDictionary: 'english-100',
+        availableDictionaries: {},
         
         showChartModal: false,
         
@@ -548,6 +549,11 @@ function typingApp() {
         },
         
         async init() {
+            // Load available dictionaries
+            if (window.typingWordLists) {
+                this.availableDictionaries = window.typingWordLists;
+            }
+            
             // Load saved settings from IndexedDB
             try {
                 // Load blind mode setting
@@ -565,7 +571,7 @@ function typingApp() {
                 
                 // Load selected dictionary
                 const savedDictionary = await getFromIndexedDB('typing-selected-dictionary');
-                if (savedDictionary !== null) {
+                if (savedDictionary !== null && window.typingWordLists && window.typingWordLists[savedDictionary]) {
                     this.selectedDictionary = savedDictionary;
                 }
             } catch (error) {

@@ -14,6 +14,29 @@ window.typingWordLists = {
         'back', 'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 'way',
         'even', 'new', 'want', 'because', 'any', 'these', 'give', 'day', 'most', 'us'
     ],
+    'english-1000': [
+        // Sample 200 words from the 1000 most common English words
+        'about', 'above', 'across', 'action', 'activity', 'against', 'almost', 'along', 'already', 'although',
+        'always', 'among', 'animal', 'answer', 'appear', 'around', 'arrive', 'article', 'available', 'beautiful',
+        'before', 'behind', 'believe', 'below', 'beside', 'better', 'between', 'beyond', 'body', 'book',
+        'bring', 'build', 'business', 'capital', 'carry', 'center', 'central', 'century', 'certain', 'change',
+        'character', 'check', 'choose', 'church', 'city', 'clear', 'close', 'collect', 'color', 'complete',
+        'condition', 'consider', 'contain', 'control', 'corner', 'correct', 'country', 'course', 'cover', 'create',
+        'current', 'cut', 'decision', 'describe', 'develop', 'difference', 'different', 'difficult', 'direct', 'doctor',
+        'during', 'early', 'earth', 'education', 'effect', 'either', 'end', 'energy', 'enough', 'entire',
+        'environment', 'especially', 'establish', 'european', 'evening', 'everything', 'evidence', 'example', 'experience', 'explain',
+        'fact', 'factor', 'fall', 'far', 'fast', 'father', 'field', 'figure', 'fill', 'final',
+        'financial', 'fire', 'follow', 'force', 'foreign', 'form', 'former', 'forward', 'four', 'free',
+        'friend', 'front', 'full', 'function', 'fund', 'further', 'future', 'game', 'garden', 'general',
+        'girl', 'glass', 'government', 'ground', 'grow', 'growth', 'guess', 'hair', 'half', 'hand',
+        'happen', 'hard', 'head', 'health', 'hear', 'heart', 'heat', 'heavy', 'history', 'hold',
+        'home', 'hope', 'hospital', 'hour', 'house', 'however', 'human', 'hundred', 'idea', 'identify',
+        'image', 'imagine', 'important', 'improve', 'include', 'increase', 'indeed', 'individual', 'industry', 'information',
+        'inside', 'instead', 'interest', 'international', 'interview', 'investment', 'involve', 'issue', 'item', 'itself',
+        'job', 'join', 'key', 'kill', 'kind', 'kitchen', 'knowledge', 'land', 'language', 'large',
+        'later', 'laugh', 'law', 'lay', 'lead', 'leader', 'learn', 'least', 'legal', 'less',
+        'letter', 'level', 'lie', 'light', 'line', 'list', 'listen', 'little', 'live', 'local'
+    ],
     'english-200': [
         // 200 common English words (first 100 same as above, next 100 added)
         'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'I',
@@ -59,6 +82,55 @@ window.typingWordLists = {
         'tem', 'temos', 'tém', 'tinha', 'tínhamos', 'tinham', 'tive', 'teve', 'tivemos', 'tiveram',
         'tivera', 'tivéramos', 'tenha', 'tenhamos', 'tenham', 'tivesse', 'tivéssemos', 'tivessem', 'tiver', 'tivermos',
         'tiverem', 'terei', 'terá', 'teremos', 'terão', 'teria', 'teríamos', 'teriam'
+    ],
+    'same-finger-digraphs': [
+        // Same finger digraphs - letter combinations typed with the same finger
+        // Useful for practicing difficult finger movements and reducing typing errors
+        
+        // ed — left-middle finger (E↘D)
+        'edited', 'needed', 'headed', 'federal', 'pedestal', 'redesign', 'wedged', 'pedicure', 'medicine',
+        'education', 'sedate', 'redefine', 'credence', 'sediment', 'pedantic', 'bleeding', 'mediated',
+        'pedestrian', 'federate', 'coded',
+        
+        // de — left-middle finger (D↗E)
+        'develop', 'decide', 'defend', 'delay', 'derive', 'delete', 'demand', 'depend', 'design', 'desert',
+        'detail', 'device', 'deafen', 'delight', 'delicate', 'debug', 'dedicate', 'decent', 'desktop',
+        'depart',
+        
+        // ce — left-middle finger (C↗E)
+        'science', 'recent', 'absence', 'sentence', 'silence', 'audience', 'license', 'conscience',
+        'patience', 'justice', 'office', 'practice', 'service', 'fierce', 'voice', 'choice', 'prince',
+        'police', 'influence', 'deceive',
+        
+        // ll — right-ring finger (L→L)
+        'all', 'will', 'still', 'small', 'call', 'shell', 'hello', 'yellow', 'pillow', 'brilliant', 'college',
+        'valley', 'balloon', 'alley', 'hill', 'spilled', 'wallet', 'allergy', 'million', 'illustrate',
+        
+        // ec — left-middle finger (E↙C)
+        'electric', 'echo', 'eccentric', 'ecosystem', 'electron', 'lecture', 'reception', 'economic',
+        'exercise', 'eclectic', 'decimal', 'mechanic', 'necklace', 'recognize', 'nectar', 'spectacle',
+        'rectangle', 'security', 'recycle', 'recount',
+        
+        // tr — left-index finger (T↙R)
+        'train', 'treat', 'track', 'truck', 'trend', 'trace', 'trade', 'trial', 'trick', 'trust', 'trophy',
+        'travel', 'triangle', 'transit', 'tremor', 'trigger', 'truce', 'tragedy', 'tranquil', 'trumpet',
+        
+        // ss — left-ring finger (S→S)
+        'glass', 'miss', 'kiss', 'grass', 'class', 'press', 'less', 'boss', 'assess', 'bliss', 'cross', 'messy',
+        'chess', 'passage', 'mission', 'issues', 'gossip', 'compass', 'massive', 'scissors',
+        
+        // un — right-index finger (U↙N)
+        'under', 'union', 'funny', 'bunker', 'unable', 'uncle', 'unknown', 'until', 'unique', 'unfold',
+        'uneven', 'unreal', 'unison', 'uncover', 'unsure', 'unplug', 'unusual', 'unzip', 'unleash',
+        'sunscreen',
+        
+        // lo — right-ring finger (L↗O)
+        'long', 'local', 'logic', 'lonely', 'logo', 'lotus', 'loiter', 'slogan', 'lotion', 'lookup', 'lower',
+        'loading', 'loyal', 'locker', 'loaf', 'locate', 'lonesome', 'loose', 'locomotive', 'lobster',
+        
+        // ee — left-middle finger (E→E)
+        'see', 'tree', 'meet', 'need', 'seed', 'seem', 'feel', 'green', 'sleep', 'street', 'cheer', 'queen', 'deer',
+        'freedom', 'sweet', 'speed', 'beetle', 'steep', 'sheep', 'speech'
     ]
 };
 // For backward compatibility
