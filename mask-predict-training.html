@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mask and Predict Training</title>
+    <link rel="stylesheet" href="mask-predict-training.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <!--
+    Mask and Predict Training Visualization
+    
+    Features:
+    - Interactive sliding window demonstration
+    - Real-time text masking and prediction
+    - Visual feedback for correct/incorrect predictions
+    - Configurable window size (8-12 words)
+    - Training speed controls
+    - Accuracy statistics tracking
+    - Source text highlighting
+    - Vertical training examples list
+    - Random word prediction simulation
+    - Color-coded feedback system
+    - LLM prediction simulation phase
+    - Recursive text generation with context window
+    - Blue context words and green predictions
+    
+    Technical Implementation:
+    - Text tokenization and windowing
+    - Sliding animation through source text
+    - Training simulation with random attempts
+    - Real-time accuracy calculation
+    - Responsive layout with dual panels
+    - Progressive training visualization
+    - Multi-phase workflow: Data → Training → Prediction
+    - Context window sliding for text generation
+    -->
+
+
+    <div class="app-container" x-data="maskPredictApp()">
+        <!-- Home Button -->
+        <a href="index.html" class="home-btn">🏠</a>
+        
+        <!-- Full Screen Toggle -->
+        <button @click="toggleFullscreen()" class="control-btn fullscreen-btn">
+            <span x-text="isFullscreen ? '🗗' : '🗖'"></span>
+        </button>
+        
+        <!-- Dark/Light Toggle -->
+        <button @click="toggleTheme()" class="control-btn theme-btn">
+            <span x-text="isDark ? '☀️' : '🌙'"></span>
+        </button>
+
+        <!-- Header -->
+        <div class="header">
+            <h1>Mask & Predict Training</h1>
+            <p>How Language Models Learn to Predict the Next Word</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button @click="handleNextStep()" :disabled="isMainButtonDisabled()" 
+                    class="main-btn" x-text="getMainButtonText()"></button>
+        </div>
+
+        <!-- Training Area -->
+        <div class="training-area">
+            <!-- Source Text Panel -->
+            <div class="source-panel">
+                <h3 x-text="isPredicting || isPredictionComplete ? 'Predict using trained LLM' : 'Source Text'"></h3>
+                
+                <!-- Training Mode: Source Text -->
+                <div class="source-text" x-show="!isPredicting && !isPredictionComplete">
+                    <template x-for="(word, index) in sourceWords" :key="index">
+                        <span class="word" 
+                              :class="{
+                                  'highlight': isInCurrentWindow(index),
+                                  'masked': isCurrentMaskedWord(index)
+                              }"
+                              x-text="word"></span>
+                    </template>
+                </div>
+                
+                <!-- Prediction Mode: Generated Text -->
+                <div class="prediction-text" x-show="isPredicting || isPredictionComplete">
+                    <template x-for="(word, index) in generatedText" :key="index">
+                        <span class="word" 
+                              :class="{
+                                  'context': index >= currentPredictionIndex && index < currentPredictionIndex + predictionWindowSize,
+                                  'prediction': index === generatedText.length - 1 && isPredicting
+                              }"
+                              x-text="word"></span>
+                    </template>
+                </div>
+                
+                <div class="progress-info" x-show="isPreparingData || isTraining || isComplete">
+                    <div class="progress-stats">
+                        <span>Position: <strong x-text="currentPosition + 1"></strong> / <strong x-text="totalPositions"></strong></span>
+                        <span>Progress: <strong x-text="Math.round((currentPosition / totalPositions) * 100)"></strong>%</span>
+                        <span x-show="isPreparingData" class="phase-indicator">� Transforming Data</span>
+                        <span x-show="isTraining" class="phase-indicator">🎯 Training Model</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Examples Panel -->
+            <div class="examples-panel">
+                <h3>Training Examples</h3>
+                <div class="examples-stats" x-show="visibleExamples.length > 0">
+                    <span>Examples: <strong x-text="visibleExamples.length"></strong></span>
+                    <span x-show="isTraining || isComplete">Accuracy: <strong x-text="Math.round(accuracy)"></strong>%</span>
+                    <span x-show="isTraining || isComplete">Correct: <strong x-text="correctPredictions"></strong></span>
+                    <span x-show="isTraining || isComplete">Total: <strong x-text="totalAttempts"></strong></span>
+                </div>
+                
+                <div class="examples-container">
+                    <template x-for="(example, index) in visibleExamples" :key="index">
+                        <div class="training-example" 
+                             :class="{ 
+                                 'current': index === currentPosition && isPreparingData,
+                                 'complete': example.isComplete,
+                                 'preparing': isPreparingData && index === currentPosition,
+                                 'training-active': isTraining && !example.isCorrect
+                             }">
+                            <div class="example-context">
+                                <template x-for="(word, wordIndex) in example.context" :key="wordIndex">
+                                    <span class="context-word" 
+                                          x-text="word"
+                                          :style="example.contextWeights ? `opacity: ${example.contextWeights[wordIndex]}; font-weight: ${example.contextWeights[wordIndex] > 0.7 ? '600' : '400'}` : 'opacity: 1'"></span>
+                                </template>
+                            </div>
+                            <div class="example-prediction" 
+                                 :class="{ 
+                                     'correct': example.isCorrect,
+                                     'incorrect': example.currentAttempt && !example.isCorrect && isTraining,
+                                     'masked': !example.currentAttempt 
+                                 }">
+                                <span x-text="example.currentAttempt || '????'"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Status -->
+        <div class="training-status" x-show="isPreparingData || isTraining || isComplete || isPredicting || isPredictionComplete">
+            <div class="status-message" 
+                 :class="{ 
+                     'complete': isComplete || isPredictionComplete, 
+                     'preparing': isPreparingData,
+                     'predicting': isPredicting
+                 }"
+                 x-text="getStatusMessage()"></div>
+        </div>
+
+        <!-- Version -->
+        <div class="version">v2025-01-17.3</div>
+    </div>
+
+    <script src="mask-predict-training.js"></script>
+    <script src="shared/footer.js"></script>
+</body>
+</html>
