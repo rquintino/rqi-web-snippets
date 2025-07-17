@@ -499,7 +499,7 @@ function maskPredictApp() {
                 green = 255;
             }
             
-            return `color: rgb(${red}, ${green}, 0)`;
+            return `color: rgb(${red}, ${green}, 0); font-size: 1.2rem`;
         }
     }
 }

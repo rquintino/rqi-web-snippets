@@ -110,7 +110,7 @@
                 <h3>Training Examples</h3>
                 <div class="examples-stats" x-show="visibleExamples.length > 0">
                     <span>Examples: <strong x-text="visibleExamples.length"></strong></span>
-                    <span x-show="isTraining || isComplete">Accuracy: <strong x-text="Math.round(accuracy)" :style="getAccuracyColor()"></strong>%</span>
+                    <span x-show="isTraining || isComplete">Prediction Accuracy: <strong x-text="Math.round(accuracy)" :style="getAccuracyColor()"></strong>%</span>
                     <span x-show="isTraining || isComplete">Correct: <strong x-text="correctPredictions"></strong></span>
                 </div>
                 
