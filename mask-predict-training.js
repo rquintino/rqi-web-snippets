@@ -225,8 +225,10 @@ function maskPredictApp() {
         
         async simulateTraining() {
             const speed = this.getTrainingSpeedMs();
-            const maxIterations = 200; // Much longer training period
+            const maxIterations = 500; // Much longer training period (2.5x longer)
             let iteration = 0;
+            let lastAccuracy = 0;
+            let backtrackChance = 0.15; // 15% chance to backtrack
             
             while (iteration < maxIterations && !this.isComplete) {
                 if (!this.isTraining) break;
@@ -234,8 +236,21 @@ function maskPredictApp() {
                 // Process all examples simultaneously
                 let allCorrect = true;
                 
+                // Check if we should backtrack (make some correct answers wrong again)
+                const shouldBacktrack = Math.random() < backtrackChance && iteration > 30;
+                
                 for (let i = 0; i < this.visibleExamples.length; i++) {
                     const example = this.visibleExamples[i];
+                    
+                    // Backtrack: occasionally make correct answers wrong again
+                    if (shouldBacktrack && example.isCorrect && Math.random() < 0.3) {
+                        example.isCorrect = false;
+                        example.isComplete = false;
+                        this.correctPredictions--;
+                        example.currentAttempt = this.getRandomWord();
+                        allCorrect = false;
+                        continue;
+                    }
                     
                     if (!example.isCorrect) {
                         allCorrect = false;
@@ -244,25 +259,34 @@ function maskPredictApp() {
                         // Update weights during training to simulate learning
                         this.updateContextWeights(example);
                         
-                        // Much more gradual learning curve
+                        // More gradual learning curve with oscillation
                         let correctChance = 0;
                         
-                        if (iteration < 30) {
-                            // First 30 iterations: very low chance (0-2%)
-                            correctChance = iteration * 0.0007;
-                        } else if (iteration < 80) {
-                            // Next 50 iterations: slow improvement (2-10%)
-                            correctChance = 0.02 + (iteration - 30) * 0.0016;
-                        } else if (iteration < 140) {
-                            // Next 60 iterations: moderate improvement (10-40%)
-                            correctChance = 0.1 + (iteration - 80) * 0.005;
+                        // Add oscillation factor
+                        const oscillationFactor = 1 + 0.3 * Math.sin(iteration * 0.1);
+                        
+                        if (iteration < 50) {
+                            // First 50 iterations: very low chance (0-4%)
+                            correctChance = iteration * 0.0008;
+                        } else if (iteration < 150) {
+                            // Next 100 iterations: slow improvement (4-20%)
+                            correctChance = 0.04 + (iteration - 50) * 0.0016;
+                        } else if (iteration < 300) {
+                            // Next 150 iterations: moderate improvement (20-60%)
+                            correctChance = 0.2 + (iteration - 150) * 0.0027;
+                        } else if (iteration < 450) {
+                            // Next 150 iterations: faster convergence (60-90%)
+                            correctChance = 0.6 + (iteration - 300) * 0.002;
                         } else {
-                            // Final 60 iterations: faster convergence (40-85%)
-                            correctChance = 0.4 + (iteration - 140) * 0.0075;
+                            // Final 50 iterations: fine-tuning (90-95%)
+                            correctChance = 0.9 + (iteration - 450) * 0.001;
                         }
                         
-                        // Cap at 85% to maintain some randomness
-                        correctChance = Math.min(correctChance, 0.85);
+                        // Apply oscillation
+                        correctChance *= oscillationFactor;
+                        
+                        // Cap at 95% to maintain some randomness
+                        correctChance = Math.min(Math.max(correctChance, 0), 0.95);
                         
                         if (Math.random() < correctChance) {
                             // Get correct answer
@@ -276,6 +300,12 @@ function maskPredictApp() {
                         }
                     }
                 }
+                
+                // Reduce backtrack chance over time
+                backtrackChance = Math.max(0.05, backtrackChance * 0.995);
+                
+                // Reduce backtrack chance over time
+                backtrackChance = Math.max(0.05, backtrackChance * 0.995);
                 
                 this.updateAccuracy();
                 
@@ -450,6 +480,26 @@ function maskPredictApp() {
             this.isDark = !this.isDark;
             document.body.classList.toggle('dark-theme', this.isDark);
             document.body.classList.toggle('light-theme', !this.isDark);
+        },
+        
+        getAccuracyColor() {
+            // Convert accuracy (0-100) to red-green color gradient
+            const accuracy = Math.max(0, Math.min(100, this.accuracy));
+            
+            // Calculate RGB values for smooth red-to-green transition
+            let red, green;
+            
+            if (accuracy <= 50) {
+                // 0-50%: Red to yellow (red stays 255, green increases)
+                red = 255;
+                green = Math.round((accuracy / 50) * 255);
+            } else {
+                // 50-100%: Yellow to green (red decreases, green stays 255)
+                red = Math.round(255 - ((accuracy - 50) / 50) * 255);
+                green = 255;
+            }
+            
+            return `color: rgb(${red}, ${green}, 0)`;
         }
     }
 }

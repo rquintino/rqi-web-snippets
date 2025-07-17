@@ -55,8 +55,8 @@
 
         <!-- Header -->
         <div class="header">
-            <h1>Mask & Predict Training</h1>
-            <p>How Language Models Learn to Predict the Next Word</p>
+            <h1>How Does GenAI Learn?</h1>
+            <p>How Language Models Learn by Masking and Guessing the Next Word</p>
         </div>
 
         <!-- Controls -->
@@ -69,7 +69,7 @@
         <div class="training-area">
             <!-- Source Text Panel -->
             <div class="source-panel">
-                <h3 x-text="isPredicting || isPredictionComplete ? 'Predict using trained LLM' : 'Source Text'"></h3>
+                <h3 x-text="isPredicting || isPredictionComplete ? 'Predict using trained LLM' : 'Source Text \n(Internet 🌐, Books📚, Code 📃,...)'"></h3>
                 
                 <!-- Training Mode: Source Text -->
                 <div class="source-text" x-show="!isPredicting && !isPredictionComplete">
@@ -110,9 +110,8 @@
                 <h3>Training Examples</h3>
                 <div class="examples-stats" x-show="visibleExamples.length > 0">
                     <span>Examples: <strong x-text="visibleExamples.length"></strong></span>
-                    <span x-show="isTraining || isComplete">Accuracy: <strong x-text="Math.round(accuracy)"></strong>%</span>
+                    <span x-show="isTraining || isComplete">Accuracy: <strong x-text="Math.round(accuracy)" :style="getAccuracyColor()"></strong>%</span>
                     <span x-show="isTraining || isComplete">Correct: <strong x-text="correctPredictions"></strong></span>
-                    <span x-show="isTraining || isComplete">Total: <strong x-text="totalAttempts"></strong></span>
                 </div>
                 
                 <div class="examples-container">
@@ -157,7 +156,7 @@
         </div>
 
         <!-- Version -->
-        <div class="version">v2025-01-17.3</div>
+        <div class="version">v2025-01-17.5</div>
     </div>
 
     <script src="mask-predict-training.js"></script>
