@@ -45,6 +45,7 @@ function typingStats() {
         avgDwell: 0,
         avgFlight: 0,
         rhythmConsistency: 0,
+        resumeStartTime: null, // timestamp when resumed from pause for running metrics warm-up
         peakWPM: 0,
         recentKeystrokes: [], // for peak WPM calculation
         wpmHistory: [], // track WPM over time for peak calculation
@@ -122,6 +123,8 @@ function typingStats() {
                     // Just resumed typing - start tracking active time again
                     this.lastActiveTime = this.lastKeyTime;
                     this.isPaused = false;
+                    // start warm-up for running metrics
+                    this.resumeStartTime = this.lastKeyTime;
                 }
             }
         },
@@ -238,6 +241,11 @@ function typingStats() {
             if (!this.sessionStartTime) return;
             
             const now = this.getCurrentTime();
+            // Determine if warm-up period after resume is over
+            const warmUpOver = !this.resumeStartTime || (now - this.resumeStartTime >= 10000);
+            if (this.resumeStartTime && warmUpOver) {
+                this.resumeStartTime = null;
+            }
             
             // Calculate active typing time
             let currentActiveTime = this.activeTypingTime;
@@ -255,17 +263,15 @@ function typingStats() {
                 this.netWPM = this.words / activeMinutes;
             }
             
-            // Running WPM: pause when idle, otherwise based on keystrokes in last 10 seconds
-            if (this.isPaused) {
-                this.runningWPM = 0;
-            } else if (this.recentKeystrokes.length > 0) {
-                const timeWindowMs = now - this.recentKeystrokes[0];
-                const timeWindowMinutes = timeWindowMs / 60000;
-                this.runningWPM = timeWindowMinutes > 0
-                    ? (this.recentKeystrokes.length / 5) / timeWindowMinutes
-                    : 0;
-            } else {
-                this.runningWPM = 0;
+            // Running WPM: update only when active and warm-up over
+            if (!this.isPaused && warmUpOver) {
+                if (this.recentKeystrokes.length > 0) {
+                    const timeWindowMs = now - this.recentKeystrokes[0];
+                    const timeWindowMinutes = timeWindowMs / 60000;
+                    this.runningWPM = timeWindowMinutes > 0
+                        ? (this.recentKeystrokes.length / 5) / timeWindowMinutes
+                        : 0;
+                }
             }
             
             // KSPC (Keys per Character)
@@ -277,30 +283,43 @@ function typingStats() {
                 e.type === 'keydown' && (e.key === 'Backspace' || e.key === 'Delete')
             ).length;
             this.errRate = this.keyStrokes > 0 ? errorKeys / this.keyStrokes : 0;
-            
-            // Average dwell time
-            const dwellTimes = this.segments.map(s => s.dwellTime).filter(t => t !== undefined);
-            this.avgDwell = dwellTimes.length > 0 ? 
-                dwellTimes.reduce((sum, t) => sum + t, 0) / dwellTimes.length : 0;
-            
-            // Average flight time
-            const flightTimes = [];
-            for (let i = 1; i < this.events.length; i++) {
-                const current = this.events[i];
-                const previous = this.events[i - 1];
-                if (current.type === 'keydown' && previous.type === 'keydown') {
-                    flightTimes.push(current.timestamp - previous.timestamp);
-                }
+
+            // Running dwell time (last 10 seconds), update only when active and warm-up over
+            if (!this.isPaused && warmUpOver) {
+                const windowStart = now - 10000;
+                const dwellWindow = this.segments
+                    .filter(s => s.upTime >= windowStart && s.dwellTime !== undefined)
+                    .map(s => s.dwellTime);
+                this.avgDwell = dwellWindow.length > 0
+                    ? dwellWindow.reduce((sum, t) => sum + t, 0) / dwellWindow.length
+                    : this.avgDwell;
             }
-            this.avgFlight = flightTimes.length > 0 ? 
-                flightTimes.reduce((sum, t) => sum + t, 0) / flightTimes.length : 0;
-            
-            // Rhythm consistency (coefficient of variation of flight times)
-            if (flightTimes.length > 1) {
-                const mean = this.avgFlight;
-                const variance = flightTimes.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / flightTimes.length;
-                const stdDev = Math.sqrt(variance);
-                this.rhythmConsistency = mean > 0 ? (1 - (stdDev / mean)) * 100 : 0; // percentage, higher = more consistent
+
+            // Running flight time (last 10 seconds), update only when active and warm-up over
+            if (!this.isPaused && warmUpOver) {
+                const windowStart = now - 10000;
+                const flightWindow = [];
+                for (let i = 1; i < this.events.length; i++) {
+                    const current = this.events[i];
+                    const previous = this.events[i - 1];
+                    if (
+                        current.type === 'keydown' &&
+                        previous.type === 'keydown' &&
+                        current.timestamp >= windowStart
+                    ) {
+                        flightWindow.push(current.timestamp - previous.timestamp);
+                    }
+                }
+                if (flightWindow.length > 0) {
+                    this.avgFlight = flightWindow.reduce((sum, t) => sum + t, 0) / flightWindow.length;
+                }
+                // Rhythm consistency (coefficient of variation of flight times)
+                if (flightWindow.length > 1) {
+                    const mean = this.avgFlight;
+                    const variance = flightWindow.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / flightWindow.length;
+                    const stdDev = Math.sqrt(variance);
+                    this.rhythmConsistency = mean > 0 ? (1 - (stdDev / mean)) * 100 : this.rhythmConsistency;
+                }
             }
             
             // Track current WPM for peak calculation
@@ -418,9 +437,11 @@ function typingStats() {
         },
         
         showTooltip(event, text) {
+            // convert literal "\\n" sequences to actual newlines for proper display
+            const formattedText = text.replace(/\\n/g, '\n');
             this.tooltip = {
                 show: true,
-                text: text,
+                text: formattedText,
                 x: event.clientX + 10,
                 y: event.clientY - 10
             };

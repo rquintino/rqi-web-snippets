@@ -107,7 +107,7 @@
 
                 <div class="metric-tile highlighted" @mouseenter="showTooltip($event, 'Running WPM: Real-time speed over last 10 seconds\\nMost relevant for current typing performance')" @mouseleave="hideTooltip()">
                     <div class="metric-value" x-text="runningWPM.toFixed(1)"></div>
-                    <div class="metric-label">WPM</div>
+                    <div class="metric-label">Running WPM</div>
                 </div>
 
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'Keys per Character: keystrokes ÷ characters\\nIdeal: 1.00, Typical: 1.05-1.25')" @mouseleave="hideTooltip()">
@@ -120,14 +120,14 @@
                     <div class="metric-label">Error Rate</div>
                 </div>
 
-                <div class="metric-tile" @mouseenter="showTooltip($event, 'Average Dwell: Mean ms between key down→up\\nTypical: 80-120 ms')" @mouseleave="hideTooltip()">
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Running Dwell: Mean ms between key down→up over last 10 seconds\nBenchmarks: 120ms (skilled) / 200ms (typical)')" @mouseleave="hideTooltip()">
                     <div class="metric-value" x-text="avgDwell.toFixed(0) + 'ms'"></div>
-                    <div class="metric-label">Avg Dwell</div>
+                    <div class="metric-label">Running Dwell</div>
                 </div>
 
-                <div class="metric-tile" @mouseenter="showTooltip($event, 'Average Flight: Mean ms between consecutive key downs\\nTypical: 30-70 ms')" @mouseleave="hideTooltip()">
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Running Flight: Mean ms between consecutive key downs over last 10 seconds\nBenchmarks: 100ms (skilled) / 150ms (typical)')" @mouseleave="hideTooltip()">
                     <div class="metric-value" x-text="avgFlight.toFixed(0) + 'ms'"></div>
-                    <div class="metric-label">Avg Flight</div>
+                    <div class="metric-label">Running Flight</div>
                 </div>
 
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'Rhythm Consistency: How steady your typing pace is\\nHigher % = more consistent rhythm\\nBased on variance in keystroke intervals')" @mouseleave="hideTooltip()">
@@ -197,7 +197,7 @@
     <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
 
     <!-- Version -->
-    <div class="version">v2025-07-18.2</div>
+    <div class="version">v2025-07-18.3</div>
 
     <script src="typing-stats.js"></script>
     <script src="shared/footer.js"></script>
