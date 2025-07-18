@@ -39,6 +39,7 @@ function typingStats() {
         words: 0,
         grossWPM: 0,
         netWPM: 0,
+        runningWPM: 0, // running WPM over last 10 seconds
         kspc: 0,
         errRate: 0,
         avgDwell: 0,
@@ -237,7 +238,6 @@ function typingStats() {
             if (!this.sessionStartTime) return;
             
             const now = this.getCurrentTime();
-            this.elapsed = (now - this.sessionStartTime) / 1000; // total session time
             
             // Calculate active typing time
             let currentActiveTime = this.activeTypingTime;
@@ -253,6 +253,19 @@ function typingStats() {
             if (activeMinutes > 0) {
                 this.grossWPM = (this.keyStrokes / 5) / activeMinutes;
                 this.netWPM = this.words / activeMinutes;
+            }
+            
+            // Running WPM: pause when idle, otherwise based on keystrokes in last 10 seconds
+            if (this.isPaused) {
+                this.runningWPM = 0;
+            } else if (this.recentKeystrokes.length > 0) {
+                const timeWindowMs = now - this.recentKeystrokes[0];
+                const timeWindowMinutes = timeWindowMs / 60000;
+                this.runningWPM = timeWindowMinutes > 0
+                    ? (this.recentKeystrokes.length / 5) / timeWindowMinutes
+                    : 0;
+            } else {
+                this.runningWPM = 0;
             }
             
             // KSPC (Keys per Character)
@@ -300,10 +313,10 @@ function typingStats() {
             const sixtySecondsAgo = now - 60000;
             this.wpmHistory = this.wpmHistory.filter(entry => entry.timestamp > sixtySecondsAgo);
             
-            // Peak WPM: highest grossWPM achieved, but only after we have meaningful data
+            // Peak WPM: highest runningWPM achieved, but only after we have meaningful data
             // Wait for at least 10 keystrokes and 5 seconds of active typing
-            if (this.keyStrokes >= 10 && activeMinutes >= (5/60) && this.grossWPM > this.peakWPM) {
-                this.peakWPM = this.grossWPM;
+            if (this.keyStrokes >= 10 && activeMinutes >= (5/60) && this.runningWPM > this.peakWPM) {
+                this.peakWPM = this.runningWPM;
             }
         },
         
@@ -330,6 +343,7 @@ function typingStats() {
                     words: this.words,
                     grossWPM: this.grossWPM,
                     netWPM: this.netWPM,
+                    runningWPM: this.runningWPM,
                     kspc: this.kspc,
                     errorRate: this.errRate,
                     avgDwell: this.avgDwell,
@@ -376,6 +390,7 @@ function typingStats() {
             this.words = 0;
             this.grossWPM = 0;
             this.netWPM = 0;
+            this.runningWPM = 0;
             this.kspc = 0;
             this.errRate = 0;
             this.avgDwell = 0;

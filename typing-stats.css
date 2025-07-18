@@ -25,6 +25,8 @@ body.light-mode{--bg-primary:#fff;--bg-secondary:#f5f5f5;--text-primary:#323437;
 .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;max-width:1000px;margin:0 auto}
 .metric-tile{background:var(--bg-secondary);padding:1.5rem;border-radius:.75rem;text-align:center;transition:all .2s;cursor:help;border:2px solid transparent;position:relative}
 .metric-tile:hover{border-color:var(--accent);transform:translateY(-2px)}
+.metric-tile.highlighted{border-color:var(--accent);box-shadow:0 0 10px rgba(226,183,20,.3);background:linear-gradient(135deg,var(--bg-secondary),rgba(226,183,20,.08))}
+.metric-tile.highlighted:hover{box-shadow:0 0 15px rgba(226,183,20,.5);transform:translateY(-3px)}
 .metric-value{font-size:2rem;font-weight:700;color:var(--accent);margin-bottom:.5rem}
 .metric-label{color:var(--text-secondary);font-size:.9rem}
 .pause-indicator{position:absolute;top:.5rem;right:.5rem;font-size:1rem;animation:pulse 1s infinite}
@@ -43,6 +45,8 @@ body.light-mode{--bg-primary:#fff;--bg-secondary:#f5f5f5;--text-primary:#323437;
 .status-paused{color:var(--text-secondary);font-weight:600}
 .tooltip{position:absolute;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--accent);border-radius:.4rem;padding:.75rem 1rem;font-size:.9rem;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;max-width:300px;white-space:pre-line;z-index:1000;transition:opacity .15s}
 body.light-mode .tooltip{background:#fffbe6;color:#323437;border-color:#d4a017}
+body.light-mode .metric-tile.highlighted{box-shadow:0 0 10px rgba(212,160,23,.3);background:linear-gradient(135deg,var(--bg-secondary),rgba(212,160,23,.08))}
+body.light-mode .metric-tile.highlighted:hover{box-shadow:0 0 15px rgba(212,160,23,.5)}
 .version{position:fixed;bottom:1rem;right:1rem;color:var(--text-secondary);font-size:.8rem}
 @media (max-width:768px){.digraph-section{grid-template-columns:1fr;gap:1rem}.metrics-grid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.75rem}.metric-tile{padding:1rem}.metric-value{font-size:1.5rem}.session-controls{flex-direction:column;align-items:center}.control-btn{width:100%;max-width:200px;justify-content:center}}
 @media (max-width:480px){.main-container{padding:1rem}.title{font-size:2rem}.subtitle{font-size:1rem}.metrics-grid{grid-template-columns:repeat(2,1fr)}.metric-value{font-size:1.3rem}.digraph-panel{padding:1rem}}

@@ -79,11 +79,6 @@
         <!-- Real-time Metrics Panel -->
         <div class="metrics-panel">
             <div class="metrics-grid">
-                <div class="metric-tile" @mouseenter="showTooltip($event, 'Total session duration since first keystroke')" @mouseleave="hideTooltip()">
-                    <div class="metric-value" x-text="formatTime(elapsed)"></div>
-                    <div class="metric-label">Session Time</div>
-                </div>
-
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'Active typing time (excludes idle periods > ' + (pauseThreshold/1000) + 's)')" @mouseleave="hideTooltip()">
                     <div class="metric-value" x-text="formatTime(activeTypingTimeSeconds)"></div>
                     <div class="metric-label">Active Time</div>
@@ -102,12 +97,17 @@
 
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'Gross WPM: (keystrokes÷5) ÷ active minutes\\nBased on active typing time only\\nBenchmarks: 40 (novice) / 70 (proficient)')" @mouseleave="hideTooltip()">
                     <div class="metric-value" x-text="grossWPM.toFixed(1)"></div>
-                    <div class="metric-label">Gross WPM</div>
+                    <div class="metric-label">Avg WPM (Gross)</div>
                 </div>
 
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'Net WPM: words ÷ active minutes\\nBased on active typing time only')" @mouseleave="hideTooltip()">
                     <div class="metric-value" x-text="netWPM.toFixed(1)"></div>
-                    <div class="metric-label">Net WPM</div>
+                    <div class="metric-label">Avg WPM (Net)</div>
+                </div>
+
+                <div class="metric-tile highlighted" @mouseenter="showTooltip($event, 'Running WPM: Real-time speed over last 10 seconds\\nMost relevant for current typing performance')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="runningWPM.toFixed(1)"></div>
+                    <div class="metric-label">WPM</div>
                 </div>
 
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'Keys per Character: keystrokes ÷ characters\\nIdeal: 1.00, Typical: 1.05-1.25')" @mouseleave="hideTooltip()">
@@ -135,7 +135,7 @@
                     <div class="metric-label">Rhythm</div>
                 </div>
 
-                <div class="metric-tile" @mouseenter="showTooltip($event, 'Peak WPM: Highest Gross WPM achieved at any point in this session\\nTracks your maximum sustained typing speed')" @mouseleave="hideTooltip()">
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Peak WPM: Highest Running WPM achieved at any point in this session\\nTracks your maximum real-time typing speed')" @mouseleave="hideTooltip()">
                     <div class="metric-value" x-text="peakWPM.toFixed(1)"></div>
                     <div class="metric-label">Peak WPM</div>
                 </div>
@@ -197,7 +197,7 @@
     <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
 
     <!-- Version -->
-    <div class="version">v2025-07-18.1</div>
+    <div class="version">v2025-07-18.2</div>
 
     <script src="typing-stats.js"></script>
     <script src="shared/footer.js"></script>
