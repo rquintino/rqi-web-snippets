@@ -1,5 +1,5 @@
 /*
- * Mask and Predict Training Visualization
+ * How Does GenAI Learn - Visualization
  * 
  * Main Purpose: Demonstrates how language models learn through masked word prediction
  * 
