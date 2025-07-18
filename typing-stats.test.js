@@ -1,0 +1,223 @@
+const { test, expect } = require('@playwright/test');
+
+test.describe('Typing Stats App', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('file://' + __dirname + '/typing-stats.html');
+  });
+
+  test('loads without network or console errors', async ({ page }) => {
+    // Check for console errors
+    const consoleErrors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+
+    // Check for network errors
+    const networkErrors = [];
+    page.on('response', response => {
+      if (!response.ok()) {
+        networkErrors.push(`${response.status()} ${response.url()}`);
+      }
+    });
+
+    // Wait for the page to fully load
+    await page.waitForLoadState('networkidle');
+    
+    // Verify no console errors
+    expect(consoleErrors).toEqual([]);
+    
+    // Verify no network errors (excluding external CDN resources that might fail in offline tests)
+    const relevantNetworkErrors = networkErrors.filter(error => 
+      !error.includes('cdn.jsdelivr.net')
+    );
+    expect(relevantNetworkErrors).toEqual([]);
+
+    // Verify the main elements are present
+    await expect(page.locator('.header-title h1')).toContainText('Typing Stats');
+    await expect(page.locator('.text-input')).toBeVisible();
+    await expect(page.locator('.metrics-panel')).toBeVisible();
+  });
+
+  test('has correct page title and basic structure', async ({ page }) => {
+    await expect(page).toHaveTitle('Typing Stats - Real-time Typing Analytics');
+    
+    // Check header elements
+    await expect(page.locator('.header')).toBeVisible();
+    await expect(page.locator('button[title="Home"]')).toBeVisible();
+    await expect(page.locator('button[title="Toggle Dark/Light Mode"]')).toBeVisible();
+    await expect(page.locator('button[title="Toggle Fullscreen"]')).toBeVisible();
+    
+    // Check header title
+    await expect(page.locator('.header-title h1')).toContainText('Typing Stats');
+    await expect(page.locator('.header-title p')).toContainText('Real-time typing analytics and insights');
+    
+    // Check main components
+    await expect(page.locator('.session-controls')).toBeVisible();
+    await expect(page.locator('.input-section')).toBeVisible();
+    await expect(page.locator('.metrics-panel')).toBeVisible();
+    await expect(page.locator('.digraph-section')).toBeVisible();
+  });
+
+  test('session controls work correctly', async ({ page }) => {
+    // Reset button should be visible and clickable
+    const resetBtn = page.locator('button:has-text("Reset Session")');
+    await expect(resetBtn).toBeVisible();
+    await expect(resetBtn).toBeEnabled();
+    
+    // Download button should be disabled initially (no data)
+    const downloadBtn = page.locator('button:has-text("Download JSON")');
+    await expect(downloadBtn).toBeVisible();
+    await expect(downloadBtn).toBeDisabled();
+  });
+
+  test('text input captures keystrokes and updates metrics', async ({ page }) => {
+    const textInput = page.locator('.text-input');
+    await textInput.click();
+    
+    // Wait for Alpine.js to initialize
+    await page.waitForFunction(() => window.Alpine && window.Alpine.version);
+    
+    // Type some text
+    await textInput.type('hello world test');
+    
+    // Wait longer for metrics to update
+    await page.waitForTimeout(500);
+    
+    // Check that keystrokes metric updated
+    const keystrokesMetric = page.locator('.metric-tile').filter({ hasText: 'Keystrokes' }).locator('.metric-value');
+    const keystrokesValue = await keystrokesMetric.textContent();
+    expect(parseInt(keystrokesValue)).toBeGreaterThan(0);
+    
+    // Check that words metric updated
+    const wordsMetric = page.locator('.metric-tile').filter({ hasText: 'Words' }).locator('.metric-value');
+    const wordsValue = await wordsMetric.textContent();
+    expect(parseInt(wordsValue)).toBeGreaterThan(0);
+    
+    // Download button should now be enabled
+    const downloadBtn = page.locator('button:has-text("Download JSON")');
+    await expect(downloadBtn).toBeEnabled();
+  });
+
+  test('metrics display with correct labels', async ({ page }) => {
+    const expectedMetrics = [
+      'Session Time',
+      'Keystrokes', 
+      'Words',
+      'Gross WPM',
+      'Net WPM',
+      'KSPC',
+      'Error Rate',
+      'Avg Dwell',
+      'Avg Flight',
+      'Spaces',
+      'Shift',
+      'Ctrl'
+    ];
+    
+    for (const metric of expectedMetrics) {
+      await expect(page.locator('.metric-label').filter({ hasText: metric })).toBeVisible();
+    }
+  });
+
+  test('digraph tables are present and structured correctly', async ({ page }) => {
+    // Check both digraph panels exist
+    await expect(page.locator('.digraph-panel').filter({ hasText: 'Most Frequent Digraphs' })).toBeVisible();
+    await expect(page.locator('.digraph-panel').filter({ hasText: 'Slowest Digraphs' })).toBeVisible();
+    
+    // Check table headers
+    await expect(page.locator('.header-cell').filter({ hasText: 'Digraph' })).toHaveCount(2);
+    await expect(page.locator('.header-cell').filter({ hasText: 'Count' })).toHaveCount(2);
+    await expect(page.locator('.header-cell').filter({ hasText: 'Avg Latency' })).toHaveCount(2);
+  });
+
+  test('dark/light mode toggle works', async ({ page }) => {
+    // Check initial state (should be dark mode)
+    await expect(page.locator('body')).not.toHaveClass(/light-mode/);
+    
+    // Click toggle button
+    const toggleBtn = page.locator('button[title="Toggle Dark/Light Mode"]');
+    await toggleBtn.click();
+    
+    // Should now be in light mode
+    await expect(page.locator('body')).toHaveClass(/light-mode/);
+    
+    // Click again to go back to dark mode
+    await toggleBtn.click();
+    await expect(page.locator('body')).not.toHaveClass(/light-mode/);
+  });
+
+  test('tooltip functionality works on metrics', async ({ page }) => {
+    // Hover over a metric tile
+    const metricTile = page.locator('.metric-tile').first();
+    await metricTile.hover();
+    
+    // Tooltip should appear
+    await expect(page.locator('.tooltip')).toBeVisible();
+    
+    // Move away from metric tile
+    await page.locator('.header-title h1').hover();
+    
+    // Tooltip should disappear
+    await expect(page.locator('.tooltip')).toBeHidden();
+  });
+
+  test('version number is displayed', async ({ page }) => {
+    await expect(page.locator('.version')).toBeVisible();
+    await expect(page.locator('.version')).toContainText('v2025-07-18.1');
+  });
+
+  test('reset session clears data', async ({ page }) => {
+    const textInput = page.locator('.text-input');
+    
+    // Wait for Alpine.js to initialize
+    await page.waitForFunction(() => window.Alpine && window.Alpine.version);
+    
+    // Type some text first
+    await textInput.click();
+    await textInput.type('test data');
+    await page.waitForTimeout(500);
+    
+    // Verify data exists
+    const keystrokesValue = await page.locator('.metric-tile').filter({ hasText: 'Keystrokes' }).locator('.metric-value').textContent();
+    expect(parseInt(keystrokesValue)).toBeGreaterThan(0);
+    
+    // Reset session
+    await page.locator('button:has-text("Reset Session")').click();
+    
+    // Verify data is cleared
+    await expect(textInput).toHaveValue('');
+    
+    // Wait for metrics to update
+    await page.waitForTimeout(300);
+    
+    const newKeystrokesValue = await page.locator('.metric-tile').filter({ hasText: 'Keystrokes' }).locator('.metric-value').textContent();
+    expect(parseInt(newKeystrokesValue)).toBe(0);
+  });
+
+  test('typing with special keys updates modifier counts', async ({ page }) => {
+    const textInput = page.locator('.text-input');
+    await textInput.click();
+    
+    // Type with shift key
+    await page.keyboard.press('Shift+A');
+    await page.keyboard.press('Shift+B');
+    
+    // Wait for metrics to update
+    await page.waitForTimeout(200);
+    
+    // Check shift count updated
+    const shiftMetric = page.locator('.metric-tile').filter({ hasText: 'Shift' }).locator('.metric-value');
+    const shiftValue = await shiftMetric.textContent();
+    expect(parseInt(shiftValue)).toBeGreaterThanOrEqual(1);
+  });
+
+  test('home button navigation works', async ({ page }) => {
+    const homeBtn = page.locator('button[title="Home"]');
+    await expect(homeBtn).toBeVisible();
+    
+    // Note: We can't test actual navigation in this context, but we can verify the button exists and is clickable
+    await expect(homeBtn).toBeEnabled();
+  });
+});

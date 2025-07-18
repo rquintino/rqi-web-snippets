@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self';">
+    <title>Typing Stats - Real-time Typing Analytics</title>
+    
+    <!-- 
+    Functional Requirements:
+    - Real-time typing analytics with deep insights into typing behavior
+    - Free-form text input with unlimited length
+    - Live metrics: Session time, keystrokes, word count, gross/net WPM, KSPC, error rate, dwell/flight times
+    - Digraph analytics: most frequent and slowest letter transitions
+    - Privacy-first: all processing client-side, no data transmission unless exported
+    - High-resolution timing with performance.now() and Date.now() fallback
+    - Session controls: download JSON logs, reset session
+    - Tooltips with explanations and benchmarks for all metrics
+    - Modern, minimalistic UI with dark/light mode toggle
+    - Fullscreen toggle
+    - Home button to return to index
+    -->
+    
+    <link rel="stylesheet" href="typing-stats.css">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body x-data="typingStats()" x-cloak>
+    <div class="header">
+        <div class="controls">
+            <button class="icon-btn" @click="goHome()" title="Home">🏠</button>
+        </div>
+        <div class="header-title">
+            <h1>Typing Stats</h1>
+            <p>Real-time typing analytics and insights</p>
+        </div>
+        <div class="controls">
+            <button class="icon-btn" @click="toggleDarkMode()" title="Toggle Dark/Light Mode">
+                <span x-text="darkMode ? '☀️' : '🌙'"></span>
+            </button>
+            <button class="icon-btn" @click="toggleFullscreen()" title="Toggle Fullscreen">⛶</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+
+        <!-- Session Controls -->
+        <div class="session-controls">
+            <button class="control-btn" @click="resetSession()" title="Clear all data and start fresh">
+                🔄 Reset Session
+            </button>
+            <button class="control-btn" @click="downloadSession()" title="Export session data as JSON" :disabled="events.length === 0">
+                📥 Download JSON
+            </button>
+        </div>
+
+        <!-- Text Input Area -->
+        <div class="input-section">
+            <textarea 
+                x-ref="textInput"
+                class="text-input"
+                placeholder="Start typing here... Your text will be analyzed in real-time."
+                @keydown="handleKeyDown($event)"
+                @keyup="handleKeyUp($event)"
+                @paste="handlePaste($event)"
+                x-model="textContent"
+                aria-label="Text input for typing analysis"
+                role="textbox"
+            ></textarea>
+        </div>
+
+        <!-- Real-time Metrics Panel -->
+        <div class="metrics-panel">
+            <div class="metrics-grid">
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Session duration since first keystroke')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="formatTime(elapsed)"></div>
+                    <div class="metric-label">Session Time</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Total key presses recorded')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="keyStrokes"></div>
+                    <div class="metric-label">Keystrokes</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Words delimited by spaces and punctuation')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="words"></div>
+                    <div class="metric-label">Words</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Gross WPM: (keystrokes÷5) ÷ minutes\\nBenchmarks: 40 (novice) / 70 (proficient)')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="grossWPM.toFixed(1)"></div>
+                    <div class="metric-label">Gross WPM</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Net WPM: words ÷ minutes')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="netWPM.toFixed(1)"></div>
+                    <div class="metric-label">Net WPM</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Keys per Character: keystrokes ÷ characters\\nIdeal: 1.00, Typical: 1.05-1.25')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="kspc.toFixed(3)"></div>
+                    <div class="metric-label">KSPC</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Error Rate: Backspace/Delete ÷ keystrokes\\nAim for < 5%')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="(errRate * 100).toFixed(1) + '%'"></div>
+                    <div class="metric-label">Error Rate</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Average Dwell: Mean ms between key down→up\\nTypical: 80-120 ms')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="avgDwell.toFixed(0) + 'ms'"></div>
+                    <div class="metric-label">Avg Dwell</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Average Flight: Mean ms between consecutive key downs\\nTypical: 30-70 ms')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="avgFlight.toFixed(0) + 'ms'"></div>
+                    <div class="metric-label">Avg Flight</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Space bar presses')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="spaceDowns"></div>
+                    <div class="metric-label">Spaces</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Shift key presses')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="shiftCount"></div>
+                    <div class="metric-label">Shift</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Ctrl key presses')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="ctrlCount"></div>
+                    <div class="metric-label">Ctrl</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Digraph Analytics -->
+        <div class="digraph-section">
+            <div class="digraph-panel">
+                <h3 class="panel-title">Most Frequent Digraphs</h3>
+                <div class="digraph-table">
+                    <div class="table-header">
+                        <div class="header-cell">Digraph</div>
+                        <div class="header-cell">Count</div>
+                        <div class="header-cell">Avg Latency</div>
+                    </div>
+                    <template x-for="digraph in topFrequentDigraphs" :key="digraph.pair">
+                        <div class="table-row">
+                            <div class="table-cell" x-text="digraph.pair"></div>
+                            <div class="table-cell" x-text="digraph.count"></div>
+                            <div class="table-cell" x-text="digraph.avgLatency.toFixed(0) + 'ms'"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="digraph-panel">
+                <h3 class="panel-title">Slowest Digraphs</h3>
+                <div class="digraph-table">
+                    <div class="table-header">
+                        <div class="header-cell">Digraph</div>
+                        <div class="header-cell">Count</div>
+                        <div class="header-cell">Avg Latency</div>
+                    </div>
+                    <template x-for="digraph in topSlowestDigraphs" :key="digraph.pair">
+                        <div class="table-row">
+                            <div class="table-cell" x-text="digraph.pair"></div>
+                            <div class="table-cell" x-text="digraph.count"></div>
+                            <div class="table-cell" x-text="digraph.avgLatency.toFixed(0) + 'ms'"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timing Notice -->
+        <div class="timing-notice" x-show="!highResTimer">
+            ⚠️ Limited accuracy: Using Date.now() instead of high-resolution timer
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
+
+    <!-- Version -->
+    <div class="version">v2025-07-18.1</div>
+
+    <script src="typing-stats.js"></script>
+    <script src="shared/footer.js"></script>
+</body>
+</html>
