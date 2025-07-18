@@ -59,6 +59,17 @@
                     <option value="2000">2 seconds</option>
                 </select>
             </div>
+            <div class="pause-settings">
+                <label for="experienceLevel">Experience Level:</label>
+                <select id="experienceLevel" x-model="experienceLevel" @change="savePreferences()">
+                    <option>Beginner</option>
+                    <option>Novice</option>
+                    <option>Intermediate</option>
+                    <option>Proficient</option>
+                    <option>Advanced</option>
+                    <option>Expert/Elite</option>
+                </select>
+            </div>
         </div>
 
         <!-- Text Input Area -->
@@ -105,13 +116,13 @@
                     <div class="metric-label">Avg WPM (Net)</div>
                 </div>
 
-                <div class="metric-tile highlighted" @mouseenter="showTooltip($event, 'Running WPM: Real-time speed over last 10 seconds\\nMost relevant for current typing performance')" @mouseleave="hideTooltip()">
-                    <div class="metric-value" x-text="runningWPM.toFixed(1)"></div>
+                <div class="metric-tile highlighted" @mouseenter="showTooltip($event, 'Running WPM: Real-time speed over last 10 seconds\\nMost relevant for current typing performance\\nTarget band: ' + getThresholdText('runningWPM') + ' WPM')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="runningWPM.toFixed(1)" :style="{ color: getMetricColor('runningWPM', runningWPM) }"></div>
                     <div class="metric-label">Running WPM</div>
                 </div>
 
-                <div class="metric-tile" @mouseenter="showTooltip($event, 'Keys per Character: keystrokes ÷ characters\\nIdeal: 1.00, Typical: 1.05-1.25')" @mouseleave="hideTooltip()">
-                    <div class="metric-value" x-text="kspc.toFixed(3)"></div>
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Keys per Character: keystrokes ÷ characters\\nTarget band: ' + getThresholdText('kspc'))" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="kspc.toFixed(3)" :style="{ color: getMetricColor('kspc', kspc) }"></div>
                     <div class="metric-label">KSPC</div>
                 </div>
 
@@ -120,13 +131,13 @@
                     <div class="metric-label">Error Rate</div>
                 </div>
 
-                <div class="metric-tile" @mouseenter="showTooltip($event, 'Running Dwell: Mean ms between key down→up over last 10 seconds\nBenchmarks: 120ms (skilled) / 200ms (typical)')" @mouseleave="hideTooltip()">
-                    <div class="metric-value" x-text="avgDwell.toFixed(0) + 'ms'"></div>
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Running Dwell: Mean ms between key down→up over last 10 seconds\\nTarget band: ' + getThresholdText('runningDwell') + ' ms')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="avgDwell.toFixed(0) + 'ms'" :style="{ color: getMetricColor('runningDwell', avgDwell) }"></div>
                     <div class="metric-label">Running Dwell</div>
                 </div>
 
-                <div class="metric-tile" @mouseenter="showTooltip($event, 'Running Flight: Mean ms between consecutive key downs over last 10 seconds\nBenchmarks: 100ms (skilled) / 150ms (typical)')" @mouseleave="hideTooltip()">
-                    <div class="metric-value" x-text="avgFlight.toFixed(0) + 'ms'"></div>
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'Running Flight: Mean ms between consecutive key downs over last 10 seconds\\nTarget band: ' + getThresholdText('runningFlight') + ' ms')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="avgFlight.toFixed(0) + 'ms'" :style="{ color: getMetricColor('runningFlight', avgFlight) }"></div>
                     <div class="metric-label">Running Flight</div>
                 </div>
 
@@ -197,8 +208,9 @@
     <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
 
     <!-- Version -->
-    <div class="version">v2025-07-18.3</div>
+    <div class="version">v2025-07-18.5</div>
 
+    <script src="shared/shared.js"></script>
     <script src="typing-stats.js"></script>
     <script src="shared/footer.js"></script>
 </body>

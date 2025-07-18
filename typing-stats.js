@@ -31,7 +31,66 @@ function typingStats() {
         
         // UI state
         darkMode: true,
+        experienceLevel: 'Intermediate',
         tooltip: { show: false, text: '', x: 0, y: 0 },
+        
+        // Experience level thresholds matrix
+        levelThresholds: {
+            'Beginner': {
+                runningWPM: { min: 10, max: 40 },
+                grossWPM: { min: 10, max: 40 },
+                netWPM: { min: 10, max: 40 },
+                peakWPM: { min: 10, max: 40 },
+                runningDwell: { min: 0, max: 200 },
+                runningFlight: { min: 0, max: 300 },
+                kspc: { min: 0, max: 2.0 }
+            },
+            'Novice': {
+                runningWPM: { min: 41, max: 60 },
+                grossWPM: { min: 41, max: 60 },
+                netWPM: { min: 41, max: 60 },
+                peakWPM: { min: 41, max: 60 },
+                runningDwell: { min: 130, max: 150 },
+                runningFlight: { min: 150, max: 200 },
+                kspc: { min: 1.10, max: 1.20 }
+            },
+            'Intermediate': {
+                runningWPM: { min: 61, max: 80 },
+                grossWPM: { min: 61, max: 80 },
+                netWPM: { min: 61, max: 80 },
+                peakWPM: { min: 61, max: 80 },
+                runningDwell: { min: 110, max: 130 },
+                runningFlight: { min: 120, max: 150 },
+                kspc: { min: 1.05, max: 1.10 }
+            },
+            'Proficient': {
+                runningWPM: { min: 81, max: 100 },
+                grossWPM: { min: 81, max: 100 },
+                netWPM: { min: 81, max: 100 },
+                peakWPM: { min: 81, max: 100 },
+                runningDwell: { min: 90, max: 110 },
+                runningFlight: { min: 90, max: 120 },
+                kspc: { min: 1.01, max: 1.05 }
+            },
+            'Advanced': {
+                runningWPM: { min: 101, max: 120 },
+                grossWPM: { min: 101, max: 120 },
+                netWPM: { min: 101, max: 120 },
+                peakWPM: { min: 101, max: 120 },
+                runningDwell: { min: 70, max: 90 },
+                runningFlight: { min: 70, max: 90 },
+                kspc: { min: 1.000, max: 1.01 }
+            },
+            'Expert/Elite': {
+                runningWPM: { min: 121, max: 999 },
+                grossWPM: { min: 121, max: 999 },
+                netWPM: { min: 121, max: 999 },
+                peakWPM: { min: 121, max: 999 },
+                runningDwell: { min: 0, max: 70 },
+                runningFlight: { min: 0, max: 70 },
+                kspc: { min: 1.000, max: 1.000 }
+            }
+        },
         
         // Real-time metrics
         elapsed: 0,
@@ -89,8 +148,9 @@ function typingStats() {
                                typeof performance.now === 'function';
             
             // Load preferences
-            this.loadPreferences();
-            this.updateTheme();
+            this.loadPreferences().then(() => {
+                this.updateTheme();
+            }).catch(err => console.warn('Failed to load preferences:', err));
             
             // Focus text input
             this.$nextTick(() => {
@@ -454,7 +514,7 @@ function typingStats() {
         toggleDarkMode() {
             this.darkMode = !this.darkMode;
             this.updateTheme();
-            this.savePreferences();
+            this.savePreferences().catch(err => console.warn('Failed to save preferences:', err));
         },
         
         updateTheme() {
@@ -481,27 +541,88 @@ function typingStats() {
             window.location.href = 'index.html';
         },
         
-        loadPreferences() {
+        async loadPreferences() {
             try {
-                const saved = localStorage.getItem('typingStats_preferences');
+                const saved = await getItem('typingStats_preferences');
                 if (saved) {
-                    const prefs = JSON.parse(saved);
+                    const prefs = typeof saved === 'string' ? JSON.parse(saved) : saved;
                     this.darkMode = prefs.darkMode !== undefined ? prefs.darkMode : true;
+                    this.experienceLevel = prefs.experienceLevel || 'Intermediate';
                 }
             } catch (error) {
                 console.warn('Could not load preferences:', error);
                 this.darkMode = true; // fallback to default
+                this.experienceLevel = 'Intermediate';
             }
         },
 
-        savePreferences() {
+        async savePreferences() {
             try {
-                localStorage.setItem('typingStats_preferences', JSON.stringify({
-                    darkMode: this.darkMode
-                }));
+                await setItem('typingStats_preferences', {
+                    darkMode: this.darkMode,
+                    experienceLevel: this.experienceLevel
+                });
             } catch (error) {
                 console.warn('Could not save preferences:', error);
             }
+        },
+        
+        getThresholdText(metric) {
+            const thresholds = this.levelThresholds[this.experienceLevel];
+            if (!thresholds || !thresholds[metric]) return '';
+            
+            const { min, max } = thresholds[metric];
+            if (metric === 'runningWPM' || metric === 'grossWPM' || metric === 'netWPM' || metric === 'peakWPM') {
+                return max === 999 ? `${min}+` : `${min}–${max}`;
+            } else if (metric === 'runningDwell' || metric === 'runningFlight') {
+                return min === 0 ? `<${max}` : `${min}–${max}`;
+            } else if (metric === 'kspc') {
+                return min === max ? `${min.toFixed(3)}` : `${min.toFixed(3)}–${max.toFixed(3)}`;
+            }
+            return `${min}–${max}`;
+        },
+        
+        getMetricColor(metric, value) {
+            const thresholds = this.levelThresholds[this.experienceLevel];
+            if (!thresholds || !thresholds[metric]) return '';
+            
+            const { min, max } = thresholds[metric];
+            
+            if (metric === 'runningWPM' || metric === 'grossWPM' || metric === 'netWPM' || metric === 'peakWPM') {
+                // Higher is better for WPM
+                if (value >= max * 1.1) return '#00ff00'; // Strong green (10% above max)
+                if (value >= min && value <= max) return '#90EE90'; // Light green (in range)
+                if (value >= min * 0.8) return '#FFD700'; // Yellow (within 20% of min)
+                return '#FF4500'; // Red (below threshold)
+            } else if (metric === 'runningDwell' || metric === 'runningFlight') {
+                // Lower is better for dwell/flight times
+                if (min === 0) { // "less than" ranges (e.g., <200 for Beginner)
+                    if (value <= max * 0.7) return '#00ff00'; // Strong green (30% below max)
+                    if (value <= max) return '#90EE90'; // Light green (at or below max)
+                    if (value <= max * 1.3) return '#FFD700'; // Yellow (within 30% above max)
+                    return '#FF4500'; // Red (well above threshold)
+                } else { // regular ranges (e.g., 130-150 for Novice)
+                    if (value < min) return '#00ff00'; // Strong green (below min = excellent)
+                    if (value >= min && value <= max) return '#90EE90'; // Light green (in range)
+                    if (value <= max * 1.3) return '#FFD700'; // Yellow (within 30% above max)
+                    return '#FF4500'; // Red (well above range)
+                }
+            } else if (metric === 'kspc') {
+                // Lower is better for KSPC (closer to 1.000 is ideal)
+                if (min === max) { // Exact value for Expert/Elite (1.000 exactly)
+                    if (Math.abs(value - min) <= 0.001) return '#00ff00'; // Strong green (exact)
+                    if (Math.abs(value - min) <= 0.01) return '#90EE90'; // Light green (very close)
+                    if (Math.abs(value - min) <= 0.05) return '#FFD700'; // Yellow (close)
+                    return '#FF4500'; // Red (far from ideal)
+                } else {
+                    if (value < min) return '#00ff00'; // Strong green (below min = excellent)
+                    if (value >= min && value <= max) return '#90EE90'; // Light green (in range)
+                    if (value <= max * 1.2) return '#FFD700'; // Yellow (within 20% above max)
+                    return '#FF4500'; // Red (well above range)
+                }
+            }
+            
+            return '';
         }
     };
 }
