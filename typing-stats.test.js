@@ -103,6 +103,7 @@ test.describe('Typing Stats App', () => {
   test('metrics display with correct labels', async ({ page }) => {
     const expectedMetrics = [
       'Session Time',
+      'Active Time',
       'Keystrokes', 
       'Words',
       'Gross WPM',
@@ -111,9 +112,8 @@ test.describe('Typing Stats App', () => {
       'Error Rate',
       'Avg Dwell',
       'Avg Flight',
-      'Spaces',
-      'Shift',
-      'Ctrl'
+      'Rhythm',
+      'Peak WPM'
     ];
     
     for (const metric of expectedMetrics) {
@@ -196,21 +196,25 @@ test.describe('Typing Stats App', () => {
     expect(parseInt(newKeystrokesValue)).toBe(0);
   });
 
-  test('typing with special keys updates modifier counts', async ({ page }) => {
+  test('typing with new metrics shows rhythm and peak WPM', async ({ page }) => {
     const textInput = page.locator('.text-input');
     await textInput.click();
     
-    // Type with shift key
-    await page.keyboard.press('Shift+A');
-    await page.keyboard.press('Shift+B');
+    // Type enough text to trigger meaningful metrics
+    await textInput.type('The quick brown fox jumps over the lazy dog. This is a test of the typing metrics system.');
     
     // Wait for metrics to update
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(1000);
     
-    // Check shift count updated
-    const shiftMetric = page.locator('.metric-tile').filter({ hasText: 'Shift' }).locator('.metric-value');
-    const shiftValue = await shiftMetric.textContent();
-    expect(parseInt(shiftValue)).toBeGreaterThanOrEqual(1);
+    // Check rhythm consistency metric exists and has a value
+    const rhythmMetric = page.locator('.metric-tile').filter({ hasText: 'Rhythm' }).locator('.metric-value');
+    const rhythmValue = await rhythmMetric.textContent();
+    expect(rhythmValue).toMatch(/\d+\.\d+%/); // Should be a percentage
+    
+    // Check peak WPM metric exists (may be 0.0 if not enough data yet)
+    const peakMetric = page.locator('.metric-tile').filter({ hasText: 'Peak WPM' }).locator('.metric-value');
+    const peakValue = await peakMetric.textContent();
+    expect(peakValue).toMatch(/\d+\.\d+/); // Should be a number
   });
 
   test('home button navigation works', async ({ page }) => {

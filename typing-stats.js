@@ -24,6 +24,10 @@ function typingStats() {
         sessionStartTime: null,
         lastKeyTime: null,
         highResTimer: true,
+        pauseThreshold: 500, // ms - time before considering user "idle"
+        isPaused: false,
+        activeTypingTime: 0, // accumulated active typing time in ms
+        lastActiveTime: null, // when we last detected active typing
         
         // UI state
         darkMode: true,
@@ -39,13 +43,21 @@ function typingStats() {
         errRate: 0,
         avgDwell: 0,
         avgFlight: 0,
-        spaceDowns: 0,
-        shiftCount: 0,
-        ctrlCount: 0,
-        altCount: 0,
-        metaCount: 0,
+        rhythmConsistency: 0,
+        peakWPM: 0,
+        recentKeystrokes: [], // for peak WPM calculation
+        wpmHistory: [], // track WPM over time for peak calculation
         
         // Computed properties
+        get activeTypingTimeSeconds() {
+            let currentActiveTime = this.activeTypingTime;
+            if (!this.isPaused && this.lastActiveTime && this.sessionStartTime) {
+                const now = this.getCurrentTime();
+                currentActiveTime += now - this.lastActiveTime;
+            }
+            return currentActiveTime / 1000;
+        },
+        
         get topFrequentDigraphs() {
             return Object.entries(this.digraphs)
                 .map(([pair, data]) => ({
@@ -86,7 +98,31 @@ function typingStats() {
             // Update metrics every 100ms
             setInterval(() => {
                 this.updateRealTimeMetrics();
+                this.checkForPause();
             }, 100);
+        },
+        
+        checkForPause() {
+            if (!this.lastKeyTime || !this.sessionStartTime) return;
+            
+            const now = this.getCurrentTime();
+            const timeSinceLastKey = now - this.lastKeyTime;
+            
+            if (timeSinceLastKey > this.pauseThreshold) {
+                if (!this.isPaused) {
+                    // Just became paused - record the active time up to this point
+                    if (this.lastActiveTime) {
+                        this.activeTypingTime += this.lastKeyTime - this.lastActiveTime;
+                    }
+                    this.isPaused = true;
+                }
+            } else {
+                if (this.isPaused) {
+                    // Just resumed typing - start tracking active time again
+                    this.lastActiveTime = this.lastKeyTime;
+                    this.isPaused = false;
+                }
+            }
         },
         
         getCurrentTime() {
@@ -99,6 +135,18 @@ function typingStats() {
             // Initialize session on first keystroke
             if (!this.sessionStartTime) {
                 this.sessionStartTime = timestamp;
+                this.lastActiveTime = timestamp;
+            }
+            
+            // Update active typing time tracking
+            if (this.isPaused && this.lastKeyTime) {
+                // Resuming from pause - start new active segment
+                this.lastActiveTime = timestamp;
+                this.isPaused = false;
+            } else if (!this.isPaused && this.lastActiveTime) {
+                // Continue active typing - update accumulated time
+                this.activeTypingTime += timestamp - this.lastActiveTime;
+                this.lastActiveTime = timestamp;
             }
             
             // Record keystroke event
@@ -118,11 +166,10 @@ function typingStats() {
             // Update counters
             this.keyStrokes++;
             
-            if (event.key === ' ') this.spaceDowns++;
-            if (event.shiftKey && event.key === 'Shift') this.shiftCount++;
-            if (event.ctrlKey && event.key === 'Control') this.ctrlCount++;
-            if (event.altKey && event.key === 'Alt') this.altCount++;
-            if (event.metaKey && (event.key === 'Meta' || event.key === 'Cmd')) this.metaCount++;
+            // Track for peak WPM calculation (keep last 10 seconds of keystrokes)
+            this.recentKeystrokes.push(timestamp);
+            const tenSecondsAgo = timestamp - 10000;
+            this.recentKeystrokes = this.recentKeystrokes.filter(t => t > tenSecondsAgo);
             
             // Track digraphs
             this.updateDigraphs(event.key, timestamp);
@@ -190,16 +237,22 @@ function typingStats() {
             if (!this.sessionStartTime) return;
             
             const now = this.getCurrentTime();
-            this.elapsed = (now - this.sessionStartTime) / 1000; // seconds
+            this.elapsed = (now - this.sessionStartTime) / 1000; // total session time
+            
+            // Calculate active typing time
+            let currentActiveTime = this.activeTypingTime;
+            if (!this.isPaused && this.lastActiveTime) {
+                currentActiveTime += now - this.lastActiveTime;
+            }
+            const activeMinutes = (currentActiveTime / 1000) / 60;
             
             // Word count
             this.words = this.textContent.trim().split(/\s+/).filter(word => word.length > 0).length;
             
-            // WPM calculations
-            const minutes = this.elapsed / 60;
-            if (minutes > 0) {
-                this.grossWPM = (this.keyStrokes / 5) / minutes;
-                this.netWPM = this.words / minutes;
+            // WPM calculations based on active typing time
+            if (activeMinutes > 0) {
+                this.grossWPM = (this.keyStrokes / 5) / activeMinutes;
+                this.netWPM = this.words / activeMinutes;
             }
             
             // KSPC (Keys per Character)
@@ -228,6 +281,30 @@ function typingStats() {
             }
             this.avgFlight = flightTimes.length > 0 ? 
                 flightTimes.reduce((sum, t) => sum + t, 0) / flightTimes.length : 0;
+            
+            // Rhythm consistency (coefficient of variation of flight times)
+            if (flightTimes.length > 1) {
+                const mean = this.avgFlight;
+                const variance = flightTimes.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / flightTimes.length;
+                const stdDev = Math.sqrt(variance);
+                this.rhythmConsistency = mean > 0 ? (1 - (stdDev / mean)) * 100 : 0; // percentage, higher = more consistent
+            }
+            
+            // Track current WPM for peak calculation
+            this.wpmHistory.push({
+                timestamp: now,
+                grossWPM: this.grossWPM
+            });
+            
+            // Keep only last 60 seconds of WPM history
+            const sixtySecondsAgo = now - 60000;
+            this.wpmHistory = this.wpmHistory.filter(entry => entry.timestamp > sixtySecondsAgo);
+            
+            // Peak WPM: highest grossWPM achieved, but only after we have meaningful data
+            // Wait for at least 10 keystrokes and 5 seconds of active typing
+            if (this.keyStrokes >= 10 && activeMinutes >= (5/60) && this.grossWPM > this.peakWPM) {
+                this.peakWPM = this.grossWPM;
+            }
         },
         
         handlePaste(event) {
@@ -243,7 +320,9 @@ function typingStats() {
                     version: '2025-07-18.1',
                     sessionStart: new Date(Date.now() - this.elapsed * 1000).toISOString(),
                     sessionEnd: new Date().toISOString(),
-                    duration: this.elapsed,
+                    totalDuration: this.elapsed,
+                    activeTypingTime: this.activeTypingTimeSeconds,
+                    pauseThreshold: this.pauseThreshold,
                     highResTimer: this.highResTimer
                 },
                 metrics: {
@@ -255,13 +334,8 @@ function typingStats() {
                     errorRate: this.errRate,
                     avgDwell: this.avgDwell,
                     avgFlight: this.avgFlight,
-                    spaceDowns: this.spaceDowns,
-                    modifierCounts: {
-                        shift: this.shiftCount,
-                        ctrl: this.ctrlCount,
-                        alt: this.altCount,
-                        meta: this.metaCount
-                    }
+                    rhythmConsistency: this.rhythmConsistency,
+                    peakWPM: this.peakWPM
                 },
                 events: this.events,
                 segments: this.segments,
@@ -290,6 +364,11 @@ function typingStats() {
             this.digraphs = {};
             this.sessionStartTime = null;
             this.lastKeyTime = null;
+            this.activeTypingTime = 0;
+            this.lastActiveTime = null;
+            this.isPaused = false;
+            this.recentKeystrokes = [];
+            this.wpmHistory = [];
             
             // Reset metrics
             this.elapsed = 0;
@@ -301,11 +380,8 @@ function typingStats() {
             this.errRate = 0;
             this.avgDwell = 0;
             this.avgFlight = 0;
-            this.spaceDowns = 0;
-            this.shiftCount = 0;
-            this.ctrlCount = 0;
-            this.altCount = 0;
-            this.metaCount = 0;
+            this.rhythmConsistency = 0;
+            this.peakWPM = 0;
             
             this.$nextTick(() => {
                 this.$refs.textInput.focus();
