@@ -102,16 +102,16 @@ test.describe('Typing Stats App', () => {
 
   test('metrics display with correct labels', async ({ page }) => {
     const expectedMetrics = [
-      'Session Time',
       'Active Time',
-      'Keystrokes', 
+      'Keystrokes',
       'Words',
-      'Gross WPM',
-      'Net WPM',
+      'Avg WPM (Gross)',
+      'Avg WPM (Net)',
+      'Running WPM',
       'KSPC',
       'Error Rate',
-      'Avg Dwell',
-      'Avg Flight',
+      'Running Dwell',
+      'Running Flight',
       'Rhythm',
       'Peak WPM'
     ];
@@ -165,7 +165,7 @@ test.describe('Typing Stats App', () => {
 
   test('version number is displayed', async ({ page }) => {
     await expect(page.locator('.version')).toBeVisible();
-    await expect(page.locator('.version')).toContainText('v2025-07-18.1');
+    await expect(page.locator('.version')).toContainText('v2025-07-18.5');
   });
 
   test('reset session clears data', async ({ page }) => {
