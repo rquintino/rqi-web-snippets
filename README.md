@@ -18,9 +18,14 @@ A collection of standalone web utilities and applications, each designed to be s
 
 All assets and utilities in this repository are published and available online via GitHub Pages.
 
-## GitHub Copilot Integration
+## 🤖 AI Coding Assistants Integration
 
-This repository includes special instructions for GitHub Copilot in the `.github/copilot-instructions.md` file. These instructions help the AI coding assistant understand the repository structure, coding conventions, and development guidelines when contributing to this project.
+This repository is optimized for AI coding assistants:
+
+- **🐙 GitHub Copilot** - Instructions in `.github/copilot-instructions.md`
+- **🧠 Claude Code** - Instructions in `CLAUDE.md`
+
+These instructions help AI assistants understand the repository structure, coding conventions, and development guidelines.
 
 ## Features
 
@@ -30,7 +35,7 @@ This repository includes special instructions for GitHub Copilot in the `.github
 - **Automated Testing** - Playwright tests for each application
 - **Privacy-Focused** - No data collection, only local storage when needed
 - **Mobile Friendly** - Responsive design for all devices
-- **GitHub Copilot Ready** - Includes AI instructions for GitHub Copilot coding agent
+- **🤖 AI Assistant Ready** - Optimized for GitHub Copilot 🐙 and Claude Code 🧠
 
 ## Available Utilities
 
@@ -61,4 +66,4 @@ npm run test:debug   # Run tests in debug mode
 
 ## Author
 
-Created by [RQuintino](https://www.linkedin.com/in/rquintino/) with the help of 🤖 Github Copilot 😉
+Created by [RQuintino](https://www.linkedin.com/in/rquintino/) with the help of 🤖 AI assistants: GitHub Copilot 🐙 & Claude Code 🧠
