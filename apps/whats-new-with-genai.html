@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="page-stored-key" content="whats-new-with-genai-2025-key-123abc">
+    <title>What's New with GenAI - Traditional vs Generative AI</title>
+    <link rel="stylesheet" href="whats-new-with-genai.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+<!-- 
+Functional Requirements:
+- Interactive comparison between Traditional AI and Generative AI
+- Network background animations with configurable colors
+- Traditional AI section showing one model per specific task
+- Generative AI section showing one foundation model for multiple tasks
+- Foundation model training visualization with progress animation
+- Company logos and model information display
+- Hover effects and section highlighting
+- Responsive grid layout
+- Modern UI with gradients and animations
+- Dark theme optimized design
+Version: v2025-07-19.3
+-->
+
+<div x-data="whatsNewWithGenai()" class="app-container" :class="{ 'dark-mode': darkMode, 'fullscreen': fullscreen }">
+    <!-- Top Controls -->
+    <div class="controls">
+        <button @click="goHome()" class="home-btn" title="Home">🏠</button>
+        <div class="control-group">
+            <button @click="toggleDarkMode()" class="mode-btn" :title="darkMode ? 'Light Mode' : 'Dark Mode'">
+                <span x-show="darkMode">☀️</span>
+                <span x-show="!darkMode">🌙</span>
+            </button>
+            <button @click="toggleFullscreen()" class="fullscreen-btn" :title="fullscreen ? 'Exit Fullscreen' : 'Fullscreen'">
+                <span x-show="fullscreen">⊗</span>
+                <span x-show="!fullscreen">⊡</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1 class="main-title">What's New with GenAI?</h1>
+        <p class="subtitle">Traditional AI vs Generative AI</p>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="main-grid">
+        <!-- Traditional AI Section -->
+        <div class="traditional-section" 
+             :class="{ 'active': activeSection === 'traditional' }"
+             @mouseenter="activeSection = 'traditional'"
+             @mouseleave="activeSection = null">
+            
+            <div class="section-header">
+                <i data-lucide="cpu" class="section-icon traditional-icon"></i>
+                <h2 class="section-title traditional-title">
+                    Traditional AI 
+                    <span class="period">(2000-2020)</span>
+                </h2>
+            </div>
+            
+            <h3 class="section-subtitle">One Model Per Very Specific Task</h3>
+            
+            <div class="tasks-list">
+                <template x-for="(task, index) in traditionalTasks" :key="index">
+                    <div class="task-item">
+                        <span class="task-emoji" x-text="task.emoji"></span>
+                        <div class="task-content">
+                            <span x-text="task.name"></span>
+                            <div class="status-indicator"></div>
+                        </div>
+                        <div class="task-model" :style="{ background: task.gradient }">
+                            <canvas class="network-bg" :data-color="task.color"></canvas>
+                            <i data-lucide="bot" class="model-icon"></i>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Generative AI Section -->
+        <div class="genai-section" 
+             :class="{ 'active': activeSection === 'genai' }"
+             @mouseenter="activeSection = 'genai'"
+             @mouseleave="activeSection = null">
+            
+            <div class="section-header">
+                <i data-lucide="zap" class="section-icon genai-icon"></i>
+                <h2 class="section-title genai-title">
+                    Generative AI 
+                    <span class="period">(2022+)</span>
+                </h2>
+            </div>
+            
+            <h3 class="section-subtitle">One Foundation Model, Multiple Tasks</h3>
+            
+            <!-- Foundation Model Visualization -->
+            <div class="foundation-model-container">
+                <div class="foundation-task-model" style="background: linear-gradient(to right, #22c55e, #3b82f6)">
+                    <canvas class="network-bg main-network" data-color="blue"></canvas>
+                    <i data-lucide="bot" class="foundation-model-icon"></i>
+                </div>
+                <span class="foundation-label">Foundation Model</span>
+            </div>
+
+            <!-- Capabilities Grid -->
+            <div class="capabilities-grid">
+                <template x-for="(capability, index) in genaiCapabilities" :key="index">
+                    <div class="capability-item">
+                        <span class="capability-emoji" x-text="capability.icon"></span>
+                        <span class="capability-name" x-text="capability.name"></span>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Benefits Box -->
+            <div class="benefits-box">
+                <template x-for="(benefit, index) in genaibenefits" :key="index">
+                    <div class="benefit-item">
+                        <span class="check-icon">✓</span>
+                        <span class="benefit-text" x-text="benefit"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Version -->
+    <div class="version">v2025-07-19.3</div>
+</div>
+
+<script src="whats-new-with-genai.js"></script>
+<script src="shared/footer.js"></script>
+</body>
+</html>
