@@ -97,17 +97,17 @@ test.describe('What\'s New with GenAI', () => {
     }
   });
 
-  test('benefits box is displayed', async ({ page }) => {
+  test('benefits grid is displayed', async ({ page }) => {
     await page.goto('file:///' + __dirname + '/whats-new-with-genai.html');
     await page.waitForLoadState('networkidle');
     
-    // Check benefits
-    const benefitItems = page.locator('.benefit-item');
-    await expect(benefitItems).toHaveCount(6);
+    // Check benefits grid
+    const benefitCards = page.locator('.benefit-card');
+    await expect(benefitCards).toHaveCount(6);
     
-    // Verify some benefits
-    await expect(page.getByText('Multi-task capability')).toBeVisible();
-    await expect(page.getByText('Natural language instructions')).toBeVisible();
+    // Verify some benefits with new text
+    await expect(page.getByText('One model, countless tasks')).toBeVisible();
+    await expect(page.getByText('Talk to it in plain English')).toBeVisible();
   });
 
 });
