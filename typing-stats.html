@@ -45,8 +45,8 @@
 
         <!-- Session Controls -->
         <div class="session-controls">
-            <button class="control-btn" @click="resetSession()" title="Clear all data and start fresh">
-                🔄 Reset Session
+            <button class="control-btn" @click="resetSession()" title="Clear all data and start fresh - or press Tab">
+                🔄 Reset Session (Tab)
             </button>
             <button class="control-btn" @click="downloadSession()" title="Export session data as JSON" :disabled="events.length === 0">
                 📥 Download JSON
@@ -208,7 +208,7 @@
     <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
 
     <!-- Version -->
-    <div class="version">v2025-07-18.5</div>
+    <div class="version">v2025-07-19.1</div>
 
     <script src="shared/shared.js"></script>
     <script src="typing-stats.js"></script>

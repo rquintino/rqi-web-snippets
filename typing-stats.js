@@ -18,7 +18,7 @@ function typingStats() {
         textContent: '',
         events: [],
         segments: [],
-        digraphs: {},
+        digraphs: new Map(),
         
         // Timing
         sessionStartTime: null,
@@ -109,6 +109,10 @@ function typingStats() {
         recentKeystrokes: [], // for peak WPM calculation
         wpmHistory: [], // track WPM over time for peak calculation
         
+        // Performance optimization
+        metricsUpdateThrottle: 100, // ms between metric updates
+        lastMetricsUpdate: 0,
+        
         // Computed properties
         get activeTypingTimeSeconds() {
             let currentActiveTime = this.activeTypingTime;
@@ -120,48 +124,43 @@ function typingStats() {
         },
         
         get topFrequentDigraphs() {
-            return Object.entries(this.digraphs)
-                .map(([pair, data]) => ({
-                    pair: pair.replace(' ', '␣'),
-                    count: data.count,
-                    avgLatency: data.count > 0 ? data.totalLatency / data.count : 0
-                }))
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 10);
+            return this.getTopDigraphs('frequency');
         },
         
         get topSlowestDigraphs() {
-            return Object.entries(this.digraphs)
-                .filter(([_, data]) => data.count >= 3)
-                .map(([pair, data]) => ({
-                    pair: pair.replace(' ', '␣'),
-                    count: data.count,
-                    avgLatency: data.count > 0 ? data.totalLatency / data.count : 0
-                }))
-                .sort((a, b) => b.avgLatency - a.avgLatency)
-                .slice(0, 10);
+            return this.getTopDigraphs('latency');
         },
         
         init() {
-            // Check for high-resolution timer support
+            this.initializeTimerSupport();
+            this.initializePreferences();
+            this.initializeUI();
+            this.startMetricsUpdateLoop();
+        },
+        
+        initializeTimerSupport() {
             this.highResTimer = typeof performance !== 'undefined' && 
                                typeof performance.now === 'function';
-            
-            // Load preferences
+        },
+        
+        initializePreferences() {
             this.loadPreferences().then(() => {
                 this.updateTheme();
             }).catch(err => console.warn('Failed to load preferences:', err));
-            
-            // Focus text input
+        },
+        
+        initializeUI() {
             this.$nextTick(() => {
                 this.$refs.textInput.focus();
             });
-            
-            // Update metrics every 100ms
+        },
+        
+        
+        startMetricsUpdateLoop() {
             setInterval(() => {
                 this.updateRealTimeMetrics();
                 this.checkForPause();
-            }, 100);
+            }, this.metricsUpdateThrottle);
         },
         
         checkForPause() {
@@ -194,209 +193,291 @@ function typingStats() {
         },
         
         handleKeyDown(event) {
+            // Handle Tab key for reset
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                this.resetSession();
+                return;
+            }
+            
             const timestamp = this.getCurrentTime();
             
-            // Initialize session on first keystroke
-            if (!this.sessionStartTime) {
-                this.sessionStartTime = timestamp;
-                this.lastActiveTime = timestamp;
-            }
+            this.initializeSessionIfNeeded(timestamp);
+            this.updateActiveTypingTimeTracking(timestamp);
             
-            // Update active typing time tracking
-            if (this.isPaused && this.lastKeyTime) {
-                // Resuming from pause - start new active segment
-                this.lastActiveTime = timestamp;
-                this.isPaused = false;
-            } else if (!this.isPaused && this.lastActiveTime) {
-                // Continue active typing - update accumulated time
-                this.activeTypingTime += timestamp - this.lastActiveTime;
-                this.lastActiveTime = timestamp;
-            }
-            
-            // Record keystroke event
-            const keyEvent = {
-                type: 'keydown',
-                key: event.key,
-                code: event.code,
-                timestamp: timestamp,
-                ctrlKey: event.ctrlKey,
-                shiftKey: event.shiftKey,
-                altKey: event.altKey,
-                metaKey: event.metaKey
-            };
-            
+            const keyEvent = this.createKeyEvent('keydown', event, timestamp);
             this.events.push(keyEvent);
             
-            // Update counters
             this.keyStrokes++;
-            
-            // Track for peak WPM calculation (keep last 10 seconds of keystrokes)
-            this.recentKeystrokes.push(timestamp);
-            const tenSecondsAgo = timestamp - 10000;
-            this.recentKeystrokes = this.recentKeystrokes.filter(t => t > tenSecondsAgo);
-            
-            // Track digraphs
+            this.trackRecentKeystroke(timestamp);
             this.updateDigraphs(event.key, timestamp);
             
             this.lastKeyTime = timestamp;
         },
         
+        initializeSessionIfNeeded(timestamp) {
+            if (!this.sessionStartTime) {
+                this.sessionStartTime = timestamp;
+                this.lastActiveTime = timestamp;
+            }
+        },
+        
+        updateActiveTypingTimeTracking(timestamp) {
+            if (this.isPaused && this.lastKeyTime) {
+                this.lastActiveTime = timestamp;
+                this.isPaused = false;
+            } else if (!this.isPaused && this.lastActiveTime) {
+                this.activeTypingTime += timestamp - this.lastActiveTime;
+                this.lastActiveTime = timestamp;
+            }
+        },
+        
+        createKeyEvent(type, event, timestamp) {
+            return {
+                type,
+                key: event.key,
+                code: event.code,
+                timestamp,
+                ctrlKey: event.ctrlKey,
+                shiftKey: event.shiftKey,
+                altKey: event.altKey,
+                metaKey: event.metaKey
+            };
+        },
+        
+        trackRecentKeystroke(timestamp) {
+            this.recentKeystrokes.push(timestamp);
+            const tenSecondsAgo = timestamp - 10000;
+            this.recentKeystrokes = this.recentKeystrokes.filter(t => t > tenSecondsAgo);
+        },
+        
         handleKeyUp(event) {
             const timestamp = this.getCurrentTime();
             
-            // Find corresponding keydown event
-            const keydownEvent = [...this.events].reverse().find(e => 
-                e.type === 'keydown' && 
-                e.key === event.key && 
-                !e.keyupTimestamp
-            );
+            const keydownEvent = this.findCorrespondingKeydownEvent(event.key, timestamp);
             
             if (keydownEvent) {
-                keydownEvent.keyupTimestamp = timestamp;
-                keydownEvent.dwellTime = timestamp - keydownEvent.timestamp;
-                
-                // Create segment for analysis
-                this.segments.push({
-                    key: event.key,
-                    downTime: keydownEvent.timestamp,
-                    upTime: timestamp,
-                    dwellTime: keydownEvent.dwellTime
-                });
+                this.processDwellTime(keydownEvent, timestamp);
+                this.createTypingSegment(event.key, keydownEvent, timestamp);
             }
             
-            // Record keyup event
-            this.events.push({
-                type: 'keyup',
-                key: event.key,
-                code: event.code,
-                timestamp: timestamp
+            this.events.push(this.createKeyEvent('keyup', event, timestamp));
+        },
+        
+        findCorrespondingKeydownEvent(key, timestamp) {
+            return [...this.events].reverse().find(e => 
+                e.type === 'keydown' && 
+                e.key === key && 
+                !e.keyupTimestamp
+            );
+        },
+        
+        processDwellTime(keydownEvent, timestamp) {
+            keydownEvent.keyupTimestamp = timestamp;
+            keydownEvent.dwellTime = timestamp - keydownEvent.timestamp;
+        },
+        
+        createTypingSegment(key, keydownEvent, timestamp) {
+            this.segments.push({
+                key,
+                downTime: keydownEvent.timestamp,
+                upTime: timestamp,
+                dwellTime: keydownEvent.dwellTime
             });
         },
         
         updateDigraphs(currentKey, timestamp) {
             if (this.events.length < 2) return;
             
-            // Find the previous keydown event
-            const previousKeydown = [...this.events].reverse().find(e => 
-                e.type === 'keydown' && e.timestamp < timestamp
-            );
+            const previousKeydown = this.findPreviousKeydownEvent(timestamp);
             
             if (previousKeydown) {
                 const digraph = previousKeydown.key + currentKey;
                 const latency = timestamp - previousKeydown.timestamp;
-                
-                if (!this.digraphs[digraph]) {
-                    this.digraphs[digraph] = {
-                        count: 0,
-                        totalLatency: 0
-                    };
-                }
-                
-                this.digraphs[digraph].count++;
-                this.digraphs[digraph].totalLatency += latency;
+                this.addDigraphData(digraph, latency);
             }
+        },
+        
+        findPreviousKeydownEvent(timestamp) {
+            return [...this.events].reverse().find(e => 
+                e.type === 'keydown' && e.timestamp < timestamp
+            );
+        },
+        
+        addDigraphData(digraph, latency) {
+            if (!this.digraphs.has(digraph)) {
+                this.digraphs.set(digraph, {
+                    count: 0,
+                    totalLatency: 0
+                });
+            }
+            
+            const data = this.digraphs.get(digraph);
+            data.count++;
+            data.totalLatency += latency;
         },
         
         updateRealTimeMetrics() {
             if (!this.sessionStartTime) return;
             
             const now = this.getCurrentTime();
-            // Determine if warm-up period after resume is over
+            
+            // Throttle updates for performance
+            if (now - this.lastMetricsUpdate < this.metricsUpdateThrottle) return;
+            this.lastMetricsUpdate = now;
+            
+            const warmUpOver = this.checkWarmUpPeriod(now);
+            const activeMinutes = this.calculateActiveTypingMinutes(now);
+            
+            this.updateBasicMetrics(activeMinutes);
+            this.updateRunningMetrics(now, warmUpOver);
+            this.updatePeakWPM(activeMinutes);
+            this.cleanupHistoryData(now);
+        },
+        
+        checkWarmUpPeriod(now) {
             const warmUpOver = !this.resumeStartTime || (now - this.resumeStartTime >= 10000);
             if (this.resumeStartTime && warmUpOver) {
                 this.resumeStartTime = null;
             }
-            
-            // Calculate active typing time
+            return warmUpOver;
+        },
+        
+        calculateActiveTypingMinutes(now) {
             let currentActiveTime = this.activeTypingTime;
             if (!this.isPaused && this.lastActiveTime) {
                 currentActiveTime += now - this.lastActiveTime;
             }
-            const activeMinutes = (currentActiveTime / 1000) / 60;
-            
-            // Word count
-            this.words = this.textContent.trim().split(/\s+/).filter(word => word.length > 0).length;
-            
-            // WPM calculations based on active typing time
+            return (currentActiveTime / 1000) / 60;
+        },
+        
+        updateBasicMetrics(activeMinutes) {
+            this.words = this.calculateWordCount();
+            this.updateWPMMetrics(activeMinutes);
+            this.updateKSPCMetric();
+            this.updateErrorRate();
+        },
+        
+        calculateWordCount() {
+            return this.textContent.trim().split(/\s+/).filter(word => word.length > 0).length;
+        },
+        
+        updateWPMMetrics(activeMinutes) {
             if (activeMinutes > 0) {
                 this.grossWPM = (this.keyStrokes / 5) / activeMinutes;
                 this.netWPM = this.words / activeMinutes;
             }
-            
-            // Running WPM: update only when active and warm-up over
-            if (!this.isPaused && warmUpOver) {
-                if (this.recentKeystrokes.length > 0) {
-                    const timeWindowMs = now - this.recentKeystrokes[0];
-                    const timeWindowMinutes = timeWindowMs / 60000;
-                    this.runningWPM = timeWindowMinutes > 0
-                        ? (this.recentKeystrokes.length / 5) / timeWindowMinutes
-                        : 0;
-                }
-            }
-            
-            // KSPC (Keys per Character)
+        },
+        
+        updateKSPCMetric() {
             const chars = this.textContent.length;
             this.kspc = chars > 0 ? this.keyStrokes / chars : 0;
-            
-            // Error rate (backspace/delete ratio)
+        },
+        
+        updateErrorRate() {
             const errorKeys = this.events.filter(e => 
-                e.type === 'keydown' && (e.key === 'Backspace' || e.key === 'Delete')
+                e.type === 'keydown' && this.isErrorKey(e.key)
             ).length;
             this.errRate = this.keyStrokes > 0 ? errorKeys / this.keyStrokes : 0;
-
-            // Running dwell time (last 10 seconds), update only when active and warm-up over
+        },
+        
+        isErrorKey(key) {
+            return key === 'Backspace' || key === 'Delete';
+        },
+        
+        updateRunningMetrics(now, warmUpOver) {
             if (!this.isPaused && warmUpOver) {
-                const windowStart = now - 10000;
-                const dwellWindow = this.segments
-                    .filter(s => s.upTime >= windowStart && s.dwellTime !== undefined)
-                    .map(s => s.dwellTime);
-                this.avgDwell = dwellWindow.length > 0
-                    ? dwellWindow.reduce((sum, t) => sum + t, 0) / dwellWindow.length
-                    : this.avgDwell;
+                this.updateRunningWPM(now);
+                this.updateRunningTiming(now);
             }
-
-            // Running flight time (last 10 seconds), update only when active and warm-up over
-            if (!this.isPaused && warmUpOver) {
-                const windowStart = now - 10000;
-                const flightWindow = [];
-                for (let i = 1; i < this.events.length; i++) {
-                    const current = this.events[i];
-                    const previous = this.events[i - 1];
-                    if (
-                        current.type === 'keydown' &&
-                        previous.type === 'keydown' &&
-                        current.timestamp >= windowStart
-                    ) {
-                        flightWindow.push(current.timestamp - previous.timestamp);
-                    }
-                }
-                if (flightWindow.length > 0) {
-                    this.avgFlight = flightWindow.reduce((sum, t) => sum + t, 0) / flightWindow.length;
-                }
-                // Rhythm consistency (coefficient of variation of flight times)
-                if (flightWindow.length > 1) {
-                    const mean = this.avgFlight;
-                    const variance = flightWindow.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / flightWindow.length;
-                    const stdDev = Math.sqrt(variance);
-                    this.rhythmConsistency = mean > 0 ? (1 - (stdDev / mean)) * 100 : this.rhythmConsistency;
-                }
+        },
+        
+        updateRunningWPM(now) {
+            if (this.recentKeystrokes.length > 0) {
+                const timeWindowMs = now - this.recentKeystrokes[0];
+                const timeWindowMinutes = timeWindowMs / 60000;
+                this.runningWPM = timeWindowMinutes > 0
+                    ? (this.recentKeystrokes.length / 5) / timeWindowMinutes
+                    : 0;
             }
+        },
+        
+        updateRunningTiming(now) {
+            const windowStart = now - 10000;
             
-            // Track current WPM for peak calculation
+            this.updateRunningDwell(windowStart);
+            this.updateRunningFlight(windowStart);
+        },
+        
+        updateRunningDwell(windowStart) {
+            const dwellWindow = this.segments
+                .filter(s => s.upTime >= windowStart && s.dwellTime !== undefined)
+                .map(s => s.dwellTime);
+            
+            if (dwellWindow.length > 0) {
+                this.avgDwell = this.calculateMean(dwellWindow);
+            }
+        },
+        
+        updateRunningFlight(windowStart) {
+            const flightWindow = this.calculateFlightTimes(windowStart);
+            
+            if (flightWindow.length > 0) {
+                this.avgFlight = this.calculateMean(flightWindow);
+                this.updateRhythmConsistency(flightWindow);
+            }
+        },
+        
+        calculateFlightTimes(windowStart) {
+            const flightWindow = [];
+            for (let i = 1; i < this.events.length; i++) {
+                const current = this.events[i];
+                const previous = this.events[i - 1];
+                if (this.isValidFlightPair(current, previous, windowStart)) {
+                    flightWindow.push(current.timestamp - previous.timestamp);
+                }
+            }
+            return flightWindow;
+        },
+        
+        isValidFlightPair(current, previous, windowStart) {
+            return current.type === 'keydown' &&
+                   previous.type === 'keydown' &&
+                   current.timestamp >= windowStart;
+        },
+        
+        updateRhythmConsistency(flightWindow) {
+            if (flightWindow.length > 1) {
+                const mean = this.avgFlight;
+                const variance = this.calculateVariance(flightWindow, mean);
+                const stdDev = Math.sqrt(variance);
+                this.rhythmConsistency = mean > 0 ? (1 - (stdDev / mean)) * 100 : this.rhythmConsistency;
+            }
+        },
+        
+        calculateMean(values) {
+            return values.reduce((sum, val) => sum + val, 0) / values.length;
+        },
+        
+        calculateVariance(values, mean) {
+            return values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+        },
+        
+        updatePeakWPM(activeMinutes) {
             this.wpmHistory.push({
-                timestamp: now,
+                timestamp: this.getCurrentTime(),
                 grossWPM: this.grossWPM
             });
             
-            // Keep only last 60 seconds of WPM history
-            const sixtySecondsAgo = now - 60000;
-            this.wpmHistory = this.wpmHistory.filter(entry => entry.timestamp > sixtySecondsAgo);
-            
-            // Peak WPM: highest runningWPM achieved, but only after we have meaningful data
-            // Wait for at least 10 keystrokes and 5 seconds of active typing
-            if (this.keyStrokes >= 10 && activeMinutes >= (5/60) && this.runningWPM > this.peakWPM) {
+            if (this.keyStrokes >= 10 && activeMinutes >= (1/60) && this.runningWPM > this.peakWPM) {
                 this.peakWPM = this.runningWPM;
             }
+        },
+        
+        
+        cleanupHistoryData(now) {
+            const sixtySecondsAgo = now - 60000;
+            this.wpmHistory = this.wpmHistory.filter(entry => entry.timestamp > sixtySecondsAgo);
         },
         
         handlePaste(event) {
@@ -432,7 +513,7 @@ function typingStats() {
                 },
                 events: this.events,
                 segments: this.segments,
-                digraphs: this.digraphs,
+                digraphs: Object.fromEntries(this.digraphs),
                 textContent: this.textContent
             };
             
@@ -451,19 +532,34 @@ function typingStats() {
         },
         
         resetSession() {
+            this.resetData();
+            this.resetTiming();
+            this.resetMetrics();
+            
+            this.$nextTick(() => {
+                this.$refs.textInput.focus();
+            });
+        },
+        
+        resetData() {
             this.textContent = '';
             this.events = [];
             this.segments = [];
-            this.digraphs = {};
+            this.digraphs = new Map();
+            this.recentKeystrokes = [];
+            this.wpmHistory = [];
+        },
+        
+        resetTiming() {
             this.sessionStartTime = null;
             this.lastKeyTime = null;
             this.activeTypingTime = 0;
             this.lastActiveTime = null;
             this.isPaused = false;
-            this.recentKeystrokes = [];
-            this.wpmHistory = [];
-            
-            // Reset metrics
+            this.resumeStartTime = null;
+        },
+        
+        resetMetrics() {
             this.elapsed = 0;
             this.keyStrokes = 0;
             this.words = 0;
@@ -476,10 +572,6 @@ function typingStats() {
             this.avgFlight = 0;
             this.rhythmConsistency = 0;
             this.peakWPM = 0;
-            
-            this.$nextTick(() => {
-                this.$refs.textInput.focus();
-            });
         },
         
         formatTime(seconds) {
@@ -502,8 +594,8 @@ function typingStats() {
             this.tooltip = {
                 show: true,
                 text: formattedText,
-                x: event.clientX + 10,
-                y: event.clientY - 10
+                x: event.pageX + 10,
+                y: event.pageY - 10
             };
         },
         
@@ -588,41 +680,80 @@ function typingStats() {
             
             const { min, max } = thresholds[metric];
             
-            if (metric === 'runningWPM' || metric === 'grossWPM' || metric === 'netWPM' || metric === 'peakWPM') {
-                // Higher is better for WPM
-                if (value >= max * 1.1) return '#00ff00'; // Strong green (10% above max)
-                if (value >= min && value <= max) return '#90EE90'; // Light green (in range)
-                if (value >= min * 0.8) return '#FFD700'; // Yellow (within 20% of min)
-                return '#FF4500'; // Red (below threshold)
-            } else if (metric === 'runningDwell' || metric === 'runningFlight') {
-                // Lower is better for dwell/flight times
-                if (min === 0) { // "less than" ranges (e.g., <200 for Beginner)
-                    if (value <= max * 0.7) return '#00ff00'; // Strong green (30% below max)
-                    if (value <= max) return '#90EE90'; // Light green (at or below max)
-                    if (value <= max * 1.3) return '#FFD700'; // Yellow (within 30% above max)
-                    return '#FF4500'; // Red (well above threshold)
-                } else { // regular ranges (e.g., 130-150 for Novice)
-                    if (value < min) return '#00ff00'; // Strong green (below min = excellent)
-                    if (value >= min && value <= max) return '#90EE90'; // Light green (in range)
-                    if (value <= max * 1.3) return '#FFD700'; // Yellow (within 30% above max)
-                    return '#FF4500'; // Red (well above range)
-                }
+            if (this.isWPMMetric(metric)) {
+                return this.getWPMColor(value, min, max);
+            } else if (this.isTimingMetric(metric)) {
+                return this.getTimingColor(value, min, max);
             } else if (metric === 'kspc') {
-                // Lower is better for KSPC (closer to 1.000 is ideal)
-                if (min === max) { // Exact value for Expert/Elite (1.000 exactly)
-                    if (Math.abs(value - min) <= 0.001) return '#00ff00'; // Strong green (exact)
-                    if (Math.abs(value - min) <= 0.01) return '#90EE90'; // Light green (very close)
-                    if (Math.abs(value - min) <= 0.05) return '#FFD700'; // Yellow (close)
-                    return '#FF4500'; // Red (far from ideal)
-                } else {
-                    if (value < min) return '#00ff00'; // Strong green (below min = excellent)
-                    if (value >= min && value <= max) return '#90EE90'; // Light green (in range)
-                    if (value <= max * 1.2) return '#FFD700'; // Yellow (within 20% above max)
-                    return '#FF4500'; // Red (well above range)
-                }
+                return this.getKSPCColor(value, min, max);
             }
             
             return '';
+        },
+        
+        isWPMMetric(metric) {
+            return ['runningWPM', 'grossWPM', 'netWPM', 'peakWPM'].includes(metric);
+        },
+        
+        isTimingMetric(metric) {
+            return ['runningDwell', 'runningFlight'].includes(metric);
+        },
+        
+        getWPMColor(value, min, max) {
+            if (value >= max * 1.1) return '#00ff00';
+            if (value >= min && value <= max) return '#90EE90';
+            if (value >= min * 0.8) return '#FFD700';
+            return '#FF4500';
+        },
+        
+        getTimingColor(value, min, max) {
+            if (min === 0) {
+                if (value <= max * 0.7) return '#00ff00';
+                if (value <= max) return '#90EE90';
+                if (value <= max * 1.3) return '#FFD700';
+                return '#FF4500';
+            } else {
+                if (value < min) return '#00ff00';
+                if (value >= min && value <= max) return '#90EE90';
+                if (value <= max * 1.3) return '#FFD700';
+                return '#FF4500';
+            }
+        },
+        
+        getKSPCColor(value, min, max) {
+            if (min === max) {
+                if (Math.abs(value - min) <= 0.001) return '#00ff00';
+                if (Math.abs(value - min) <= 0.01) return '#90EE90';
+                if (Math.abs(value - min) <= 0.05) return '#FFD700';
+                return '#FF4500';
+            } else {
+                if (value < min) return '#00ff00';
+                if (value >= min && value <= max) return '#90EE90';
+                if (value <= max * 1.2) return '#FFD700';
+                return '#FF4500';
+            }
+        },
+        
+        getTopDigraphs(sortBy) {
+            const digraphArray = Array.from(this.digraphs.entries())
+                .map(([pair, data]) => ({
+                    pair: pair.replace(' ', '␣'),
+                    count: data.count,
+                    avgLatency: data.count > 0 ? data.totalLatency / data.count : 0
+                }));
+            
+            if (sortBy === 'frequency') {
+                return digraphArray
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 10);
+            } else if (sortBy === 'latency') {
+                return digraphArray
+                    .filter(d => d.count >= 3)
+                    .sort((a, b) => b.avgLatency - a.avgLatency)
+                    .slice(0, 10);
+            }
+            
+            return [];
         }
     };
 }

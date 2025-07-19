@@ -165,7 +165,7 @@ test.describe('Typing Stats App', () => {
 
   test('version number is displayed', async ({ page }) => {
     await expect(page.locator('.version')).toBeVisible();
-    await expect(page.locator('.version')).toContainText('v2025-07-18.5');
+    await expect(page.locator('.version')).toContainText('v2025-07-19.1');
   });
 
   test('reset session clears data', async ({ page }) => {
