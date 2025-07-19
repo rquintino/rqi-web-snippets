@@ -39,11 +39,30 @@ These instructions help AI assistants understand the repository structure, codin
 
 ## Available Utilities
 
-- **Typing Speed Test** - Measure and improve your typing speed with real-time WPM calculation and word-by-word performance visualization
-- **Typing Stats** - Advanced real-time typing analytics with deep insights into typing behavior, digraph analysis, dwell/flight times, and comprehensive metrics tracking
-- **Markdown Viewer** - Three-pane markdown editor with live preview, table of contents, drag & drop file support, and HTML export
-- **Foundation Model Training** - Interactive visualization of AI model training pipeline with animated GPU scaling and training simulation
-- **How Does GenAI Learn?** - Interactive visualization demonstrating how language models learn through masked word prediction and next-word generation
+### [Typing Speed Test](https://rquintino.github.io/rqi-web-snippets/apps/typing-speed-test.html)
+Measure and improve your typing speed with real-time WPM calculation and word-by-word performance visualization
+
+![Typing Speed Test](apps/typing-speed-test.jpeg)
+
+### [Typing Stats](https://rquintino.github.io/rqi-web-snippets/apps/typing-stats.html)
+Advanced real-time typing analytics with deep insights into typing behavior, digraph analysis, dwell/flight times, and comprehensive metrics tracking
+
+![Typing Stats](apps/typing-stats.jpeg)
+
+### [Markdown Viewer](https://rquintino.github.io/rqi-web-snippets/apps/markdown-viewer.html)
+Three-pane markdown editor with live preview, table of contents, drag & drop file support, and HTML export
+
+![Markdown Viewer](apps/markdown-viewer.jpeg)
+
+### [Foundation Model Training](https://rquintino.github.io/rqi-web-snippets/apps/foundation-model-training.html)
+Interactive visualization of AI model training pipeline with animated GPU scaling and training simulation
+
+![Foundation Model Training](apps/foundation-model-training.jpeg)
+
+### [How Does GenAI Learn?](https://rquintino.github.io/rqi-web-snippets/apps/how-does-genai-learn.html)
+Interactive visualization demonstrating how language models learn through masked word prediction and next-word generation
+
+![How Does GenAI Learn](apps/how-does-genai-learn.jpeg)
 
 ## Usage
 
