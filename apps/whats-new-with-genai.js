@@ -216,12 +216,12 @@ function whatsNewWithGenai() {
         rotationTimer: null,
         
         genaibenefits: [
-            "Multi-task capability",
-            "Works with unstructured data", 
-            "Just use (instead of complex train)",
-            "Natural language instructions (not code)",
-            "Multi-modal (text/image/video/sound)",
-            "AI as a Service"
+            "One model, countless tasks",
+            "Understands any data format", 
+            "Ready to use immediately",
+            "Talk to it in plain English",
+            "Text, images, video & audio",
+            "No technical setup required"
         ],
         
         init() {

@@ -117,11 +117,11 @@ Version: v2025-07-19.3
                 </template>
             </div>
 
-            <!-- Benefits Box -->
-            <div class="benefits-box">
+            <!-- Benefits Grid -->
+            <div class="benefits-grid">
                 <template x-for="(benefit, index) in genaibenefits" :key="index">
-                    <div class="benefit-item">
-                        <span class="check-icon">✓</span>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">✓</div>
                         <span class="benefit-text" x-text="benefit"></span>
                     </div>
                 </template>
