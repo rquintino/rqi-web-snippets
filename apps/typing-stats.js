@@ -630,7 +630,7 @@ function typingStats() {
         },
         
         goHome() {
-            window.location.href = 'index.html';
+            window.location.href = '../index.html';
         },
         
         async loadPreferences() {
