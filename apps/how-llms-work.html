@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How LLMs Work - Interactive Visualization</title>
+    <!-- 
+    Functional Requirements:
+    - Interactive visualization showing how Large Language Models process inputs to generate outputs
+    - Three main sections: Context Window (inputs), Foundation Model (processing), Generated Outputs
+    - Animated network connections and pattern nodes within the model visualization
+    - Multiple input types: User Prompt, Conversation Thread, Files, System Instructions
+    - Multiple output types: Text, Code, Tool Usage, Visual Content, Video/Sound
+    - Responsive design with dark theme
+    - Full screen and dark/light mode toggles
+    - Home navigation button
+    - Animated elements with CSS keyframes for visual engagement
+    -->
+    <link rel="stylesheet" href="how-llms-work.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="how-llms-work.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body x-data="{ 
+    isDark: true, 
+    isFullscreen: false,
+    patternNodes: [],
+    init() {
+        const data = llmVisualization();
+        Object.assign(this, data);
+    },
+    toggleTheme() { 
+        this.isDark = !this.isDark;
+        localStorage.setItem('llm-theme', this.isDark ? 'dark' : 'light');
+        document.body.classList.toggle('light', !this.isDark);
+        setTimeout(() => {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }, 100);
+    },
+    toggleFullscreen() { 
+        this.isFullscreen = !this.isFullscreen;
+        if (this.isFullscreen) {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+}" :class="{ 'dark': isDark, 'fullscreen': isFullscreen }">
+    <!-- Controls -->
+    <div class="controls">
+        <button @click.stop="toggleFullscreen()" class="control-btn" title="Toggle Fullscreen">
+            <i data-lucide="maximize-2" x-show="!isFullscreen"></i>
+            <i data-lucide="minimize-2" x-show="isFullscreen"></i>
+        </button>
+        <button @click.stop="toggleTheme()" class="control-btn" title="Toggle Theme">
+            <i data-lucide="sun" x-show="isDark"></i>
+            <i data-lucide="moon" x-show="!isDark"></i>
+        </button>
+        <button @click="window.location.href='../index.html'" class="control-btn home-btn" title="Home">
+            <i data-lucide="home"></i>
+        </button>
+    </div>
+
+    <div class="main-container">
+        <!-- Section Headers -->
+        <div class="section-headers">
+            <div class="header-section">
+                <h2 class="section-title context-title">Context Window</h2>
+                <p class="section-desc">Multiple layers of input combined and sent to the AI model</p>
+            </div>
+            <div class="header-section">
+                <h2 class="section-title model-title">Foundation Model<br/>(ex. Claude, GPT-4o)</h2>
+                <p class="section-desc">Frozen learned patterns of language/public knowledge</p>
+            </div>
+            <div class="header-section">
+                <h2 class="section-title outputs-title">Generated Outputs</h2>
+                <p class="section-desc">Generated responses in multiple formats</p>
+            </div>
+        </div>
+
+        <!-- Main Content Flow -->
+        <div class="flow-container">
+            <!-- Input Section -->
+            <div class="inputs-section">
+                <div class="input-layer user-prompt">
+                    <div class="layer-content">
+                        <i data-lucide="user"></i>
+                        <div class="layer-text">
+                            <h4>User Prompt</h4>
+                            <p>"Write a professional email to decline a meeting"</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="plus-connector">
+                    <i data-lucide="plus"></i>
+                </div>
+
+                <div class="input-layer conversation">
+                    <div class="layer-content">
+                        <i data-lucide="message-square"></i>
+                        <div class="layer-text">
+                            <h4>Conversation Thread</h4>
+                            <p>Previous messages and context</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-layer files">
+                    <div class="layer-content">
+                        <i data-lucide="file-text"></i>
+                        <div class="layer-text">
+                            <h4>Additional Files</h4>
+                            <p>Documents, data, and references</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-layer system">
+                    <div class="layer-content">
+                        <i data-lucide="settings"></i>
+                        <div class="layer-text">
+                            <h4>System Instructions</h4>
+                            <p>Behavior and response guidelines</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Section -->
+            <div class="model-section">
+                <div class="model-container">
+                    <svg class="network-svg" viewBox="0 0 100 100">
+                        <!-- Network connections -->
+                        <line x1="20%" y1="20%" x2="45%" y2="50%" class="network-line" style="animation-delay: 0ms"></line>
+                        <line x1="60%" y1="15%" x2="45%" y2="50%" class="network-line" style="animation-delay: 200ms"></line>
+                        <line x1="80%" y1="40%" x2="45%" y2="50%" class="network-line" style="animation-delay: 400ms"></line>
+                        <line x1="15%" y1="60%" x2="45%" y2="50%" class="network-line" style="animation-delay: 600ms"></line>
+                        <line x1="75%" y1="70%" x2="45%" y2="50%" class="network-line" style="animation-delay: 800ms"></line>
+                        <line x1="30%" y1="85%" x2="45%" y2="50%" class="network-line" style="animation-delay: 1000ms"></line>
+                        <line x1="65%" y1="85%" x2="45%" y2="50%" class="network-line" style="animation-delay: 1200ms"></line>
+                        <line x1="85%" y1="20%" x2="45%" y2="50%" class="network-line" style="animation-delay: 1400ms"></line>
+                        <line x1="10%" y1="30%" x2="45%" y2="50%" class="network-line" style="animation-delay: 1600ms"></line>
+                        <line x1="85%" y1="60%" x2="45%" y2="50%" class="network-line" style="animation-delay: 1800ms"></line>
+                        <line x1="20%" y1="20%" x2="60%" y2="15%" class="network-line" style="animation-delay: 1500ms"></line>
+                        <line x1="60%" y1="15%" x2="80%" y2="40%" class="network-line" style="animation-delay: 1650ms"></line>
+                        <line x1="80%" y1="40%" x2="75%" y2="70%" class="network-line" style="animation-delay: 1800ms"></line>
+                        <line x1="75%" y1="70%" x2="65%" y2="85%" class="network-line" style="animation-delay: 1950ms"></line>
+                        <line x1="65%" y1="85%" x2="30%" y2="85%" class="network-line" style="animation-delay: 2100ms"></line>
+                    </svg>
+
+                    <!-- Pattern nodes -->
+                    <template x-for="(node, index) in patternNodes" :key="index">
+                        <div class="pattern-node" 
+                             :style="`left: ${node.x}%; top: ${node.y}%; width: ${node.size}px; height: ${node.size}px; animation-delay: ${node.delay}ms`">
+                        </div>
+                    </template>
+
+                    <!-- Central Bot Icon -->
+                    <div class="central-icon">
+                        <i data-lucide="bot"></i>
+                    </div>
+
+
+                    <!-- Flow Arrows -->
+                    <div class="flow-text left">Input</div>
+                    <div class="flow-arrow left">
+                        <i data-lucide="chevron-right"></i>
+                    </div>
+                    <div class="flow-arrow right">
+                        <i data-lucide="chevron-right"></i>
+                    </div>
+                    <div class="flow-text right">Output</div>
+                </div>
+
+                <div class="frozen-notice">
+                    <p>🔒 FROZEN PATTERNS<br/>Learned knowledge cannot be changed during inference</p>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="outputs-section">
+                <div class="output-card text-output">
+                    <div class="card-content">
+                        <i data-lucide="message-square"></i>
+                        <h4>Text</h4>
+                    </div>
+                    <p>Writing, summarization, translation, Q&A, analysis</p>
+                </div>
+
+                <div class="output-card code-output">
+                    <div class="card-content">
+                        <i data-lucide="code"></i>
+                        <h4>Code</h4>
+                    </div>
+                    <p>Programming, debugging, automation, scripts</p>
+                </div>
+
+                <div class="output-card tools-output">
+                    <div class="card-content">
+                        <i data-lucide="wrench"></i>
+                        <h4>Tool Usage</h4>
+                    </div>
+                    <p>Gmail, Calendar, CRM, databases, web search</p>
+                </div>
+
+                <div class="output-card visual-output">
+                    <div class="card-content">
+                        <i data-lucide="image"></i>
+                        <h4>Visual Content</h4>
+                    </div>
+                    <p>Generated images and diagrams</p>
+                </div>
+
+                <div class="output-card video-output">
+                    <div class="card-content">
+                        <i data-lucide="video"></i>
+                        <h4>Video and Sound</h4>
+                    </div>
+                    <p>Multimedia content and audio generation</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version -->
+    <div class="version">v2025-07-19.1</div>
+
+    <script src="shared/footer.js"></script>
+</body>
+</html>

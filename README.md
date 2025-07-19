@@ -64,6 +64,11 @@ Interactive visualization demonstrating how language models learn through masked
 
 <img src="apps/how-does-genai-learn.jpeg" alt="How Does GenAI Learn" height="180">
 
+### [How LLMs Work](https://rquintino.github.io/rqi-web-snippets/apps/how-llms-work.html)
+Interactive visualization showing how Large Language Models process inputs to generate outputs with animated network connections and pattern nodes
+
+<img src="apps/how-llms-work.jpeg" alt="How LLMs Work" height="180">
+
 ## Usage
 
 1. Simply clone the repository

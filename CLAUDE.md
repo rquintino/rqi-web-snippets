@@ -66,6 +66,12 @@ This repository contains a collection of standalone web utilities and applicatio
 - Unless requested otherwise, all apps should use modern and minimal UI, have a full screen toggle and dark/light toggle, these icons -not text buttons- should be shown on top right of the page
 - On every change to each app, change the version that should be stored with the file itself, that version should be shown on the app bottom right for easier user checking that they are seeing the latest version, on every update to the file increment the version. The version should be something like vyyyy-MM-dd.N
 
+### Alpine.js Best Practices
+- **Critical**: Always define reactive properties (`isDark`, `isFullscreen`, etc.) inline in `x-data="{}"` for immediate availability
+- Use `init()` method for complex setup or data loading after basic properties are defined
+- Avoid function calls in `x-data` attribute - Alpine.js evaluates expressions immediately and needs variables to exist from the start
+- Example: `x-data="{ isDark: true, init() { /* complex setup */ } }"` not `x-data="myFunction()"`
+
 ### Development Flow
 - Simply open any utility's HTML file in the apps/ folder in a web browser to use it. No installation or setup required.
 - Right after creating the first version of each app (HTML file) open that automatically in the user's browser
