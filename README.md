@@ -74,6 +74,11 @@ Interactive comparison between Traditional AI and Generative AI with network ani
 
 <img src="apps/whats-new-with-genai.jpeg" alt="What's New with GenAI" height="180">
 
+### [Image Mask](https://rquintino.github.io/rqi-web-snippets/apps/image-mask.html)
+Privacy-focused image masking tool with multiple effects (blur, pixelate, blackout, noise) for secure image redaction, completely client-side processing
+
+<img src="apps/image-mask.jpeg" alt="Image Mask" height="180">
+
 ## Usage
 
 1. Simply clone the repository

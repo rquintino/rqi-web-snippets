@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Mask - Privacy Tool</title>
+    <link rel="stylesheet" href="image-mask.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<!--
+Functional Requirements:
+- Upload or paste images from clipboard
+- Draw rectangles to select areas for masking
+- Apply effects immediately: blur, pixelate, black bars, noise
+- Undo last action
+- Reset all masks
+- Download or copy masked image
+- All processing client-side for privacy
+- Minimal UI with effect selector
+- Touch-friendly for mobile
+Features:
+- Canvas-based image editing
+- Multiple masking effects
+- Clipboard support (paste/copy)
+- Responsive design
+- Dark/light mode toggle
+- Fullscreen mode
+-->
+<body x-data="{
+    isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+    isFullscreen: false,
+    selectedEffect: 'blur',
+    effects: ['blur', 'pixelate', 'blackout', 'noise'],
+    image: null,
+    init() {
+        this.$refs.canvas.width = 800;
+        this.$refs.canvas.height = 600;
+        this.setupCanvas();
+        this.setupPasteHandler();
+        this.$watch('isDark', (value) => {
+            localStorage.setItem('theme', value ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', value ? 'dark' : 'light');
+        });
+        document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
+    },
+    setupCanvas() {
+        window.ImageMask.init(this.$refs.canvas);
+    },
+    setupPasteHandler() {
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (let item of items) {
+                if (item.type.includes('image')) {
+                    this.loadImage(item.getAsFile());
+                    break;
+                }
+            }
+        });
+    },
+    loadImage(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.image = true;
+            window.ImageMask.loadImage(e.target.result);
+        };
+        reader.readAsDataURL(file);
+    },
+    selectEffect(effect) {
+        this.selectedEffect = effect;
+        window.ImageMask.setEffect(effect);
+    },
+    undo() { window.ImageMask.undo(); },
+    reset() { this.image = null; window.ImageMask.reset(); },
+    download() { window.ImageMask.download(); },
+    copy() { window.ImageMask.copy(); },
+    toggleTheme() {
+        this.isDark = !this.isDark;
+    },
+    toggleFullscreen() {
+        if (!this.isFullscreen) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+        this.isFullscreen = !this.isFullscreen;
+    }
+}" :class="{ dark: isDark }">
+
+<div class="container">
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button @click="window.location.href='../index.html'" class="btn-base home-btn" title="Home">🏠</button>
+                <h1>Image Mask</h1>
+            </div>
+            <div class="header-right">
+                <button @click="toggleTheme()" class="btn-base icon-btn" :title="isDark ? 'Light Mode' : 'Dark Mode'">
+                    <span x-text="isDark ? '☀️' : '🌙'"></span>
+                </button>
+                <button @click="toggleFullscreen()" class="btn-base icon-btn" title="Fullscreen">⛶</button>
+            </div>
+        </header>
+
+        <!-- Workspace -->
+        <div class="workspace">
+            <!-- Canvas Area -->
+            <div class="canvas-area">
+                <!-- Combined Canvas/Upload Area -->
+                <div class="canvas-container" :class="{ 'upload-mode': !image }" @drop.prevent="loadImage($event.dataTransfer.files[0])" @dragover.prevent @click="!image && $refs.fileInput.click()">
+                    <input type="file" x-ref="fileInput" accept="image/*" @change="loadImage($event.target.files[0])" style="display: none;">
+                    <canvas x-ref="canvas" class="main-canvas" x-show="image"></canvas>
+                    <div x-show="!image" class="upload-placeholder">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">Drop image here, paste from clipboard, or click to upload</div>
+                        <div class="upload-hint">Supports JPG, PNG, GIF</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Effects Section -->
+                <div class="section">
+                    <div class="section-title">Masking Effects</div>
+                    <div class="effect-selector">
+                        <template x-for="effect in effects" :key="effect">
+                            <button 
+                                @click="selectEffect(effect)" 
+                                :class="{ active: selectedEffect === effect }"
+                                class="btn-base effect-btn"
+                                x-text="effect"
+                            ></button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Actions Section -->
+                <div class="section">
+                    <div class="section-title">Actions</div>
+                    <div class="actions">
+                        <button @click="undo()" class="btn-base action-btn secondary">↶ Undo</button>
+                        <button @click="reset()" class="btn-base action-btn secondary">⟲ Reset</button>
+                        <button @click="copy()" class="btn-base action-btn">📋 Copy</button>
+                        <button @click="download()" class="btn-base action-btn primary">💾 Download</button>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="section">
+                    <div class="section-title">How to Use</div>
+                    <div style="font-size: 13px; line-height: 1.5; color: var(--text); opacity: 0.8;">
+                        1. Upload or paste an image<br>
+                        2. Select a masking effect<br>
+                        3. Draw rectangles to mask areas<br>
+                        4. Download or copy result
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version -->
+    <div class="version">v2025-07-19.2</div>
+</div>
+
+<script src="image-mask.js"></script>
+<script src="shared/footer.js"></script>
+</body>
+</html>

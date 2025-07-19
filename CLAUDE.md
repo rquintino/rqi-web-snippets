@@ -45,6 +45,31 @@ This repository contains a collection of standalone web utilities and applicatio
 - Always ensure the minimal test which is the app loads without network or console errors
 - When adding a feature also add needed tests, be exhaustive, always
 
+#### Critical Testing Pattern for Console Error Detection
+- **ALWAYS** set up console error listeners BEFORE loading the page in tests
+- Use this exact pattern for the "loads without errors" test:
+```javascript
+test('page loads without errors', async ({ page }) => {
+  // Set up console error listener BEFORE loading the page
+  const errors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') {
+      errors.push(msg.text());
+    }
+  });
+
+  await page.goto(`file://${path.resolve(__dirname, 'app-name.html')}`);
+  await page.waitForLoadState('networkidle');
+  
+  // ... other assertions ...
+  
+  // Check no console errors - this MUST be at the end
+  expect(errors).toEqual([]);
+});
+```
+- This pattern ensures that JavaScript loading errors, missing files, and other console errors are properly caught
+- Without this pattern, tests may pass while the page has loading failures
+
 ### 5. Security & Privacy
 - All external resources must be loaded via HTTPS
 - Minimize external dependencies
