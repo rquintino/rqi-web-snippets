@@ -8,6 +8,18 @@ test.describe('Foundation Model Training Visualization', () => {
   });
 
   test('page loads without errors', async ({ page }) => {
+    // Set up console error listener BEFORE loading the page
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    const filePath = path.join(__dirname, 'foundation-model-training.html');
+    await page.goto(`file://${filePath}`);
+    await page.waitForLoadState('networkidle');
+    
     // Check that the page title is correct
     await expect(page).toHaveTitle('Foundation Model Training');
     
@@ -28,17 +40,8 @@ test.describe('Foundation Model Training Visualization', () => {
     // Check for version
     await expect(page.locator('.version')).toBeVisible();
     
-    // Verify no console errors
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    // Wait for any potential errors (2 seconds should be enough for initial load)
-    await page.waitForTimeout(2000);
-    expect(errors.length).toBe(0);
+    // Check for no console errors
+    expect(errors).toHaveLength(0);
   });
   
   test('training progress updates correctly', async ({ page }) => {

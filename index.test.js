@@ -8,6 +8,18 @@ test.describe('Web Utilities Index Page', () => {
   });
 
   test('should load the page correctly without errors', async ({ page }) => {
+    // Set up console error listener BEFORE loading the page
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    const filePath = path.join(__dirname, 'index.html');
+    await page.goto(`file://${filePath}`);
+    await page.waitForLoadState('networkidle');
+    
     // Check the title
     await expect(page).toHaveTitle('Rui Quintino (with 🤖) Web Snippets Playground');
     
@@ -31,15 +43,6 @@ test.describe('Web Utilities Index Page', () => {
     expect(cardCount).toBeGreaterThan(1);
     
     // Check for no console errors
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    // Wait a moment to capture any potential errors
-    await page.waitForTimeout(1000);
     expect(errors).toEqual([]);
   });
 

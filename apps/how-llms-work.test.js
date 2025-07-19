@@ -28,12 +28,20 @@ test.describe('How LLMs Work Visualization', () => {
   });
 
   test('page loads without errors', async ({ page }) => {
+    // Set up console error listener BEFORE loading the page
     const errors = [];
     page.on('console', msg => {
       if (msg.type() === 'error') {
         errors.push(msg.text());
       }
     });
+    
+    await page.goto('file://' + __dirname + '/how-llms-work.html');
+    await page.waitForLoadState('networkidle');
+    await page.waitForFunction(() => window.Alpine !== undefined, { timeout: 10000 });
+    await page.waitForTimeout(500);
+    
+    // Check for no console errors
     expect(errors).toHaveLength(0);
   });
 

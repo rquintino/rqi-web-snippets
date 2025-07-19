@@ -8,6 +8,18 @@ test.describe('Typing Speed Test', () => {
   });
 
   test('should load the page correctly without errors', async ({ page }) => {
+    // Set up console error listener BEFORE loading the page
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    const filePath = path.join(__dirname, 'typing-speed-test.html');
+    await page.goto(`file://${filePath}`);
+    await page.waitForLoadState('networkidle');
+    
     // Check the title
     await expect(page).toHaveTitle('Typing Speed Test - Active WPM');
     
@@ -17,15 +29,6 @@ test.describe('Typing Speed Test', () => {
     await expect(page.locator('.restart-btn')).toBeVisible();
     
     // Check for no console errors
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    // Wait a moment to capture any potential errors
-    await page.waitForTimeout(1000);
     expect(errors).toEqual([]);
   });
 
