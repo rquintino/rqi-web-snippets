@@ -42,27 +42,27 @@ These instructions help AI assistants understand the repository structure, codin
 ### [Typing Speed Test](https://rquintino.github.io/rqi-web-snippets/apps/typing-speed-test.html)
 Measure and improve your typing speed with real-time WPM calculation and word-by-word performance visualization
 
-![Typing Speed Test](apps/typing-speed-test.jpeg)
+<img src="apps/typing-speed-test.jpeg" alt="Typing Speed Test" height="180">
 
 ### [Typing Stats](https://rquintino.github.io/rqi-web-snippets/apps/typing-stats.html)
 Advanced real-time typing analytics with deep insights into typing behavior, digraph analysis, dwell/flight times, and comprehensive metrics tracking
 
-![Typing Stats](apps/typing-stats.jpeg)
+<img src="apps/typing-stats.jpeg" alt="Typing Stats" height="180">
 
 ### [Markdown Viewer](https://rquintino.github.io/rqi-web-snippets/apps/markdown-viewer.html)
 Three-pane markdown editor with live preview, table of contents, drag & drop file support, and HTML export
 
-![Markdown Viewer](apps/markdown-viewer.jpeg)
+<img src="apps/markdown-viewer.jpeg" alt="Markdown Viewer" height="180">
 
 ### [Foundation Model Training](https://rquintino.github.io/rqi-web-snippets/apps/foundation-model-training.html)
 Interactive visualization of AI model training pipeline with animated GPU scaling and training simulation
 
-![Foundation Model Training](apps/foundation-model-training.jpeg)
+<img src="apps/foundation-model-training.jpeg" alt="Foundation Model Training" height="180">
 
 ### [How Does GenAI Learn?](https://rquintino.github.io/rqi-web-snippets/apps/how-does-genai-learn.html)
 Interactive visualization demonstrating how language models learn through masked word prediction and next-word generation
 
-![How Does GenAI Learn](apps/how-does-genai-learn.jpeg)
+<img src="apps/how-does-genai-learn.jpeg" alt="How Does GenAI Learn" height="180">
 
 ## Usage
 
