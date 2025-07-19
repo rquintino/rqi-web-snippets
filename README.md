@@ -29,8 +29,8 @@ These instructions help AI assistants understand the repository structure, codin
 
 ## Features
 
-- **Standalone Applications** - Each utility is a self-contained HTML/JS/CSS set
-- **No Setup Required** - Just open any HTML file in a browser
+- **Standalone Applications** - Each utility is a self-contained HTML/JS/CSS set in the `apps/` folder
+- **No Setup Required** - Just open any HTML file in the `apps/` folder in a browser
 - **Modern UI** - Dark/light mode and fullscreen toggles on all utilities
 - **Automated Testing** - Playwright tests for each application
 - **Privacy-Focused** - No data collection, only local storage when needed
@@ -48,7 +48,7 @@ These instructions help AI assistants understand the repository structure, codin
 ## Usage
 
 1. Simply clone the repository
-2. Open any utility's HTML file in a modern web browser
+2. Open any utility's HTML file in the `apps/` folder in a modern web browser
 3. No build steps, no dependencies to install (except for playwright for tests)
 
 Alternatively, you can access all utilities directly through the GitHub Pages site: [https://rquintino.github.io/rqi-web-snippets/](https://rquintino.github.io/rqi-web-snippets/)

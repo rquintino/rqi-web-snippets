@@ -3,7 +3,7 @@
  * 
  * This script automatically generates thumbnail screenshots for all HTML utilities
  * in the workspace. It creates light mode screenshots only.
- * Screenshots are saved directly in the root directory using the naming convention:
+ * Screenshots are saved directly in the apps directory using the naming convention:
  * - nameoftheapp.jpeg (320x180px thumbnail with proper scaling)
  * 
  * The script uses a two-step process:
@@ -22,7 +22,7 @@ const path = require('path');
 
 class ScreenshotGenerator {
     constructor() {
-        this.outputDir = '..'; // Root directory
+        this.outputDir = '../apps'; // Apps directory
         this.viewport = { width: 1422, height: 800 }; // Full-size viewport for proper display
         this.thumbnailSize = { width: 640, height: 360 }; // Output thumbnail dimensions to match index.html
         this.apps = [];
@@ -32,8 +32,8 @@ class ScreenshotGenerator {
      * Scan workspace for HTML apps (excluding index.html)
      */
     scanForApps() {
-        const rootDir = path.join(__dirname, '..');
-        const files = fs.readdirSync(rootDir);
+        const appsDir = path.join(__dirname, '..', 'apps');
+        const files = fs.readdirSync(appsDir);
         this.apps = files
             .filter(file => 
                 file.endsWith('.html') && 
@@ -43,7 +43,7 @@ class ScreenshotGenerator {
             .map(file => ({
                 filename: file,
                 name: path.basename(file, '.html'),
-                path: path.resolve(rootDir, file)
+                path: path.resolve(appsDir, file)
             }));
         
         console.log(`Found ${this.apps.length} apps:`, this.apps.map(app => app.name));

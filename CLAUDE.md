@@ -5,9 +5,10 @@ This repository contains a collection of standalone web utilities and applicatio
 ## Repository Rules & Guidelines
 
 ### 1. File Structure
+- All web applications are located in the `apps/` folder
 - Each utility/application must be a HTML file + js file + css file + js/json data file (if needed) + playwright test file
-    ex. tictactoe.html, tictactoe.js, tictactoe.css, tictactoe.jsdata, tictactoe.test.js
-- New utilities require new separate files with descriptive names
+    ex. apps/tictactoe.html, apps/tictactoe.js, apps/tictactoe.css, apps/tictactoe.jsdata, apps/tictactoe.test.js
+- New utilities require new separate files with descriptive names in the apps/ folder
 - Each utility should be named clearly for easy future reference
 - If user requests a new tool to be created, assume it needs to be created, don't search current folder for previously existing or similar tools
 
@@ -52,7 +53,7 @@ This repository contains a collection of standalone web utilities and applicatio
 
 ### Shared Footer Component
 - For "Created by" footer with LinkedIn link, include shared/footer.js in all utility pages to avoid duplication
-- All utility pages should include `<script src="shared/footer.js"></script>` before closing body tag
+- All utility pages should include `<script src="shared/footer.js"></script>` before closing body tag (path relative to apps/ folder)
 - The shared/footer.js automatically adds a "Created by" footer with LinkedIn link in bottom-right
 - Automatically detects and adapts to dark/light mode themes
 - Positioned above version number to avoid overlap
@@ -66,10 +67,10 @@ This repository contains a collection of standalone web utilities and applicatio
 - On every change to each app, change the version that should be stored with the file itself, that version should be shown on the app bottom right for easier user checking that they are seeing the latest version, on every update to the file increment the version. The version should be something like vyyyy-MM-dd.N
 
 ### Development Flow
-- Simply open any utility's HTML file in a web browser to use it. No installation or setup required.
+- Simply open any utility's HTML file in the apps/ folder in a web browser to use it. No installation or setup required.
 - Right after creating the first version of each app (HTML file) open that automatically in the user's browser
-- Keep a single index.html that should have links to all existing pages. Make it modern, fun
-- All app/utilities files should have a home button that goes back to the index file
+- Keep a single apps/index.html that should have links to all existing pages. Make it modern, fun
+- All app/utilities files should have a home button that goes back to the apps/index.html file
 - When editing large files always use multiple edits instead of a full rewrite of the file as it will likely fail
 
 ## Testing Commands

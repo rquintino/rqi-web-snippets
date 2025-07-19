@@ -48,14 +48,14 @@ test.describe('Screenshot Generation', () => {
         
         try {
             // Store which screenshots existed before the test
-            const rootDir = path.join(__dirname, '..');
-            const filesBefore = fs.readdirSync(rootDir);
+            const appsDir = path.join(__dirname, '..', 'apps');
+            const filesBefore = fs.readdirSync(appsDir);
             const screenshotsBefore = filesBefore.filter(file => file.endsWith('.jpeg'));
             
             await generator.generateAllScreenshots();
             
-            // Check that screenshots exist in root directory
-            const filesAfter = fs.readdirSync(rootDir);
+            // Check that screenshots exist in apps directory
+            const filesAfter = fs.readdirSync(appsDir);
             const screenshotsAfter = filesAfter.filter(file => file.endsWith('.jpeg'));
             
             // Screenshots should exist (either created now or existed before)
@@ -76,8 +76,8 @@ test.describe('Screenshot Generation', () => {
     });
 
     test('generated screenshots should be valid JPEG files', () => {
-        const rootDir = path.join(__dirname, '..');
-        const files = fs.readdirSync(rootDir);
+        const appsDir = path.join(__dirname, '..', 'apps');
+        const files = fs.readdirSync(appsDir);
         const screenshots = files.filter(file => file.endsWith('.jpeg'));
         
         if (screenshots.length === 0) {
@@ -86,7 +86,7 @@ test.describe('Screenshot Generation', () => {
         }
         
         screenshots.forEach(screenshot => {
-            const filePath = path.join(rootDir, screenshot);
+            const filePath = path.join(appsDir, screenshot);
             const stats = fs.statSync(filePath);
             
             // File should exist and have some size
@@ -103,14 +103,14 @@ test.describe('Screenshot Generation', () => {
 
     test('should follow naming convention', () => {
         const apps = generator.scanForApps();
-        const rootDir = path.join(__dirname, '..');
+        const appsDir = path.join(__dirname, '..', 'apps');
         
-        if (!fs.existsSync(rootDir)) {
-            test.skip('Root directory does not exist');
+        if (!fs.existsSync(appsDir)) {
+            test.skip('Apps directory does not exist');
             return;
         }
         
-        const files = fs.readdirSync(rootDir);
+        const files = fs.readdirSync(appsDir);
         const screenshots = files.filter(file => file.endsWith('.jpeg'));
         
         if (screenshots.length === 0) {
@@ -131,8 +131,8 @@ test.describe('Screenshot Generation', () => {
     });
 
     test('screenshot dimensions should match the thumbnailSize', async () => {
-        const rootDir = path.join(__dirname, '..');
-        const files = fs.readdirSync(rootDir);
+        const appsDir = path.join(__dirname, '..', 'apps');
+        const files = fs.readdirSync(appsDir);
         const screenshots = files.filter(file => file.endsWith('.jpeg'));
         
         if (screenshots.length === 0) {
@@ -142,7 +142,7 @@ test.describe('Screenshot Generation', () => {
 
         // Use a different approach to verify dimensions - create a simple HTML page
         // Use relative paths which are more reliable
-        const tempHtmlPath = path.join(rootDir, '__temp_image_test.html');
+        const tempHtmlPath = path.join(appsDir, '__temp_image_test.html');
         
         // Get one screenshot to test
         const sampleScreenshot = screenshots[0];

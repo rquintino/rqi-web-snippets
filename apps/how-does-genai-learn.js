@@ -94,8 +94,16 @@ function maskPredictApp() {
             this.createTrainingExamples();
             this.tokenizePredictionText();
             
-            // Apply dark theme by default
-            document.body.classList.add('dark-theme');
+            // Apply theme based on isDark state
+            this.applyTheme();
+        },
+        
+        applyTheme() {
+            if (this.isDark) {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
         },
         
         tokenizeText() {
@@ -478,8 +486,7 @@ function maskPredictApp() {
         
         toggleTheme() {
             this.isDark = !this.isDark;
-            document.body.classList.toggle('dark-theme', this.isDark);
-            document.body.classList.toggle('light-theme', !this.isDark);
+            this.applyTheme();
         },
         
         getAccuracyColor() {

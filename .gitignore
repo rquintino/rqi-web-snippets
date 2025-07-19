@@ -52,3 +52,7 @@ coverage/
 # Backup files
 *.bak
 *.backup
+
+# Claude local settings
+.claude/
+claude-settings.json
