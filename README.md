@@ -69,6 +69,11 @@ Interactive visualization showing how Large Language Models process inputs to ge
 
 <img src="apps/how-llms-work.jpeg" alt="How LLMs Work" height="180">
 
+### [What's New with GenAI](https://rquintino.github.io/rqi-web-snippets/apps/whats-new-with-genai.html)
+Interactive comparison between Traditional AI and Generative AI with network animations, foundation model visualization, and dynamic capability showcase
+
+<img src="apps/whats-new-with-genai.jpeg" alt="What's New with GenAI" height="180">
+
 ## Usage
 
 1. Simply clone the repository
