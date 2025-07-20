@@ -19,6 +19,7 @@ function devCostAnalyzer() {
         isFullscreen: false,
         sortBy: 'complexity',
         filterComplexity: 'all',
+        showAssumptions: false,
         
         // Cost Configuration
         rates: {

@@ -45,18 +45,25 @@
         <!-- Cost Calculator Panel -->
         <div class="calculator-panel">
             <h2>💰 Cost Calculator</h2>
+            <div class="disclaimer">
+                <span class="disclaimer-text">📊 Estimates generated with Claude Sonnet</span>
+                <button class="info-btn" @click="showAssumptions = !showAssumptions" title="View calculation assumptions">ℹ️</button>
+            </div>
             <div class="rate-controls">
                 <div class="rate-input">
-                    <label>Junior Dev Rate ($/hour):</label>
-                    <input type="number" x-model.number="rates.junior" min="20" max="100" @input="updateCalculations()">
+                    <label>Junior Dev Rate: $<span x-text="rates.junior"></span>/hour</label>
+                    <input type="range" x-model.number="rates.junior" min="20" max="100" step="5" @input="updateCalculations()" class="rate-slider">
+                    <div class="slider-range">$20 - $100</div>
                 </div>
                 <div class="rate-input">
-                    <label>Mid-level Rate ($/hour):</label>
-                    <input type="number" x-model.number="rates.intermediate" min="40" max="150" @input="updateCalculations()">
+                    <label>Mid-level Rate: $<span x-text="rates.intermediate"></span>/hour</label>
+                    <input type="range" x-model.number="rates.intermediate" min="40" max="150" step="5" @input="updateCalculations()" class="rate-slider">
+                    <div class="slider-range">$40 - $150</div>
                 </div>
                 <div class="rate-input">
-                    <label>Senior Dev Rate ($/hour):</label>
-                    <input type="number" x-model.number="rates.advanced" min="80" max="300" @input="updateCalculations()">
+                    <label>Senior Dev Rate: $<span x-text="rates.advanced"></span>/hour</label>
+                    <input type="range" x-model.number="rates.advanced" min="80" max="300" step="10" @input="updateCalculations()" class="rate-slider">
+                    <div class="slider-range">$80 - $300</div>
                 </div>
             </div>
             
@@ -142,7 +149,10 @@
                 <template x-for="app in filteredApps" :key="app.name">
                     <div class="app-card" :class="getComplexityClass(app.complexity)">
                         <div class="app-header">
-                            <h3 x-text="app.name"></h3>
+                            <div class="app-title">
+                                <h3 x-text="app.name"></h3>
+                                <a :href="app.file" target="_blank" class="launch-btn" title="Open app in new tab">🌐</a>
+                            </div>
                             <div class="complexity-badge" x-text="app.complexity + '/10'"></div>
                         </div>
                         
@@ -262,7 +272,70 @@
         </div>
     </div>
 
-    <div class="version">v2025-07-20.1</div>
+    <!-- Assumptions Modal -->
+    <div x-show="showAssumptions" class="modal-overlay" @click="showAssumptions = false" x-transition>
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3>📋 Calculation Assumptions</h3>
+                <button @click="showAssumptions = false" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <h4>🤖 AI Analysis Method</h4>
+                <p>All development estimates were generated using <strong>Claude Sonnet</strong> based on comprehensive code analysis including:</p>
+                <ul>
+                    <li>Line count analysis (HTML, CSS, JavaScript)</li>
+                    <li>Feature complexity assessment</li>
+                    <li>Dependency integration requirements</li>
+                    <li>Technical challenge identification</li>
+                    <li>Architecture and design patterns</li>
+                </ul>
+
+                <h4>⏱️ Time Estimation Factors</h4>
+                <ul>
+                    <li><strong>Junior Developer:</strong> 1-2 years experience, requires guidance, learning curve</li>
+                    <li><strong>Mid-level Developer:</strong> 3-5 years experience, independent work, moderate efficiency</li>
+                    <li><strong>Senior Developer:</strong> 5+ years experience, high efficiency, architectural decisions</li>
+                </ul>
+
+                <h4>🎯 Complexity Scoring (1-10)</h4>
+                <ul>
+                    <li><strong>1-3:</strong> Simple static pages, basic interactions</li>
+                    <li><strong>4-6:</strong> Moderate complexity, multiple libraries, responsive design</li>
+                    <li><strong>7-8:</strong> High complexity, real-time features, advanced algorithms</li>
+                    <li><strong>9-10:</strong> Very complex, multiple integrations, performance optimization</li>
+                </ul>
+
+                <h4>📊 Included Development Tasks</h4>
+                <ul>
+                    <li>Initial setup and architecture</li>
+                    <li>Core feature development</li>
+                    <li>UI/UX implementation and styling</li>
+                    <li>Testing and debugging</li>
+                    <li>Documentation and comments</li>
+                    <li>Cross-browser compatibility</li>
+                    <li>Performance optimization</li>
+                </ul>
+
+                <h4>⚠️ Not Included</h4>
+                <ul>
+                    <li>Project management overhead</li>
+                    <li>Client communication time</li>
+                    <li>Requirements gathering</li>
+                    <li>Deployment and hosting setup</li>
+                    <li>Maintenance and updates</li>
+                    <li>Third-party service integration</li>
+                </ul>
+
+                <p class="disclaimer-note">
+                    <strong>Note:</strong> These are educational estimates for reference purposes. 
+                    Actual development time may vary significantly based on team experience, 
+                    requirements clarity, and project constraints.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="version">v2025-07-20.6</div>
     <script src="dev-cost-analyzer.jsdata"></script>
     <script src="dev-cost-analyzer.js"></script>
     <script src="shared/footer.js"></script>

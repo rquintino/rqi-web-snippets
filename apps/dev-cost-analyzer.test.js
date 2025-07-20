@@ -62,12 +62,15 @@ test.describe('Development Cost Analyzer', () => {
     // Check initial cost values are displayed
     await expect(page.locator('.cost-card').first()).toContainText('$');
     
-    // Test rate input changes
-    const juniorRateInput = page.locator('input').first();
-    await juniorRateInput.fill('50');
+    // Test rate slider changes
+    const juniorRateSlider = page.locator('.rate-slider').first();
+    await juniorRateSlider.fill('50');
     
     // Wait for calculations to update
     await page.waitForTimeout(100);
+    
+    // Verify slider value is displayed in label
+    await expect(page.locator('.rate-input').first()).toContainText('$50/hour');
     
     // Verify costs updated
     const costCards = page.locator('.cost-card');
@@ -80,7 +83,7 @@ test.describe('Development Cost Analyzer', () => {
     
     // Check initial app cards are displayed
     const appCards = page.locator('.app-card');
-    await expect(appCards).toHaveCount(9);
+    await expect(appCards).toHaveCount(10);
     
     // Test complexity filter
     await page.selectOption('select[x-model="filterComplexity"]', 'high');
@@ -224,7 +227,7 @@ test.describe('Development Cost Analyzer', () => {
     await expect(statCards).toHaveCount(4);
     
     // Check total apps stat
-    await expect(page.locator('.stat-card').first()).toContainText('9');
+    await expect(page.locator('.stat-card').first()).toContainText('10');
     
     // Check lines of code stat shows numbers
     const locStat = page.locator('.stat-card').nth(1);
@@ -289,7 +292,7 @@ test.describe('Development Cost Analyzer', () => {
     
     // Check complexity badges are present
     const complexityBadges = page.locator('.complexity-badge');
-    await expect(complexityBadges).toHaveCount(9);
+    await expect(complexityBadges).toHaveCount(10);
     
     // Check badge format (should contain "/10")
     await expect(complexityBadges.first()).toContainText('/10');
@@ -298,5 +301,67 @@ test.describe('Development Cost Analyzer', () => {
     const highComplexityCards = page.locator('.app-card.high-complexity');
     const count = await highComplexityCards.count();
     expect(count).toBeGreaterThan(0);
+  });
+
+  test('disclaimer and assumptions modal', async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'dev-cost-analyzer.html')}`);
+    await page.waitForLoadState('networkidle');
+    
+    // Check disclaimer is visible
+    const disclaimer = page.locator('.disclaimer');
+    await expect(disclaimer).toBeVisible();
+    await expect(disclaimer).toContainText('Claude Sonnet');
+    
+    // Check info button is present
+    const infoBtn = page.locator('.info-btn');
+    await expect(infoBtn).toBeVisible();
+    
+    // Check modal is initially hidden
+    const modal = page.locator('.modal-overlay');
+    await expect(modal).not.toBeVisible();
+    
+    // Click info button to open modal
+    await infoBtn.click();
+    await expect(modal).toBeVisible();
+    
+    // Check modal content
+    await expect(modal).toContainText('Calculation Assumptions');
+    await expect(modal).toContainText('AI Analysis Method');
+    await expect(modal).toContainText('Time Estimation Factors');
+    await expect(modal).toContainText('Complexity Scoring');
+    
+    // Close modal by clicking close button
+    const closeBtn = page.locator('.close-btn');
+    await closeBtn.click();
+    await expect(modal).not.toBeVisible();
+    
+    // Re-open modal and close by clicking overlay (outside modal content)
+    await infoBtn.click();
+    await expect(modal).toBeVisible();
+    await modal.click({ position: { x: 50, y: 50 } });
+    await page.waitForTimeout(100);
+    await expect(modal).not.toBeVisible();
+  });
+
+  test('app launch buttons are present and functional', async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'dev-cost-analyzer.html')}`);
+    await page.waitForLoadState('networkidle');
+    
+    // Check launch buttons are present for all apps
+    const launchButtons = page.locator('.launch-btn');
+    await expect(launchButtons).toHaveCount(10);
+    
+    // Check launch button has correct attributes
+    const firstLaunchBtn = launchButtons.first();
+    await expect(firstLaunchBtn).toBeVisible();
+    await expect(firstLaunchBtn).toHaveAttribute('target', '_blank');
+    await expect(firstLaunchBtn).toHaveAttribute('title', 'Open app in new tab');
+    
+    // Check href attribute points to a valid HTML file
+    const href = await firstLaunchBtn.getAttribute('href');
+    expect(href).toMatch(/\.html$/);
+    
+    // Check launch button styling and icon
+    await expect(firstLaunchBtn).toContainText('🌐');
   });
 });

@@ -226,5 +226,37 @@ window.devCostAnalyzerData = [
             "Visual flow representation"
         ],
         "hours": { "junior": 20, "intermediate": 12, "advanced": 7 }
+    },
+    {
+        "name": "Development Cost Analyzer",
+        "file": "dev-cost-analyzer.html",
+        "purpose": "Comprehensive analysis dashboard for all web applications in repository with cost estimation",
+        "complexity": 8,
+        "totalLines": 862,
+        "features": [
+            "Cost estimation calculator with multiple developer skill levels",
+            "Interactive complexity scoring and breakdown visualization",
+            "Real-time cost projections with hourly rate adjustments",
+            "Detailed feature analysis and technical challenge identification",
+            "Export capabilities (CSV, JSON, PDF) for cost estimates and reports",
+            "Comparison tools for development approaches and timelines",
+            "Visual complexity distribution with Chart.js scatter plots",
+            "Time distribution charts across skill levels",
+            "Interactive filtering and sorting capabilities",
+            "Mobile-responsive design with dark/light mode support",
+            "Client-side processing for instant calculations and updates",
+            "External data loading with CORS-safe script tag pattern"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Chart.js 4.4.1", "External jsdata file"],
+        "challenges": [
+            "Complex Chart.js integration with multiple chart types",
+            "Real-time cost calculation algorithms",
+            "Data separation and external file loading patterns",
+            "Advanced filtering and sorting logic",
+            "Multiple export format generation",
+            "Responsive dashboard layout management",
+            "Performance optimization for large datasets"
+        ],
+        "hours": { "junior": 40, "intermediate": 24, "advanced": 15 }
     }
 ];
