@@ -13,11 +13,13 @@
 window.ImageMask = (function() {
     let canvas, ctx;
     let image = null;
+    let originalImage = null;
     let isDrawing = false;
     let startX, startY;
     let currentEffect = 'blur';
     let history = [];
     let currentHistoryIndex = -1;
+    let scaleRatio = 1;
     
     function init(canvasElement) {
         canvas = canvasElement;
@@ -52,6 +54,7 @@ window.ImageMask = (function() {
     
     function getMousePos(e) {
         const rect = canvas.getBoundingClientRect();
+        // Calculate position relative to the actual canvas coordinates
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         return {
@@ -74,7 +77,7 @@ window.ImageMask = (function() {
             const img = new Image();
             img.onload = function() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 if (callback) callback();
             };
             img.src = history[currentHistoryIndex];
@@ -239,16 +242,22 @@ window.ImageMask = (function() {
         const img = new Image();
         img.onload = function() {
             image = img;
+            originalImage = img;
             
-            // Resize canvas to fit image while maintaining aspect ratio
+            // Calculate display size to fit canvas while maintaining aspect ratio
             const maxWidth = 800;
             const maxHeight = 600;
-            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            scaleRatio = Math.min(maxWidth / img.width, maxHeight / img.height);
             
-            canvas.width = img.width * ratio;
-            canvas.height = img.height * ratio;
+            // Set canvas to original image size for quality preservation
+            canvas.width = img.width;
+            canvas.height = img.height;
             
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // Set display size via CSS to show scaled version
+            canvas.style.width = (img.width * scaleRatio) + 'px';
+            canvas.style.height = (img.height * scaleRatio) + 'px';
+            
+            ctx.drawImage(img, 0, 0, img.width, img.height);
             
             // Clear history and save initial state
             history = [];
@@ -277,7 +286,7 @@ window.ImageMask = (function() {
         const img = new Image();
         img.onload = function() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         };
         img.src = history[index];
     }
@@ -305,7 +314,7 @@ window.ImageMask = (function() {
         
         const link = document.createElement('a');
         link.download = 'masked-image.png';
-        link.href = canvas.toDataURL();
+        link.href = canvas.toDataURL('image/png', 1.0);
         link.click();
     }
     
@@ -313,12 +322,18 @@ window.ImageMask = (function() {
         if (!image) return;
         
         try {
+            // Ensure document is focused before clipboard operation
+            window.focus();
+            canvas.focus();
+            
             canvas.toBlob(async (blob) => {
                 const item = new ClipboardItem({ 'image/png': blob });
                 await navigator.clipboard.write([item]);
-            });
+            }, 'image/png', 1.0);
         } catch (err) {
             console.warn('Copy to clipboard failed:', err);
+            // Fallback: show a message to user
+            alert('Copy to clipboard failed. Please click on the canvas first and try again.');
         }
     }
     
