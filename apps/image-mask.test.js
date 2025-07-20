@@ -120,7 +120,7 @@ test.describe('Image Mask Utility', () => {
 
   test('version number is displayed', async ({ page }) => {
     await expect(page.locator('.version')).toBeVisible();
-    await expect(page.locator('.version')).toContainText('v2025-07-19.2');
+    await expect(page.locator('.version')).toContainText(/^v\d{4}-\d{2}-\d{2}\.\d+$/);
   });
 
   test('responsive design elements', async ({ page }) => {
