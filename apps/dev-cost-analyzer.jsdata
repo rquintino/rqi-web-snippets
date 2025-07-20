@@ -25,7 +25,7 @@ window.devCostAnalyzerData = [
             "Digraph analysis algorithms",
             "Performance optimization for real-time updates"
         ],
-        "hours": { "junior": 50, "intermediate": 30, "advanced": 20 }
+        "hours": { "junior": 44, "intermediate": 30, "advanced": 20 }
     },
     {
         "name": "Typing Stats Insights",
@@ -51,7 +51,7 @@ window.devCostAnalyzerData = [
             "Canvas-based heatmap rendering",
             "Performance optimization for large datasets"
         ],
-        "hours": { "junior": 70, "intermediate": 45, "advanced": 30 }
+        "hours": { "junior": 66, "intermediate": 44, "advanced": 30 }
     },
     {
         "name": "Typing Speed Test",
@@ -77,7 +77,7 @@ window.devCostAnalyzerData = [
             "Canvas animation programming",
             "Chart.js integration and customization"
         ],
-        "hours": { "junior": 42, "intermediate": 25, "advanced": 16 }
+        "hours": { "junior": 35, "intermediate": 24, "advanced": 16 }
     },
     {
         "name": "How Does GenAI Learn",
@@ -102,7 +102,7 @@ window.devCostAnalyzerData = [
             "Educational concept visualization",
             "Real-time text processing"
         ],
-        "hours": { "junior": 35, "intermediate": 22, "advanced": 13 }
+        "hours": { "junior": 33, "intermediate": 21, "advanced": 13 }
     },
     {
         "name": "Image Mask",
@@ -127,7 +127,7 @@ window.devCostAnalyzerData = [
             "Image effect algorithms",
             "File handling and clipboard integration"
         ],
-        "hours": { "junior": 38, "intermediate": 22, "advanced": 14 }
+        "hours": { "junior": 35, "intermediate": 22, "advanced": 14 }
     },
     {
         "name": "Markdown Viewer",
@@ -152,13 +152,13 @@ window.devCostAnalyzerData = [
             "Security considerations with HTML rendering",
             "Complex layout management"
         ],
-        "hours": { "junior": 30, "intermediate": 18, "advanced": 10 }
+        "hours": { "junior": 30, "intermediate": 19, "advanced": 12 }
     },
     {
         "name": "Foundation Model Training",
         "file": "foundation-model-training.html",
         "purpose": "Visualization of the multi-billion dollar AI training process",
-        "complexity": 6,
+        "complexity": 7,
         "totalLines": 724,
         "features": [
             "3-step training pipeline visualization",
@@ -177,13 +177,13 @@ window.devCostAnalyzerData = [
             "Educational visualization design",
             "Performance optimization for animations"
         ],
-        "hours": { "junior": 30, "intermediate": 19, "advanced": 12 }
+        "hours": { "junior": 35, "intermediate": 22, "advanced": 14 }
     },
     {
         "name": "What's New with GenAI",
         "file": "whats-new-with-genai.html",
         "purpose": "Interactive comparison between Traditional AI and Generative AI",
-        "complexity": 5,
+        "complexity": 4,
         "totalLines": 685,
         "features": [
             "Side-by-side AI comparison visualization",
@@ -201,13 +201,13 @@ window.devCostAnalyzerData = [
             "Educational content organization",
             "Interactive state management"
         ],
-        "hours": { "junior": 25, "intermediate": 15, "advanced": 9 }
+        "hours": { "junior": 21, "intermediate": 13, "advanced": 7 }
     },
     {
         "name": "How LLMs Work",
         "file": "how-llms-work.html",
         "purpose": "Interactive visualization of LLM input processing and output generation",
-        "complexity": 4,
+        "complexity": 3,
         "totalLines": 703,
         "features": [
             "Three-section flow visualization",
@@ -225,7 +225,7 @@ window.devCostAnalyzerData = [
             "Responsive layout management",
             "Visual flow representation"
         ],
-        "hours": { "junior": 20, "intermediate": 12, "advanced": 7 }
+        "hours": { "junior": 18, "intermediate": 11, "advanced": 6 }
     },
     {
         "name": "Development Cost Analyzer",
@@ -257,6 +257,6 @@ window.devCostAnalyzerData = [
             "Responsive dashboard layout management",
             "Performance optimization for large datasets"
         ],
-        "hours": { "junior": 40, "intermediate": 24, "advanced": 15 }
+        "hours": { "junior": 35, "intermediate": 23, "advanced": 15 }
     }
 ];
