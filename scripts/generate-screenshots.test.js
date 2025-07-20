@@ -47,26 +47,29 @@ test.describe('Screenshot Generation', () => {
         test.setTimeout(60000);
         
         try {
-            // Store which screenshots existed before the test
-            const appsDir = path.join(__dirname, '..', 'apps');
-            const filesBefore = fs.readdirSync(appsDir);
-            const screenshotsBefore = filesBefore.filter(file => file.endsWith('.jpeg'));
+            // Check each screenshot individually and only generate missing ones
+            const apps = generator.scanForApps();
+            const missingScreenshots = generator.findMissingScreenshots(apps);
             
-            await generator.generateAllScreenshots();
+            if (missingScreenshots.length === 0) {
+                console.log('All screenshots already exist, skipping generation...');
+            } else {
+                console.log(`Found ${missingScreenshots.length} missing screenshots, generating only those...`);
+                // Generate only missing screenshots
+                await generator.generateSelectiveScreenshots(missingScreenshots);
+            }
             
             // Check that screenshots exist in apps directory
-            const filesAfter = fs.readdirSync(appsDir);
-            const screenshotsAfter = filesAfter.filter(file => file.endsWith('.jpeg'));
+            const screenshotsAfter = generator.getExistingScreenshots();
             
             // Screenshots should exist (either created now or existed before)
             expect(screenshotsAfter.length).toBeGreaterThan(0);
             
             // Check naming convention - should have appname.jpeg
-            const apps = generator.scanForApps();
             apps.forEach(app => {
                 const lightFile = `${app.name}.jpeg`;
                 
-                expect(filesAfter.includes(lightFile)).toBe(true);
+                expect(screenshotsAfter.includes(lightFile)).toBe(true);
             });
             
         } catch (error) {
@@ -76,9 +79,7 @@ test.describe('Screenshot Generation', () => {
     });
 
     test('generated screenshots should be valid JPEG files', () => {
-        const appsDir = path.join(__dirname, '..', 'apps');
-        const files = fs.readdirSync(appsDir);
-        const screenshots = files.filter(file => file.endsWith('.jpeg'));
+        const screenshots = generator.getExistingScreenshots();
         
         if (screenshots.length === 0) {
             test.skip('No screenshots found to validate');
@@ -86,7 +87,7 @@ test.describe('Screenshot Generation', () => {
         }
         
         screenshots.forEach(screenshot => {
-            const filePath = path.join(appsDir, screenshot);
+            const filePath = path.join(generator.getAppsDir(), screenshot);
             const stats = fs.statSync(filePath);
             
             // File should exist and have some size
@@ -103,15 +104,13 @@ test.describe('Screenshot Generation', () => {
 
     test('should follow naming convention', () => {
         const apps = generator.scanForApps();
-        const appsDir = path.join(__dirname, '..', 'apps');
         
-        if (!fs.existsSync(appsDir)) {
+        if (!fs.existsSync(generator.getAppsDir())) {
             test.skip('Apps directory does not exist');
             return;
         }
         
-        const files = fs.readdirSync(appsDir);
-        const screenshots = files.filter(file => file.endsWith('.jpeg'));
+        const screenshots = generator.getExistingScreenshots();
         
         if (screenshots.length === 0) {
             test.skip('No screenshots found to validate naming');
@@ -131,9 +130,7 @@ test.describe('Screenshot Generation', () => {
     });
 
     test('screenshot dimensions should match the thumbnailSize', async () => {
-        const appsDir = path.join(__dirname, '..', 'apps');
-        const files = fs.readdirSync(appsDir);
-        const screenshots = files.filter(file => file.endsWith('.jpeg'));
+        const screenshots = generator.getExistingScreenshots();
         
         if (screenshots.length === 0) {
             test.skip('No screenshots found to validate dimensions');
@@ -142,7 +139,7 @@ test.describe('Screenshot Generation', () => {
 
         // Use a different approach to verify dimensions - create a simple HTML page
         // Use relative paths which are more reliable
-        const tempHtmlPath = path.join(appsDir, '__temp_image_test.html');
+        const tempHtmlPath = path.join(generator.getAppsDir(), '__temp_image_test.html');
         
         // Get one screenshot to test
         const sampleScreenshot = screenshots[0];

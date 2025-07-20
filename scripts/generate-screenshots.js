@@ -29,10 +29,41 @@ class ScreenshotGenerator {
     }
 
     /**
+     * Get the apps directory path
+     */
+    getAppsDir() {
+        return path.join(__dirname, '..', 'apps');
+    }
+
+    /**
+     * Get all screenshot files in the apps directory
+     */
+    getExistingScreenshots() {
+        const appsDir = this.getAppsDir();
+        const files = fs.readdirSync(appsDir);
+        return files.filter(file => file.endsWith('.jpeg'));
+    }
+
+    /**
+     * Check which apps are missing screenshots
+     */
+    findMissingScreenshots(apps = null) {
+        if (!apps) {
+            apps = this.scanForApps();
+        }
+        
+        const existingFiles = fs.readdirSync(this.getAppsDir());
+        return apps.filter(app => {
+            const filename = `${app.name}.jpeg`;
+            return !existingFiles.includes(filename);
+        });
+    }
+
+    /**
      * Scan workspace for HTML apps (excluding index.html)
      */
     scanForApps() {
-        const appsDir = path.join(__dirname, '..', 'apps');
+        const appsDir = this.getAppsDir();
         const files = fs.readdirSync(appsDir);
         this.apps = files
             .filter(file => 
@@ -107,7 +138,7 @@ class ScreenshotGenerator {
                 `${app.name}-dark.jpeg` : 
                 `${app.name}.jpeg`;
             
-            const screenshotPath = path.join(__dirname, this.outputDir, filename);
+            const screenshotPath = path.join(this.getAppsDir(), filename);
             
             // Check if screenshot already exists
             if (fs.existsSync(screenshotPath)) {
@@ -169,38 +200,55 @@ class ScreenshotGenerator {
     }
 
     /**
-     * Generate screenshots for all apps (light theme only)
+     * Generate screenshots for specific apps only (light theme only)
      */
-    async generateAllScreenshots() {
-        console.log('🤖 Starting screenshot generation (light theme only)...\n');
+    async generateSelectiveScreenshots(appsToProcess) {
+        console.log(`🤖 Starting selective screenshot generation for ${appsToProcess.length} apps...\n`);
         
-        // Scan for apps
-        this.scanForApps();
+        // Filter out apps that already have screenshots
+        const missingScreenshots = this.findMissingScreenshots(appsToProcess);
+        const existingCount = appsToProcess.length - missingScreenshots.length;
         
-        if (this.apps.length === 0) {
-            console.log('No apps found to screenshot.');
+        if (existingCount > 0) {
+            console.log(`  ⚠️ ${existingCount} screenshots already exist`);
+        }
+        
+        if (missingScreenshots.length === 0) {
+            console.log('All screenshots already exist. Use \'npm run screenshots:clean\' to regenerate.');
             return;
         }
+        
+        console.log(`Found ${missingScreenshots.length} missing screenshots, generating only those...\n`);
         
         // Launch browser
         const browser = await chromium.launch();
         
         try {
-            // Process each app
-            for (const app of this.apps) {
+            // Process only missing screenshots
+            for (const app of missingScreenshots) {
                 console.log(`\n📸 Processing ${app.name}...`);
                 
                 // Take light mode screenshot only
                 await this.takeScreenshot(browser, app, 'light');
             }
             
-            console.log('\n🎉 Screenshot generation complete!');
-            console.log(`📁 Screenshots saved in root directory with naming convention: appname.jpeg`);
-            console.log(`📏 All thumbnails generated at 320x180px to match index.html display size`);
+            console.log('\n🎉 Selective screenshot generation complete!');
+            console.log(`📁 Screenshots saved in apps directory with naming convention: appname.jpeg`);
             
         } finally {
             await browser.close();
         }
+    }
+
+    /**
+     * Generate screenshots for all apps (light theme only)
+     */
+    async generateAllScreenshots() {
+        console.log('🤖 Starting screenshot generation (light theme only)...\n');
+        
+        // Scan for apps and generate for all
+        this.scanForApps();
+        await this.generateSelectiveScreenshots(this.apps);
     }
 }
 
