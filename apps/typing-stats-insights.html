@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self';">
+    <title>Typing Stats Insights - Behavioral Analysis Dashboard</title>
+    
+    <!-- 
+    Functional Requirements:
+    - Interactive analysis dashboard for typing behavior data
+    - JSON log file ingestion with batch processing capability
+    - Comprehensive metrics calculation (speed, accuracy, timing, rhythm)
+    - Multiple chart types: time-series (Dygraphs), histograms, keyboard heatmap
+    - Performance band classification and coaching recommendations
+    - Session comparison and trend analysis
+    - Optional IndexedDB persistence for longitudinal tracking
+    - CSV export functionality
+    - Mobile-responsive design with dark/light modes
+    - Privacy-first: all processing client-side
+    - Drag/drop file interface with progress feedback
+    -->
+    
+    <link rel="stylesheet" href="typing-stats-insights.css">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/dygraphs@2.2.1/dist/dygraph.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+</head>
+<body x-data="typingInsights()" x-cloak>
+    <div class="header">
+        <div class="controls">
+            <button class="icon-btn" @click="goHome()" title="Home">🏠</button>
+        </div>
+        <div class="header-title">
+            <h1>Typing Stats Insights</h1>
+            <p>Behavioral Analysis Dashboard</p>
+        </div>
+        <div class="controls">
+            <button class="icon-btn" @click="toggleDarkMode()" title="Toggle Dark/Light Mode (Press D)">
+                <span x-text="isDark ? '☀️' : '🌙'"></span>
+            </button>
+            <button class="icon-btn" @click="toggleFullscreen()" title="Toggle Fullscreen">⛶</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- File Upload Section -->
+        <div class="upload-section" x-show="!hasData">
+            <div class="drop-zone" 
+                 @drop.prevent="handleFileDrop($event)"
+                 @dragover.prevent="dragOver = true"
+                 @dragleave.prevent="dragOver = false"
+                 :class="{ 'drag-over': dragOver }"
+                 @click="$refs.fileInput.click()">
+                <div class="drop-zone-content">
+                    <div class="upload-icon">📁</div>
+                    <h3>Drop typing stats JSON files here</h3>
+                    <p>or click to browse files</p>
+                    <p class="format-info">Supports single files or batch uploads (schema v2025-07-18.1)</p>
+                    <p class="keyboard-hint">💡 Press Ctrl+O to open files</p>
+                </div>
+                <input type="file" 
+                       x-ref="fileInput" 
+                       @change="handleFileSelect($event)"
+                       multiple 
+                       accept=".json"
+                       style="display: none;">
+            </div>
+            
+            <div class="upload-progress" x-show="isProcessing">
+                <div class="progress-bar">
+                    <div class="progress-fill" :style="`width: ${processingProgress}%`"></div>
+                </div>
+                <p x-text="`Processing ${processedFiles}/${totalFiles} files...`"></p>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="dashboard" x-show="hasData" x-transition>
+            <!-- Session Selector -->
+            <div class="session-controls">
+                <div class="session-selector">
+                    <label for="sessionSelect">Session:</label>
+                    <select id="sessionSelect" x-model="selectedSessionId" @change="loadSession()">
+                        <template x-for="session in sessions" :key="session.id">
+                            <option :value="session.id" x-text="formatSessionLabel(session)"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="control-buttons">
+                    <button class="btn" @click="showAllSessions()" title="View all sessions">📋 All Sessions</button>
+                    <button class="btn" @click="showProgressTracking()" title="View learning progress">📈 Progress</button>
+                    <button class="btn" @click="toggleComparison()" title="Compare sessions" :class="{ 'active': comparisonMode }">🔄 Compare</button>
+                    <button class="btn" @click="exportCSV()" title="Export metrics as CSV (Ctrl+E)">📊 Export CSV</button>
+                    <button class="btn" @click="clearData()" title="Clear all data">🗑️ Clear</button>
+                </div>
+            </div>
+
+            <!-- Comparison Controls -->
+            <div class="comparison-controls" x-show="comparisonMode" x-transition>
+                <div class="comparison-selector">
+                    <label>Compare with:</label>
+                    <select x-model="comparisonSessionId" @change="loadComparison()">
+                        <option value="">Select session to compare</option>
+                        <template x-for="session in sessions.filter(s => s.id !== selectedSessionId)" :key="session.id">
+                            <option :value="session.id" x-text="formatSessionLabel(session)"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="comparison-info" x-show="comparisonSession">
+                    <span>Comparing current vs <span x-text="comparisonSession?.filename"></span></span>
+                </div>
+            </div>
+
+            <!-- Overview Cards -->
+            <div class="overview-cards">
+                <div class="metric-card" 
+                     @mouseenter="showTooltip($event, 'Net typing speed after accounting for errors. Higher is better.')" 
+                     @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="currentSession?.metrics?.netWPM?.toFixed(1) || '0'"></div>
+                    <div class="metric-label">Net WPM</div>
+                    <div class="metric-band" 
+                         :class="getPerformanceBandClass('netWPM', currentSession?.metrics?.netWPM)" 
+                         x-text="getPerformanceBand('netWPM', currentSession?.metrics?.netWPM)"></div>
+                </div>
+                <div class="metric-card" 
+                     @mouseenter="showTooltip($event, 'Percentage of keystrokes that were corrections. Lower is better.')" 
+                     @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="((currentSession?.metrics?.errorRate || 0) * 100).toFixed(1) + '%'"></div>
+                    <div class="metric-label">Error Rate</div>
+                    <div class="metric-band" 
+                         :class="getPerformanceBandClass('errorRate', currentSession?.metrics?.errorRate * 100)" 
+                         x-text="getPerformanceBand('errorRate', currentSession?.metrics?.errorRate * 100)"></div>
+                </div>
+                <div class="metric-card" 
+                     @mouseenter="showTooltip($event, 'Average time each key is held down. Lower indicates lighter touch.')" 
+                     @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="currentSession?.metrics?.avgDwell?.toFixed(0) + 'ms' || '0ms'"></div>
+                    <div class="metric-label">Avg Dwell</div>
+                    <div class="metric-band" 
+                         :class="getPerformanceBandClass('avgDwell', currentSession?.metrics?.avgDwell)" 
+                         x-text="getPerformanceBand('avgDwell', currentSession?.metrics?.avgDwell)"></div>
+                </div>
+                <div class="metric-card" 
+                     @mouseenter="showTooltip($event, 'How consistent your typing rhythm is. Higher indicates more regular timing.')" 
+                     @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="currentSession?.metrics?.rhythmConsistency?.toFixed(1) + '%' || '0%'"></div>
+                    <div class="metric-label">Rhythm Consistency</div>
+                    <div class="metric-band" 
+                         :class="getPerformanceBandClass('rhythmCV', 100 - currentSession?.metrics?.rhythmConsistency)" 
+                         x-text="getPerformanceBand('rhythmCV', 100 - currentSession?.metrics?.rhythmConsistency)"></div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="charts-section">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3>Typing Metrics Over Time</h3>
+                        <div class="chart-controls">
+                            <label for="primaryMetric">Primary:</label>
+                            <select id="primaryMetric" x-model="selectedPrimaryMetric" @change="updateSpeedChart()">
+                                <option value="wpm">WPM</option>
+                                <option value="accuracy">Accuracy %</option>
+                                <option value="dwell">Dwell Time</option>
+                                <option value="flight">Flight Time</option>
+                                <option value="rhythm">Rhythm Consistency</option>
+                            </select>
+                            <label for="secondaryMetric">Secondary:</label>
+                            <select id="secondaryMetric" x-model="selectedSecondaryMetric" @change="updateSpeedChart()">
+                                <option value="">None</option>
+                                <option value="wpm">WPM</option>
+                                <option value="accuracy">Accuracy %</option>
+                                <option value="dwell">Dwell Time</option>
+                                <option value="flight">Flight Time</option>
+                                <option value="rhythm">Rhythm Consistency</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="speed-chart" class="chart"></div>
+                    <div class="timestamp-info" x-show="hoveredTimestamp">
+                        <div class="timestamp-details">
+                            <strong>At <span x-text="hoveredTimestamp?.time"></span>:</strong>
+                            <span x-text="hoveredTimestamp?.text"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Timing Distribution</h3>
+                    <div class="chart-grid">
+                        <canvas id="dwell-chart" class="timing-chart"></canvas>
+                        <canvas id="flight-chart" class="timing-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Keyboard Heatmap & Replay</h3>
+                    <div class="heatmap-replay-container">
+                        <div class="heatmap-section">
+                            <canvas id="keyboard-heatmap" class="heatmap"></canvas>
+                            <div class="replay-controls">
+                                <button class="btn" @click="startReplay()" :disabled="isReplaying">▶️ Replay</button>
+                                <button class="btn" @click="pauseReplay()" :disabled="!isReplaying">⏸️ Pause</button>
+                                <button class="btn" @click="stopReplay()">⏹️ Stop</button>
+                                <label>Speed: </label>
+                                <select x-model.number="replaySpeed">
+                                    <option value="0.25">0.25x</option>
+                                    <option value="0.5">0.5x</option>
+                                    <option value="1">1x</option>
+                                    <option value="2">2x</option>
+                                    <option value="5">5x</option>
+                                    <option value="10">10x</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="replay-section">
+                            <div class="replay-display">
+                                <h4>Typing Replay</h4>
+                                <div class="replay-text-container">
+                                    <div class="replay-text" x-html="replayTextDisplay"></div>
+                                    <div class="replay-cursor" x-show="isReplaying" :style="`left: ${replayCursorX}px`"></div>
+                                </div>
+                                <div class="replay-stats">
+                                    <div class="stat">
+                                        <span class="label">Progress:</span>
+                                        <span x-text="`${replayProgress}/${replayTotal}`"></span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="label">Current WPM:</span>
+                                        <span x-text="replayCurrentWPM.toFixed(1)"></span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="label">Key:</span>
+                                        <span x-text="replayCurrentKey"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Top Digraph Latencies</h3>
+                    <canvas id="digraph-chart" class="digraph-chart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Typing Flow Analysis</h3>
+                    <div class="flow-analysis-grid">
+                        <div class="flow-chart-section">
+                            <h4>Speed Bursts & Flow</h4>
+                            <canvas id="flow-chart" class="flow-chart"></canvas>
+                        </div>
+                        <div class="flow-stats-section">
+                            <h4>Flow Metrics</h4>
+                            <div class="flow-stats">
+                                <div class="flow-stat">
+                                    <span class="flow-label">Burst Count:</span>
+                                    <span class="flow-value" x-text="currentSession?.flowAnalysis?.burstCount || 0"></span>
+                                </div>
+                                <div class="flow-stat">
+                                    <span class="flow-label">Avg Burst Duration:</span>
+                                    <span class="flow-value" x-text="(currentSession?.flowAnalysis?.avgBurstDuration || 0).toFixed(1) + 's'"></span>
+                                </div>
+                                <div class="flow-stat">
+                                    <span class="flow-label">Fatigue Points:</span>
+                                    <span class="flow-value" x-text="currentSession?.flowAnalysis?.fatiguePoints || 0"></span>
+                                </div>
+                                <div class="flow-stat">
+                                    <span class="flow-label">Flow Consistency:</span>
+                                    <span class="flow-value" x-text="(currentSession?.flowAnalysis?.flowConsistency || 0).toFixed(1) + '%'"></span>
+                                </div>
+                                <div class="flow-stat">
+                                    <span class="flow-label">Peak Performance:</span>
+                                    <span class="flow-value" x-text="(currentSession?.flowAnalysis?.peakWPM || 0).toFixed(1) + ' WPM'"></span>
+                                </div>
+                                <div class="flow-stat">
+                                    <span class="flow-label">Momentum Score:</span>
+                                    <span class="flow-value" x-text="(currentSession?.flowAnalysis?.momentumScore || 0).toFixed(1)"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations Panel -->
+            <div class="recommendations-panel" x-show="recommendations.length > 0">
+                <h3>📋 Coaching Recommendations</h3>
+                <div class="recommendation-cards">
+                    <template x-for="rec in recommendations" :key="rec.id">
+                        <div class="recommendation-card" :class="rec.priority">
+                            <div class="rec-header">
+                                <span class="rec-icon" x-text="rec.icon"></span>
+                                <span class="rec-title" x-text="rec.title"></span>
+                            </div>
+                            <div class="rec-content" x-html="rec.content"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" 
+         x-show="showTooltipElement" 
+         x-transition
+         :style="`left: ${tooltipX}px; top: ${tooltipY}px`"
+         x-text="tooltipText"></div>
+
+    <!-- Session Summary Modal (simple alert for now) -->
+    <div class="session-summary" x-show="showSummary" x-transition>
+        <div class="summary-content">
+            <h3>Session Summary</h3>
+            <div x-html="summaryContent"></div>
+            <button @click="showSummary = false" class="btn">Close</button>
+        </div>
+    </div>
+
+    <div class="version">v2025-07-20.3</div>
+    <script src="typing-stats-insights.js"></script>
+    <script src="shared/footer.js"></script>
+</body>
+</html>

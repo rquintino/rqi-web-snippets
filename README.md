@@ -49,6 +49,11 @@ Advanced real-time typing analytics with deep insights into typing behavior, dig
 
 <img src="apps/typing-stats.jpeg" alt="Typing Stats" height="180">
 
+### [Typing Stats Insights](https://rquintino.github.io/rqi-web-snippets/apps/typing-stats-insights.html)
+Advanced behavioral analysis dashboard for typing data with coaching recommendations, session comparison, and detailed performance insights
+
+<img src="apps/typing-stats-insights.jpeg" alt="Typing Stats Insights" height="180">
+
 ### [Markdown Viewer](https://rquintino.github.io/rqi-web-snippets/apps/markdown-viewer.html)
 Three-pane markdown editor with live preview, table of contents, drag & drop file support, and HTML export
 
@@ -78,6 +83,11 @@ Interactive comparison between Traditional AI and Generative AI with network ani
 Privacy-focused image masking tool with multiple effects (blur, pixelate, blackout, noise) for secure image redaction, completely client-side processing
 
 <img src="apps/image-mask.jpeg" alt="Image Mask" height="180">
+
+### [Development Cost Analyzer](https://rquintino.github.io/rqi-web-snippets/apps/dev-cost-analyzer.html)
+Comprehensive analysis dashboard for development costs and complexity across all web applications with interactive charts, complexity scoring, and detailed cost breakdowns
+
+<img src="apps/dev-cost-analyzer.jpeg" alt="Development Cost Analyzer" height="180">
 
 ## Usage
 

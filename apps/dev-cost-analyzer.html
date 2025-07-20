@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self';">
+    <title>Development Cost Analyzer - RQI Web Snippets</title>
+    
+    <!-- 
+    Functional Requirements:
+    - Comprehensive analysis dashboard for all web applications in repository
+    - Cost estimation calculator with multiple developer skill levels
+    - Interactive complexity scoring and breakdown visualization
+    - Real-time cost projections with hourly rate adjustments
+    - Detailed feature analysis and technical challenge identification
+    - Export capabilities for cost estimates and project reports
+    - Comparison tools for development approaches and timelines
+    - Visual complexity distribution and pattern analysis
+    - Mobile-responsive design with dark/light mode support
+    - Client-side processing for instant calculations and updates
+    -->
+    
+    <link rel="stylesheet" href="dev-cost-analyzer.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body x-data="devCostAnalyzer()" x-cloak>
+    <div class="header">
+        <div class="controls">
+            <button class="icon-btn" @click="goHome()" title="Home">🏠</button>
+        </div>
+        <div class="header-title">
+            <h1>Development Cost Analyzer</h1>
+            <p>Comprehensive Analysis of RQI Web Snippets</p>
+        </div>
+        <div class="controls">
+            <button class="icon-btn" @click="toggleDarkMode()" title="Toggle Dark/Light Mode (Press D)">
+                <span x-text="isDark ? '☀️' : '🌙'"></span>
+            </button>
+            <button class="icon-btn" @click="toggleFullscreen()" title="Toggle Fullscreen">⛶</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Cost Calculator Panel -->
+        <div class="calculator-panel">
+            <h2>💰 Cost Calculator</h2>
+            <div class="rate-controls">
+                <div class="rate-input">
+                    <label>Junior Dev Rate ($/hour):</label>
+                    <input type="number" x-model.number="rates.junior" min="20" max="100" @input="updateCalculations()">
+                </div>
+                <div class="rate-input">
+                    <label>Mid-level Rate ($/hour):</label>
+                    <input type="number" x-model.number="rates.intermediate" min="40" max="150" @input="updateCalculations()">
+                </div>
+                <div class="rate-input">
+                    <label>Senior Dev Rate ($/hour):</label>
+                    <input type="number" x-model.number="rates.advanced" min="80" max="300" @input="updateCalculations()">
+                </div>
+            </div>
+            
+            <div class="cost-summary">
+                <div class="cost-card">
+                    <div class="cost-value" x-text="'$' + totalCosts.junior.toLocaleString()"></div>
+                    <div class="cost-label">Junior Developer</div>
+                    <div class="cost-hours" x-text="totalHours.junior + ' hours'"></div>
+                </div>
+                <div class="cost-card">
+                    <div class="cost-value" x-text="'$' + totalCosts.intermediate.toLocaleString()"></div>
+                    <div class="cost-label">Mid-Level Developer</div>
+                    <div class="cost-hours" x-text="totalHours.intermediate + ' hours'"></div>
+                </div>
+                <div class="cost-card">
+                    <div class="cost-value" x-text="'$' + totalCosts.advanced.toLocaleString()"></div>
+                    <div class="cost-label">Senior Developer</div>
+                    <div class="cost-hours" x-text="totalHours.advanced + ' hours'"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overview Stats -->
+        <div class="overview-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📱</div>
+                    <div class="stat-value" x-text="appData.length"></div>
+                    <div class="stat-label">Total Apps</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-value" x-text="totalLinesOfCode.toLocaleString()"></div>
+                    <div class="stat-label">Lines of Code</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-value" x-text="averageComplexity.toFixed(1)"></div>
+                    <div class="stat-label">Avg Complexity</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔗</div>
+                    <div class="stat-value" x-text="totalDependencies"></div>
+                    <div class="stat-label">Dependencies</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3>Complexity vs Development Cost</h3>
+                <canvas id="complexityCostChart" class="chart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Development Time Distribution</h3>
+                <canvas id="timeDistributionChart" class="chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Apps Analysis Table -->
+        <div class="apps-section">
+            <div class="section-header">
+                <h2>📊 Detailed App Analysis</h2>
+                <div class="filter-controls">
+                    <select x-model="sortBy" @change="sortApps()">
+                        <option value="complexity">Sort by Complexity</option>
+                        <option value="cost">Sort by Cost</option>
+                        <option value="name">Sort by Name</option>
+                        <option value="lines">Sort by Lines of Code</option>
+                    </select>
+                    <select x-model="filterComplexity" @change="filterApps()">
+                        <option value="all">All Complexity Levels</option>
+                        <option value="low">Low (1-4)</option>
+                        <option value="medium">Medium (5-7)</option>
+                        <option value="high">High (8-10)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="apps-grid">
+                <template x-for="app in filteredApps" :key="app.name">
+                    <div class="app-card" :class="getComplexityClass(app.complexity)">
+                        <div class="app-header">
+                            <h3 x-text="app.name"></h3>
+                            <div class="complexity-badge" x-text="app.complexity + '/10'"></div>
+                        </div>
+                        
+                        <div class="app-purpose" x-text="app.purpose"></div>
+                        
+                        <div class="app-metrics">
+                            <div class="metric">
+                                <span class="label">Lines of Code:</span>
+                                <span class="value" x-text="app.totalLines.toLocaleString()"></span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">Dependencies:</span>
+                                <span class="value" x-text="app.dependencies.length"></span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">Features:</span>
+                                <span class="value" x-text="app.features.length"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="development-costs">
+                            <div class="cost-row">
+                                <span>Junior:</span>
+                                <span x-text="'$' + app.costs.junior.toLocaleString()"></span>
+                            </div>
+                            <div class="cost-row">
+                                <span>Mid-level:</span>
+                                <span x-text="'$' + app.costs.intermediate.toLocaleString()"></span>
+                            </div>
+                            <div class="cost-row">
+                                <span>Senior:</span>
+                                <span x-text="'$' + app.costs.advanced.toLocaleString()"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="features-list" x-show="app.showDetails" x-transition>
+                            <h4>Key Features:</h4>
+                            <ul>
+                                <template x-for="feature in app.features.slice(0, 5)" :key="feature">
+                                    <li x-text="feature"></li>
+                                </template>
+                            </ul>
+                            
+                            <h4>Technical Challenges:</h4>
+                            <ul>
+                                <template x-for="challenge in app.challenges" :key="challenge">
+                                    <li x-text="challenge"></li>
+                                </template>
+                            </ul>
+                            
+                            <h4>Dependencies:</h4>
+                            <div class="dependencies-list">
+                                <template x-for="dep in app.dependencies" :key="dep">
+                                    <span class="dependency-tag" x-text="dep"></span>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <button class="details-toggle" @click="app.showDetails = !app.showDetails">
+                            <span x-text="app.showDetails ? 'Hide Details' : 'Show Details'"></span>
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="export-section">
+            <h2>📄 Export Options</h2>
+            <div class="export-buttons">
+                <button class="btn export-btn" @click="exportCSV()">📊 Export CSV Report</button>
+                <button class="btn export-btn" @click="exportJSON()">📋 Export JSON Data</button>
+                <button class="btn export-btn" @click="generatePDF()">📄 Generate PDF Report</button>
+            </div>
+        </div>
+
+        <!-- Insights Panel -->
+        <div class="insights-panel">
+            <h2>💡 Key Insights</h2>
+            <div class="insights-grid">
+                <div class="insight-card">
+                    <div class="insight-icon">🏆</div>
+                    <div class="insight-content">
+                        <h4>Most Complex App</h4>
+                        <p x-text="mostComplexApp.name + ' (' + mostComplexApp.complexity + '/10)'"></p>
+                        <small x-text="'Estimated: $' + mostComplexApp.costs.intermediate.toLocaleString() + ' (mid-level dev)'"></small>
+                    </div>
+                </div>
+                
+                <div class="insight-card">
+                    <div class="insight-icon">⚡</div>
+                    <div class="insight-content">
+                        <h4>Quick Wins</h4>
+                        <p x-text="quickWinApps.length + ' apps under 20 hours'"></p>
+                        <small>Low complexity, high impact projects</small>
+                    </div>
+                </div>
+                
+                <div class="insight-card">
+                    <div class="insight-icon">📈</div>
+                    <div class="insight-content">
+                        <h4>Technology Stack</h4>
+                        <p>Alpine.js + Canvas/Charts</p>
+                        <small>Consistent modern approach across all apps</small>
+                    </div>
+                </div>
+                
+                <div class="insight-card">
+                    <div class="insight-icon">💰</div>
+                    <div class="insight-content">
+                        <h4>Cost Range</h4>
+                        <p x-text="'$' + minCost.toLocaleString() + ' - $' + maxCost.toLocaleString()"></p>
+                        <small>Per app development cost (mid-level)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="version">v2025-07-20.1</div>
+    <script src="dev-cost-analyzer.js"></script>
+    <script src="shared/footer.js"></script>
+</body>
+</html>

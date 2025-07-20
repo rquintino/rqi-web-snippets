@@ -56,3 +56,6 @@ coverage/
 # Claude local settings
 .claude/
 claude-settings.json
+
+# Specs folder
+specs/

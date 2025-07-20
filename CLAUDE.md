@@ -24,6 +24,16 @@ This repository contains a collection of standalone web utilities and applicatio
 - Only use well-established libraries with strong security track records, if in doubt, stop and confirm with user
 - Don't use libraries with any known security or privacy risks
 
+#### Chart.js Specific Guidelines
+- **ALWAYS** use the UMD version: `chart.umd.min.js` instead of `chart.min.js`
+- This prevents "Cannot use import statement outside a module" errors in browsers
+- Load Chart.js BEFORE Alpine.js to ensure proper initialization order
+- Example: `<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>`
+- In chart rendering methods, ALWAYS check if Chart.js is loaded: `if (typeof Chart === 'undefined') return;`
+- Use `maintainAspectRatio: true` to prevent infinite chart stretching
+- Set explicit container heights with `max-height` CSS to constrain chart growth
+- Add proper error handling with try-catch blocks around chart creation
+
 ### 4. Code Philosophy
 - Prioritize code readability and simplicity over performance, these are personal standalone apps/tools
 - Keep applications lightweight and focused
@@ -47,6 +57,7 @@ This repository contains a collection of standalone web utilities and applicatio
 
 #### Critical Testing Pattern for Console Error Detection
 - **ALWAYS** set up console error listeners BEFORE loading the page in tests
+- **ALSO** set up page error listeners for JavaScript errors that might not appear in console
 - Use this exact pattern for the "loads without errors" test:
 ```javascript
 test('page loads without errors', async ({ page }) => {
@@ -58,10 +69,19 @@ test('page loads without errors', async ({ page }) => {
     }
   });
 
+  // Set up page error listener for JavaScript errors
+  const pageErrors = [];
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
+  });
+
   await page.goto(`file://${path.resolve(__dirname, 'app-name.html')}`);
   await page.waitForLoadState('networkidle');
   
   // ... other assertions ...
+  
+  // Check no JavaScript page errors
+  expect(pageErrors).toEqual([]);
   
   // Check no console errors - this MUST be at the end
   expect(errors).toEqual([]);
@@ -69,6 +89,23 @@ test('page loads without errors', async ({ page }) => {
 ```
 - This pattern ensures that JavaScript loading errors, missing files, and other console errors are properly caught
 - Without this pattern, tests may pass while the page has loading failures
+
+#### Alpine.js and External Library Integration
+- When using external libraries (like Chart.js) with Alpine.js, ensure proper loading order
+- External libraries should load BEFORE Alpine.js (remove `defer` from external libraries)
+- Use `this.$nextTick()` in Alpine.js `init()` methods before calling external library functions
+- Add library availability checks before using: `if (typeof LibraryName === 'undefined') return;`
+- For chart rendering, use a polling pattern to wait for library availability:
+```javascript
+const checkLibrary = () => {
+  if (typeof Chart !== 'undefined') {
+    this.renderCharts();
+  } else {
+    setTimeout(checkLibrary, 50);
+  }
+};
+setTimeout(checkLibrary, 100);
+```
 
 ### 5. Security & Privacy
 - All external resources must be loaded via HTTPS
