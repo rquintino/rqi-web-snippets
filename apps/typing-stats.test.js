@@ -121,15 +121,17 @@ test.describe('Typing Stats App', () => {
     }
   });
 
-  test('digraph tables are present and structured correctly', async ({ page }) => {
-    // Check both digraph panels exist
-    await expect(page.locator('.digraph-panel').filter({ hasText: 'Most Frequent Digraphs' })).toBeVisible();
-    await expect(page.locator('.digraph-panel').filter({ hasText: 'Slowest Digraphs' })).toBeVisible();
+  test('digraph table is present and structured correctly', async ({ page }) => {
+    // Check unified digraph panel exists
+    await expect(page.locator('.digraph-panel').filter({ hasText: 'Digraph Analysis' })).toBeVisible();
     
-    // Check table headers
-    await expect(page.locator('.header-cell').filter({ hasText: 'Digraph' })).toHaveCount(2);
-    await expect(page.locator('.header-cell').filter({ hasText: 'Count' })).toHaveCount(2);
-    await expect(page.locator('.header-cell').filter({ hasText: 'Avg Latency' })).toHaveCount(2);
+    // Check table headers for unified table
+    await expect(page.locator('.header-cell').filter({ hasText: 'Digraph' })).toHaveCount(1);
+    await expect(page.locator('.header-cell').filter({ hasText: 'Count' })).toHaveCount(1);
+    await expect(page.locator('.header-cell').filter({ hasText: 'Avg ± Std Dev' })).toHaveCount(1);
+    
+    // Check that sortable headers have proper class
+    await expect(page.locator('.header-cell.sortable')).toHaveCount(2);
   });
 
   test('dark/light mode toggle works', async ({ page }) => {
@@ -165,7 +167,7 @@ test.describe('Typing Stats App', () => {
 
   test('version number is displayed', async ({ page }) => {
     await expect(page.locator('.version')).toBeVisible();
-    await expect(page.locator('.version')).toContainText('v2025-07-19.1');
+    await expect(page.locator('.version')).toContainText('v2025-07-20.1');
   });
 
   test('reset session clears data', async ({ page }) => {

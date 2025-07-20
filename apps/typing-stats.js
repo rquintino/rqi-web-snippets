@@ -20,6 +20,10 @@ function typingStats() {
         segments: [],
         digraphs: new Map(),
         
+        // Digraph sorting state
+        digraphSortBy: 'avgLatency',
+        digraphSortDesc: true,
+        
         // Timing
         sessionStartTime: null,
         lastKeyTime: null,
@@ -123,12 +127,8 @@ function typingStats() {
             return currentActiveTime / 1000;
         },
         
-        get topFrequentDigraphs() {
-            return this.getTopDigraphs('frequency');
-        },
-        
-        get topSlowestDigraphs() {
-            return this.getTopDigraphs('latency');
+        get sortedDigraphs() {
+            return this.getSortedDigraphs();
         },
         
         init() {
@@ -308,13 +308,15 @@ function typingStats() {
             if (!this.digraphs.has(digraph)) {
                 this.digraphs.set(digraph, {
                     count: 0,
-                    totalLatency: 0
+                    totalLatency: 0,
+                    latencies: []
                 });
             }
             
             const data = this.digraphs.get(digraph);
             data.count++;
             data.totalLatency += latency;
+            data.latencies.push(latency);
         },
         
         updateRealTimeMetrics() {
@@ -548,6 +550,8 @@ function typingStats() {
             this.digraphs = new Map();
             this.recentKeystrokes = [];
             this.wpmHistory = [];
+            this.digraphSortBy = 'avgLatency';
+            this.digraphSortDesc = true;
         },
         
         resetTiming() {
@@ -734,26 +738,43 @@ function typingStats() {
             }
         },
         
-        getTopDigraphs(sortBy) {
+        getSortedDigraphs() {
             const digraphArray = Array.from(this.digraphs.entries())
+                .filter(([pair, data]) => data.count >= 2)
                 .map(([pair, data]) => ({
                     pair: pair.replace(' ', '␣'),
                     count: data.count,
-                    avgLatency: data.count > 0 ? data.totalLatency / data.count : 0
+                    avgLatency: data.count > 0 ? data.totalLatency / data.count : 0,
+                    stdDev: this.calculateStdDev(data.latencies, data.count > 0 ? data.totalLatency / data.count : 0)
                 }));
             
-            if (sortBy === 'frequency') {
-                return digraphArray
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 10);
-            } else if (sortBy === 'latency') {
-                return digraphArray
-                    .filter(d => d.count >= 3)
-                    .sort((a, b) => b.avgLatency - a.avgLatency)
-                    .slice(0, 10);
-            }
+            // Sort based on current sort criteria
+            digraphArray.sort((a, b) => {
+                let comparison = 0;
+                if (this.digraphSortBy === 'count') {
+                    comparison = a.count - b.count;
+                } else if (this.digraphSortBy === 'avgLatency') {
+                    comparison = a.avgLatency - b.avgLatency;
+                }
+                return this.digraphSortDesc ? -comparison : comparison;
+            });
             
-            return [];
+            return digraphArray.slice(0, 15);
+        },
+        
+        calculateStdDev(values, mean) {
+            if (values.length <= 1) return 0;
+            const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+            return Math.sqrt(variance);
+        },
+        
+        sortDigraphs(column) {
+            if (this.digraphSortBy === column) {
+                this.digraphSortDesc = !this.digraphSortDesc;
+            } else {
+                this.digraphSortBy = column;
+                this.digraphSortDesc = column === 'avgLatency'; // Default desc for latency, asc for count
+            }
         }
     };
 }

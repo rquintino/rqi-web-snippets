@@ -156,36 +156,22 @@
         <!-- Digraph Analytics -->
         <div class="digraph-section">
             <div class="digraph-panel">
-                <h3 class="panel-title">Most Frequent Digraphs</h3>
+                <h3 class="panel-title">Digraph Analysis</h3>
                 <div class="digraph-table">
                     <div class="table-header">
                         <div class="header-cell">Digraph</div>
-                        <div class="header-cell">Count</div>
-                        <div class="header-cell">Avg Latency</div>
-                    </div>
-                    <template x-for="digraph in topFrequentDigraphs" :key="digraph.pair">
-                        <div class="table-row">
-                            <div class="table-cell" x-text="digraph.pair"></div>
-                            <div class="table-cell" x-text="digraph.count"></div>
-                            <div class="table-cell" x-text="digraph.avgLatency.toFixed(0) + 'ms'"></div>
+                        <div class="header-cell sortable" @click="sortDigraphs('count')" :class="{ 'sorted': digraphSortBy === 'count', 'desc': digraphSortBy === 'count' && digraphSortDesc }">
+                            Count <span class="sort-arrow">↕</span>
                         </div>
-                    </template>
-                </div>
-            </div>
-
-            <div class="digraph-panel">
-                <h3 class="panel-title">Slowest Digraphs</h3>
-                <div class="digraph-table">
-                    <div class="table-header">
-                        <div class="header-cell">Digraph</div>
-                        <div class="header-cell">Count</div>
-                        <div class="header-cell">Avg Latency</div>
+                        <div class="header-cell sortable" @click="sortDigraphs('avgLatency')" :class="{ 'sorted': digraphSortBy === 'avgLatency', 'desc': digraphSortBy === 'avgLatency' && digraphSortDesc }">
+                            Avg ± Std Dev <span class="sort-arrow">↕</span>
+                        </div>
                     </div>
-                    <template x-for="digraph in topSlowestDigraphs" :key="digraph.pair">
+                    <template x-for="digraph in sortedDigraphs" :key="digraph.pair">
                         <div class="table-row">
                             <div class="table-cell" x-text="digraph.pair"></div>
                             <div class="table-cell" x-text="digraph.count"></div>
-                            <div class="table-cell" x-text="digraph.avgLatency.toFixed(0) + 'ms'"></div>
+                            <div class="table-cell" x-text="digraph.avgLatency.toFixed(0) + 'ms ± ' + digraph.stdDev.toFixed(0) + 'ms'"></div>
                         </div>
                     </template>
                 </div>
@@ -208,7 +194,7 @@
     <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
 
     <!-- Version -->
-    <div class="version">v2025-07-19.1</div>
+    <div class="version">v2025-07-20.1</div>
 
     <script src="shared/shared.js"></script>
     <script src="typing-stats.js"></script>
