@@ -1,0 +1,230 @@
+// Development Cost Analyzer Data - RQI Web Snippets
+// Exposed as window.devCostAnalyzerData for use in the app
+window.devCostAnalyzerData = [
+    {
+        "name": "Typing Stats",
+        "file": "typing-stats.html",
+        "purpose": "Real-time typing analytics with deep behavioral insights",
+        "complexity": 9,
+        "totalLines": 1255,
+        "features": [
+            "Real-time typing metrics (WPM, accuracy, error rate)",
+            "Digraph analytics (letter transition analysis)",
+            "High-resolution timing with performance.now()",
+            "Dwell time and flight time measurements",
+            "Rhythm consistency tracking",
+            "Session persistence with JSON export",
+            "Privacy-first client-side processing",
+            "Experience level customization",
+            "Tooltips with explanations and benchmarks"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Custom shared.js utilities"],
+        "challenges": [
+            "High-resolution timing implementation",
+            "Complex real-time metrics calculations",
+            "Digraph analysis algorithms",
+            "Performance optimization for real-time updates"
+        ],
+        "hours": { "junior": 50, "intermediate": 30, "advanced": 20 }
+    },
+    {
+        "name": "Typing Stats Insights",
+        "file": "typing-stats-insights.html",
+        "purpose": "Advanced behavioral analysis dashboard for typing data",
+        "complexity": 10,
+        "totalLines": 2128,
+        "features": [
+            "JSON log file batch processing",
+            "Multiple chart types (Dygraphs, Chart.js)",
+            "Keyboard heatmap visualization",
+            "Typing replay with speed controls",
+            "Session comparison analysis",
+            "Performance coaching recommendations",
+            "CSV export functionality",
+            "IndexedDB persistence option",
+            "Flow analysis and burst detection"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Dygraphs 2.2.1", "Chart.js 3.9.1"],
+        "challenges": [
+            "Complex data processing algorithms",
+            "Multiple charting library integration",
+            "Canvas-based heatmap rendering",
+            "Performance optimization for large datasets"
+        ],
+        "hours": { "junior": 70, "intermediate": 45, "advanced": 30 }
+    },
+    {
+        "name": "Typing Speed Test",
+        "file": "typing-speed-test.html",
+        "purpose": "Modern typing speed test with real-time performance visualization",
+        "complexity": 8,
+        "totalLines": 1876,
+        "features": [
+            "Real-time WPM calculation per word",
+            "Word-by-word performance visualization",
+            "Multiple dictionary support",
+            "Blind mode typing challenge",
+            "WPM penalty system for errors",
+            "Chart.js performance graphs",
+            "Best score tracking with celebration",
+            "Confetti animations for achievements",
+            "Word sorting and statistics"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Chart.js 4.4.1", "Custom word dictionaries"],
+        "challenges": [
+            "Real-time performance calculations",
+            "Complex color-coded feedback system",
+            "Canvas animation programming",
+            "Chart.js integration and customization"
+        ],
+        "hours": { "junior": 42, "intermediate": 25, "advanced": 16 }
+    },
+    {
+        "name": "How Does GenAI Learn",
+        "file": "how-does-genai-learn.html",
+        "purpose": "Interactive visualization of GenAI learning through masking and prediction",
+        "complexity": 7,
+        "totalLines": 1151,
+        "features": [
+            "Sliding window text masking demonstration",
+            "Real-time prediction simulation",
+            "Training accuracy tracking",
+            "Multi-phase workflow visualization",
+            "Context window sliding for text generation",
+            "Color-coded feedback system",
+            "Progressive training visualization",
+            "Random word prediction simulation"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Lucide icons"],
+        "challenges": [
+            "Complex animation sequencing",
+            "State machine implementation",
+            "Educational concept visualization",
+            "Real-time text processing"
+        ],
+        "hours": { "junior": 35, "intermediate": 22, "advanced": 13 }
+    },
+    {
+        "name": "Image Mask",
+        "file": "image-mask.html",
+        "purpose": "Privacy-focused image masking tool with multiple effects",
+        "complexity": 7,
+        "totalLines": 877,
+        "features": [
+            "Canvas-based image editing",
+            "Multiple masking effects (blur, pixelate, blackout, noise)",
+            "Clipboard support (paste/copy)",
+            "Draw rectangles for area selection",
+            "Undo/redo functionality",
+            "Client-side privacy protection",
+            "Drag-and-drop image upload",
+            "Touch-friendly mobile interface"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Canvas API"],
+        "challenges": [
+            "Canvas image processing",
+            "Complex drawing interactions",
+            "Image effect algorithms",
+            "File handling and clipboard integration"
+        ],
+        "hours": { "junior": 38, "intermediate": 22, "advanced": 14 }
+    },
+    {
+        "name": "Markdown Viewer",
+        "file": "markdown-viewer.html",
+        "purpose": "Three-pane markdown editor with TOC and live preview",
+        "complexity": 6,
+        "totalLines": 654,
+        "features": [
+            "Three-pane layout (Input, TOC, Preview)",
+            "Collapsible input pane",
+            "Drag & drop file support",
+            "Table of Contents generation",
+            "Synchronized scrolling",
+            "Markdown syntax highlighting",
+            "HTML clipboard export",
+            "Local storage persistence"
+        ],
+        "dependencies": ["Alpine.js 3.12.3", "Marked 4.3.0", "DOMPurify 3.0.5", "Highlight.js 11.7.0"],
+        "challenges": [
+            "Multiple library integration",
+            "Synchronized scrolling implementation",
+            "Security considerations with HTML rendering",
+            "Complex layout management"
+        ],
+        "hours": { "junior": 30, "intermediate": 18, "advanced": 10 }
+    },
+    {
+        "name": "Foundation Model Training",
+        "file": "foundation-model-training.html",
+        "purpose": "Visualization of the multi-billion dollar AI training process",
+        "complexity": 6,
+        "totalLines": 724,
+        "features": [
+            "3-step training pipeline visualization",
+            "Dynamic GPU cluster scaling animation",
+            "Real-time progress tracking with calendar",
+            "Interactive network background animations",
+            "AI model completion with personality greetings",
+            "Company showcase with AI models",
+            "30-day training simulation",
+            "Canvas-based animations"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Lucide icons", "Company data JSON"],
+        "challenges": [
+            "Canvas animation programming",
+            "Complex timing and progression logic",
+            "Educational visualization design",
+            "Performance optimization for animations"
+        ],
+        "hours": { "junior": 30, "intermediate": 19, "advanced": 12 }
+    },
+    {
+        "name": "What's New with GenAI",
+        "file": "whats-new-with-genai.html",
+        "purpose": "Interactive comparison between Traditional AI and Generative AI",
+        "complexity": 5,
+        "totalLines": 685,
+        "features": [
+            "Side-by-side AI comparison visualization",
+            "Network background animations",
+            "Traditional vs Generative AI concepts",
+            "Foundation model training visualization",
+            "Company logos and model information",
+            "Hover effects and section highlighting",
+            "Responsive grid layout"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Lucide icons"],
+        "challenges": [
+            "Canvas background animations",
+            "Responsive design implementation",
+            "Educational content organization",
+            "Interactive state management"
+        ],
+        "hours": { "junior": 25, "intermediate": 15, "advanced": 9 }
+    },
+    {
+        "name": "How LLMs Work",
+        "file": "how-llms-work.html",
+        "purpose": "Interactive visualization of LLM input processing and output generation",
+        "complexity": 4,
+        "totalLines": 703,
+        "features": [
+            "Three-section flow visualization",
+            "Animated network connections",
+            "Multiple input types display",
+            "Multiple output formats",
+            "Pattern node animations",
+            "Educational content layout",
+            "Responsive design"
+        ],
+        "dependencies": ["Alpine.js 3.x", "Lucide icons"],
+        "challenges": [
+            "SVG animation coordination",
+            "Educational content design",
+            "Responsive layout management",
+            "Visual flow representation"
+        ],
+        "hours": { "junior": 20, "intermediate": 12, "advanced": 7 }
+    }
+];

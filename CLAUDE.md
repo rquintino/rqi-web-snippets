@@ -124,6 +124,35 @@ setTimeout(checkLibrary, 100);
 ### Data and Storage
 - If the app needs to persist state, use local storage to ensure no user data is lost, if large content use IndexedDB
 
+#### Data File Loading (.jsdata files)
+- **CRITICAL**: Always load .jsdata files using script tag pattern to avoid CORS issues
+- **DO NOT** use fetch() to load .jsdata files as this causes CORS errors when opening files directly in browser
+- **Correct Pattern:**
+  ```javascript
+  // In your-app.jsdata file:
+  window.yourAppData = [
+      { "key": "value" },
+      // ... your data
+  ];
+  ```
+  ```html
+  <!-- In your HTML file, load BEFORE your main JS file: -->
+  <script src="your-app.jsdata"></script>
+  <script src="your-app.js"></script>
+  ```
+  ```javascript
+  // In your JS file:
+  initializeData() {
+      if (window.yourAppData) {
+          this.data = window.yourAppData;
+      } else {
+          console.error('Data not loaded');
+      }
+  }
+  ```
+- **Examples**: See typing-speed-test.jsdata and dev-cost-analyzer.jsdata for reference patterns
+- This pattern ensures no CORS issues when opening HTML files directly in browser
+
 ### 6. UI
 - Unless requested otherwise, all apps should use modern and minimal UI, have a full screen toggle and dark/light toggle, these icons -not text buttons- should be shown on top right of the page
 - On every change to each app, change the version that should be stored with the file itself, that version should be shown on the app bottom right for easier user checking that they are seeing the latest version, on every update to the file increment the version. The version should be something like vyyyy-MM-dd.N
