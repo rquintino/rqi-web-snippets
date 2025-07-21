@@ -164,124 +164,6 @@ h1 {font-size:1.25rem;font-weight:600}
   overflow: hidden;
 }
 
-.sidebar {
-  width: 16rem;
-  background: var(--gray-50);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-header {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sidebar-header h3 {font-size:1rem;font-weight:600}
-.slide-count {font-size:0.75rem;color:var(--gray-500)}
-
-.slide-navigation {
-  flex: 1;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.nav-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.nav-header h4 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.slide-indicator {
-  font-size: 0.875rem;
-  color: var(--gray-500);
-  font-weight: 500;
-}
-
-.nav-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.btn-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: var(--bg);
-  color: var(--fg);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-nav:hover:not(:disabled) {
-  background: var(--gray-50);
-  border-color: var(--primary);
-}
-
-.btn-nav:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-nav-primary {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.btn-nav-primary:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-.slide-info {
-  background: var(--gray-50);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-}
-
-.slide-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
-}
-
-.slide-status {
-  font-size: 0.75rem;
-  color: var(--success);
-  font-weight: normal;
-}
-
-.slide-status-empty {
-  color: var(--gray-500);
-}
-
-.slide-actions {
-  display: flex;
-  gap: 0.5rem;
-}
 
 .canvas-container {
   flex: 1;
@@ -406,13 +288,6 @@ h1 {font-size:1.25rem;font-weight:600}
   color: var(--fg);
 }
 
-.canvas-controls {
-  position: absolute;
-  top: -3rem;
-  right: 0;
-  display: flex;
-  gap: 0.5rem;
-}
 
 .empty-state {
   text-align: center;
@@ -458,30 +333,6 @@ h1 {font-size:1.25rem;font-weight:600}
   to {transform:rotate(360deg)}
 }
 
-.profile-config {
-  border-top: 1px solid var(--border);
-  margin-top: 1rem;
-  padding-top: 1rem;
-}
-
-.config-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.config-header h4 {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.config-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
 
 .config-field {
   display: flex;
@@ -623,71 +474,7 @@ h1 {font-size:1.25rem;font-weight:600}
   white-space: nowrap;
 }
 
-.viewport-profile-link {
-  text-decoration: none;
-  color: inherit;
-  display: block;
-  transition: transform 0.2s;
-}
 
-.viewport-profile-link:hover {
-  transform: translateY(-1px);
-}
-
-.slider-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.slider-field {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.slider-field label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--gray-600);
-  min-width: 4rem;
-}
-
-.slider {
-  flex: 1;
-  height: 1.5rem;
-  background: var(--gray-200);
-  border-radius: 0.75rem;
-  outline: none;
-  cursor: pointer;
-}
-
-.slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 1rem;
-  height: 1rem;
-  border-radius: 50%;
-  background: var(--primary);
-  cursor: pointer;
-}
-
-.slider::-moz-range-thumb {
-  width: 1rem;
-  height: 1rem;
-  border-radius: 50%;
-  background: var(--primary);
-  border: none;
-  cursor: pointer;
-}
-
-.slider-value {
-  font-size: 0.75rem;
-  color: var(--fg);
-  min-width: 2.5rem;
-  text-align: right;
-  font-weight: 500;
-}
 
 .version {
   position: fixed;

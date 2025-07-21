@@ -6,10 +6,13 @@ Key methods:
 - addSlide(): Creates new slide with unique ID
 - duplicateSlide(): Clones current slide
 - deleteSlide(): Removes current slide with index management
-- handleImageUpload(): Processes image files via drag/drop, paste, or file input
-- exportPDF(): Generates PDF using html2canvas and jsPDF
+- processImageFile(): Processes image files via drag/drop, paste, or file input
+- generatePDF(): Core PDF generation logic used by export and preview
+- exportPDF(): Downloads PDF using generatePDF()
+- previewPDF(): Shows PDF preview using generatePDF()
 - saveToStorage(): Auto-saves to IndexedDB for persistence (with localStorage fallback)
 - loadFromStorage(): Loads data from IndexedDB storage
+- setupInteractions(): Sets up drag/resize interactions for current slide
 */
 
 function carrouselApp() {
@@ -83,12 +86,7 @@ function carrouselApp() {
             if (this.slides.length === 0) return;
             
             this.slides.splice(this.activeSlide, 1);
-            
-            if (this.slides.length === 0) {
-                this.activeSlide = 0;
-            } else if (this.activeSlide >= this.slides.length) {
-                this.activeSlide = this.slides.length - 1;
-            }
+            this.activeSlide = Math.min(this.activeSlide, Math.max(0, this.slides.length - 1));
             
             this.saveToStorage();
             this.refreshPreview();
@@ -98,10 +96,7 @@ function carrouselApp() {
             if (index >= 0 && index < this.slides.length) {
                 this.activeSlide = index;
                 this.$nextTick(() => {
-                    setTimeout(() => {
-                        this.setupBackgroundImageInteraction();
-                        this.setupAllCalloutInteractions();
-                    }, 100);
+                    setTimeout(() => this.setupInteractions(), 100);
                 });
             }
         },
@@ -151,9 +146,7 @@ function carrouselApp() {
                         
                         // Setup interaction after image loads
                         this.$nextTick(() => {
-                            setTimeout(() => {
-                                this.setupBackgroundImageInteraction();
-                            }, 100);
+                            setTimeout(() => this.setupBackgroundImageInteraction(), 100);
                         });
                     };
                     img.src = e.target.result;
@@ -242,176 +235,118 @@ function carrouselApp() {
         setupInteractJS() {
             this.$nextTick(() => {
                 if (typeof interact !== 'undefined') {
-                    this.setupThumbnailDragSort();
-                    this.setupBackgroundImageInteraction();
-                    this.setupAllCalloutInteractions();
+                    this.setupInteractions();
                 }
             });
         },
 
-        setupThumbnailDragSort() {
+        setupInteractions() {
             if (typeof interact === 'undefined') return;
             
-            interact('.thumbnail').draggable({
-                listeners: {
-                    move(event) {
-                        const target = event.target;
-                        const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-                        const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-                        
-                        target.style.transform = `translate(${x}px, ${y}px)`;
-                        target.setAttribute('data-x', x);
-                        target.setAttribute('data-y', y);
-                    },
-                    end(event) {
-                        event.target.style.transform = '';
-                        event.target.removeAttribute('data-x');
-                        event.target.removeAttribute('data-y');
-                    }
-                }
-            });
-
-            interact('#thumbnails-container').dropzone({
-                listeners: {
-                    drop(event) {
-                        const draggedElement = event.relatedTarget;
-                        const draggedId = draggedElement.getAttribute('data-slide-id');
-                        const targetElement = event.target.closest('.thumbnail');
-                        
-                        if (targetElement && draggedId) {
-                            const targetId = targetElement.getAttribute('data-slide-id');
-                            this.reorderSlides(draggedId, targetId);
-                        }
-                    }
-                }
-            });
+            this.setupBackgroundImageInteraction();
+            this.setupAllCalloutInteractions();
         },
 
-
-        reorderSlides(draggedId, targetId) {
-            const draggedIndex = this.slides.findIndex(slide => slide.id === draggedId);
-            const targetIndex = this.slides.findIndex(slide => slide.id === targetId);
+        async generatePDF() {
+            if (this.slides.length === 0) return null;
             
-            if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
-                const draggedSlide = this.slides.splice(draggedIndex, 1)[0];
-                this.slides.splice(targetIndex, 0, draggedSlide);
+            const { jsPDF } = window.jspdf;
+            const isSquare = this.aspectRatio === 'square';
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [1080, isSquare ? 1080 : 1350]
+            });
+            
+            for (let i = 0; i < this.slides.length; i++) {
+                if (i > 0) pdf.addPage();
                 
-                if (this.activeSlide === draggedIndex) {
-                    this.activeSlide = targetIndex;
-                } else if (this.activeSlide === targetIndex) {
-                    this.activeSlide = draggedIndex;
+                this.setActiveSlide(i);
+                await this.$nextTick();
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                const slide = this.getCurrentSlide();
+                const viewport = document.getElementById('viewport');
+                const targetWidth = 1080;
+                const targetHeight = isSquare ? 1080 : 1350;
+                
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = targetWidth;
+                tempCanvas.height = targetHeight;
+                const ctx = tempCanvas.getContext('2d');
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, targetWidth, targetHeight);
+                
+                if (slide?.bgSrc) {
+                    try {
+                        const bgImg = new Image();
+                        bgImg.crossOrigin = 'anonymous';
+                        
+                        await new Promise((resolve, reject) => {
+                            bgImg.onload = resolve;
+                            bgImg.onerror = reject;
+                            bgImg.src = slide.bgSrc;
+                        });
+                        
+                        const viewportRect = viewport.getBoundingClientRect();
+                        const bgElement = document.getElementById(`bg-image-${i}`);
+                        
+                        if (bgElement) {
+                            const bgRect = bgElement.getBoundingClientRect();
+                            
+                            const intersectLeft = Math.max(viewportRect.left, bgRect.left);
+                            const intersectTop = Math.max(viewportRect.top, bgRect.top);
+                            const intersectRight = Math.min(viewportRect.right, bgRect.right);
+                            const intersectBottom = Math.min(viewportRect.bottom, bgRect.bottom);
+                            
+                            if (intersectRight > intersectLeft && intersectBottom > intersectTop) {
+                                const scaleX = bgImg.naturalWidth / bgRect.width;
+                                const scaleY = bgImg.naturalHeight / bgRect.height;
+                                
+                                const srcX = (intersectLeft - bgRect.left) * scaleX;
+                                const srcY = (intersectTop - bgRect.top) * scaleY;
+                                const srcWidth = (intersectRight - intersectLeft) * scaleX;
+                                const srcHeight = (intersectBottom - intersectTop) * scaleY;
+                                
+                                const destX = (intersectLeft - viewportRect.left) * (targetWidth / viewportRect.width);
+                                const destY = (intersectTop - viewportRect.top) * (targetHeight / viewportRect.height);
+                                const destWidth = (intersectRight - intersectLeft) * (targetWidth / viewportRect.width);
+                                const destHeight = (intersectBottom - intersectTop) * (targetHeight / viewportRect.height);
+                                
+                                ctx.drawImage(bgImg, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('Failed to load background image for export:', error);
+                    }
                 }
                 
-                this.saveToStorage();
+                const overlayCanvas = await html2canvas(viewport, {
+                    backgroundColor: null,
+                    useCORS: true,
+                    allowTaint: true,
+                    scale: 2
+                });
+                
+                ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
+                
+                const imgData = tempCanvas.toDataURL('image/png');
+                pdf.addImage(imgData, 'PNG', 0, 0, 1080, targetHeight);
             }
+            
+            return pdf;
         },
 
         async exportPDF() {
             if (this.slides.length === 0) return;
             
             this.isExporting = true;
-            
             try {
-                const { jsPDF } = window.jspdf;
-                const isSquare = this.aspectRatio === 'square';
-                const pdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'px',
-                    format: [1080, isSquare ? 1080 : 1350]
-                });
-                
-                for (let i = 0; i < this.slides.length; i++) {
-                    if (i > 0) pdf.addPage();
-                    
-                    this.setActiveSlide(i);
-                    await this.$nextTick();
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    
-                    const slide = this.getCurrentSlide();
-                    const viewport = document.getElementById('viewport');
-                    const targetWidth = isSquare ? 1080 : 1080;
-                    const targetHeight = isSquare ? 1080 : 1350;
-                    
-                    // Create a temporary canvas to compose the final image
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = targetWidth;
-                    tempCanvas.height = targetHeight;
-                    const ctx = tempCanvas.getContext('2d');
-                    
-                    // Fill with white background
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, targetWidth, targetHeight);
-                    
-                    // If there's a background image, draw it first
-                    if (slide?.bgSrc) {
-                        try {
-                            const bgImg = new Image();
-                            bgImg.crossOrigin = 'anonymous';
-                            
-                            await new Promise((resolve, reject) => {
-                                bgImg.onload = resolve;
-                                bgImg.onerror = reject;
-                                bgImg.src = slide.bgSrc;
-                            });
-                            
-                            // Get viewport dimensions
-                            const viewportRect = viewport.getBoundingClientRect();
-                            const canvas = document.getElementById('canvas');
-                            const canvasRect = canvas.getBoundingClientRect();
-                            
-                            // Calculate the actual visible portion of the background image
-                            const bgElement = document.getElementById(`bg-image-${i}`);
-                            if (bgElement) {
-                                const bgRect = bgElement.getBoundingClientRect();
-                                
-                                // Calculate the intersection between bg image and viewport
-                                const intersectLeft = Math.max(viewportRect.left, bgRect.left);
-                                const intersectTop = Math.max(viewportRect.top, bgRect.top);
-                                const intersectRight = Math.min(viewportRect.right, bgRect.right);
-                                const intersectBottom = Math.min(viewportRect.bottom, bgRect.bottom);
-                                
-                                if (intersectRight > intersectLeft && intersectBottom > intersectTop) {
-                                    // Calculate source coordinates on the original image
-                                    const scaleX = bgImg.naturalWidth / bgRect.width;
-                                    const scaleY = bgImg.naturalHeight / bgRect.height;
-                                    
-                                    const srcX = (intersectLeft - bgRect.left) * scaleX;
-                                    const srcY = (intersectTop - bgRect.top) * scaleY;
-                                    const srcWidth = (intersectRight - intersectLeft) * scaleX;
-                                    const srcHeight = (intersectBottom - intersectTop) * scaleY;
-                                    
-                                    // Calculate destination coordinates on the export canvas
-                                    const destX = (intersectLeft - viewportRect.left) * (targetWidth / viewportRect.width);
-                                    const destY = (intersectTop - viewportRect.top) * (targetHeight / viewportRect.height);
-                                    const destWidth = (intersectRight - intersectLeft) * (targetWidth / viewportRect.width);
-                                    const destHeight = (intersectBottom - intersectTop) * (targetHeight / viewportRect.height);
-                                    
-                                    // Draw the cropped portion
-                                    ctx.drawImage(bgImg, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
-                                }
-                            }
-                        } catch (error) {
-                            console.warn('Failed to load background image for export:', error);
-                        }
-                    }
-                    
-                    // Now capture the viewport overlay content (profile info, etc.)
-                    const overlayCanvas = await html2canvas(viewport, {
-                        backgroundColor: null,
-                        useCORS: true,
-                        allowTaint: true,
-                        scale: 2
-                    });
-                    
-                    // Draw the overlay on top
-                    ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
-                    
-                    // Convert to data URL and add to PDF
-                    const imgData = tempCanvas.toDataURL('image/png');
-                    pdf.addImage(imgData, 'PNG', 0, 0, 1080, isSquare ? 1080 : 1350);
+                const pdf = await this.generatePDF();
+                if (pdf) {
+                    pdf.save('linkedin-carousel.pdf');
                 }
-                
-                pdf.save('linkedin-carousel.pdf');
             } catch (error) {
                 console.error('Export failed:', error);
                 alert('Export failed. Please try again.');
@@ -424,116 +359,16 @@ function carrouselApp() {
             if (this.slides.length === 0) return;
             
             this.isPreviewLoading = true;
-            
             try {
-                const { jsPDF } = window.jspdf;
-                const isSquare = this.aspectRatio === 'square';
-                const pdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'px',
-                    format: [1080, isSquare ? 1080 : 1350]
-                });
-                
-                for (let i = 0; i < this.slides.length; i++) {
-                    if (i > 0) pdf.addPage();
+                const pdf = await this.generatePDF();
+                if (pdf) {
+                    const pdfBlob = pdf.output('blob');
+                    const pdfUrl = URL.createObjectURL(pdfBlob);
                     
-                    this.setActiveSlide(i);
-                    await this.$nextTick();
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    
-                    const slide = this.getCurrentSlide();
-                    const viewport = document.getElementById('viewport');
-                    const targetWidth = isSquare ? 1080 : 1080;
-                    const targetHeight = isSquare ? 1080 : 1350;
-                    
-                    // Create a temporary canvas to compose the final image
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = targetWidth;
-                    tempCanvas.height = targetHeight;
-                    const ctx = tempCanvas.getContext('2d');
-                    
-                    // Fill with white background
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, targetWidth, targetHeight);
-                    
-                    // If there's a background image, draw it first
-                    if (slide?.bgSrc) {
-                        try {
-                            const bgImg = new Image();
-                            bgImg.crossOrigin = 'anonymous';
-                            
-                            await new Promise((resolve, reject) => {
-                                bgImg.onload = resolve;
-                                bgImg.onerror = reject;
-                                bgImg.src = slide.bgSrc;
-                            });
-                            
-                            // Get viewport dimensions
-                            const viewportRect = viewport.getBoundingClientRect();
-                            const canvas = document.getElementById('canvas');
-                            const canvasRect = canvas.getBoundingClientRect();
-                            
-                            // Calculate the actual visible portion of the background image
-                            const bgElement = document.getElementById(`bg-image-${i}`);
-                            if (bgElement) {
-                                const bgRect = bgElement.getBoundingClientRect();
-                                
-                                // Calculate the intersection between bg image and viewport
-                                const intersectLeft = Math.max(viewportRect.left, bgRect.left);
-                                const intersectTop = Math.max(viewportRect.top, bgRect.top);
-                                const intersectRight = Math.min(viewportRect.right, bgRect.right);
-                                const intersectBottom = Math.min(viewportRect.bottom, bgRect.bottom);
-                                
-                                if (intersectRight > intersectLeft && intersectBottom > intersectTop) {
-                                    // Calculate source coordinates on the original image
-                                    const scaleX = bgImg.naturalWidth / bgRect.width;
-                                    const scaleY = bgImg.naturalHeight / bgRect.height;
-                                    
-                                    const srcX = (intersectLeft - bgRect.left) * scaleX;
-                                    const srcY = (intersectTop - bgRect.top) * scaleY;
-                                    const srcWidth = (intersectRight - intersectLeft) * scaleX;
-                                    const srcHeight = (intersectBottom - intersectTop) * scaleY;
-                                    
-                                    // Calculate destination coordinates on the export canvas
-                                    const destX = (intersectLeft - viewportRect.left) * (targetWidth / viewportRect.width);
-                                    const destY = (intersectTop - viewportRect.top) * (targetHeight / viewportRect.height);
-                                    const destWidth = (intersectRight - intersectLeft) * (targetWidth / viewportRect.width);
-                                    const destHeight = (intersectBottom - intersectTop) * (targetHeight / viewportRect.height);
-                                    
-                                    // Draw the cropped portion
-                                    ctx.drawImage(bgImg, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
-                                }
-                            }
-                        } catch (error) {
-                            console.warn('Failed to load background image for export:', error);
-                        }
-                    }
-                    
-                    // Now capture the viewport overlay content (profile info, etc.)
-                    const overlayCanvas = await html2canvas(viewport, {
-                        backgroundColor: null,
-                        useCORS: true,
-                        allowTaint: true,
-                        scale: 2
-                    });
-                    
-                    // Draw the overlay on top
-                    ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
-                    
-                    // Convert to data URL and add to PDF
-                    const imgData = tempCanvas.toDataURL('image/png');
-                    pdf.addImage(imgData, 'PNG', 0, 0, 1080, isSquare ? 1080 : 1350);
+                    this.currentPDF = pdf;
+                    this.previewUrl = pdfUrl;
+                    this.showPreview = true;
                 }
-                
-                // Create blob URL for preview
-                const pdfBlob = pdf.output('blob');
-                const pdfUrl = URL.createObjectURL(pdfBlob);
-                
-                // Store for download later
-                this.currentPDF = pdf;
-                this.previewUrl = pdfUrl;
-                this.showPreview = true;
-                
             } catch (error) {
                 console.error('Preview failed:', error);
                 alert('Preview failed. Please try again.');
@@ -706,12 +541,14 @@ function carrouselApp() {
             
             const imageId = `bg-image-${this.activeSlide}`;
             const imageElement = document.getElementById(imageId);
-            
             if (!imageElement) return;
             
-            // Remove any existing interaction
-            interact(`#${imageId}`).unset();
+            const saveChanges = () => {
+                this.saveToStorage();
+                this.refreshPreview();
+            };
             
+            interact(`#${imageId}`).unset();
             interact(`#${imageId}`).draggable({
                 listeners: {
                     move: (event) => {
@@ -720,45 +557,30 @@ function carrouselApp() {
                         
                         slide.bgPosition.x += event.dx;
                         slide.bgPosition.y += event.dy;
-                        
                         event.target.style.transform = 
                             `translate(${slide.bgPosition.x}px, ${slide.bgPosition.y}px)`;
                     },
-                    end: () => {
-                        this.saveToStorage();
-                        this.refreshPreview();
-                    }
+                    end: saveChanges
                 }
             }).resizable({
                 edges: { left: true, right: true, bottom: true, top: true },
-                modifiers: [
-                    interact.modifiers.aspectRatio({
-                        ratio: 'preserve'
-                    })
-                ],
+                modifiers: [interact.modifiers.aspectRatio({ ratio: 'preserve' })],
                 listeners: {
                     move: (event) => {
                         const slide = this.getCurrentSlide();
                         if (!slide) return;
                         
-                        // Update size
                         slide.bgSize.width = event.rect.width;
                         slide.bgSize.height = event.rect.height;
-                        
-                        // Update position if edges moved
                         slide.bgPosition.x += event.deltaRect.left;
                         slide.bgPosition.y += event.deltaRect.top;
                         
-                        // Apply styles
                         event.target.style.width = event.rect.width + 'px';
                         event.target.style.height = event.rect.height + 'px';
                         event.target.style.transform = 
                             `translate(${slide.bgPosition.x}px, ${slide.bgPosition.y}px)`;
                     },
-                    end: () => {
-                        this.saveToStorage();
-                        this.refreshPreview();
-                    }
+                    end: saveChanges
                 }
             });
         },
@@ -836,28 +658,22 @@ function carrouselApp() {
             
             const selector = `#callout-${calloutId}`;
             const element = document.querySelector(selector);
+            
             if (!element) {
                 setTimeout(() => this.setupCalloutInteraction(calloutId), 100);
                 return;
             }
 
-            // Remove any existing interaction
             interact(selector).unset();
-
-            // Simple draggable - similar to background image
             interact(selector).draggable({
                 listeners: {
                     move: (event) => {
                         const slide = this.getCurrentSlide();
-                        if (!slide) return;
-                        
-                        const callout = slide.callouts?.find(c => c.id === calloutId);
+                        const callout = slide?.callouts?.find(c => c.id === calloutId);
                         if (!callout) return;
 
                         callout.x += event.dx;
                         callout.y += event.dy;
-
-                        // Update position immediately like background image does
                         event.target.style.left = callout.x + 'px';
                         event.target.style.top = callout.y + 'px';
                     },
