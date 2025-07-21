@@ -2494,4 +2494,162 @@ test.describe('Carousel Generator', () => {
     expect(pageErrors).toEqual([]);
     expect(errors).toEqual([]);
   });
+
+  test('profile link functionality in PDF generation', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Set up profile with name and URL
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+    await page.fill('input[placeholder="Your Name"]', 'Test Profile');
+    await page.fill('input[placeholder="https://linkedin.com/in/..."]', 'https://linkedin.com/in/testprofile');
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Verify profile is visible
+    const profileName = page.locator('.viewport-profile-name');
+    await expect(profileName).toBeVisible();
+    await expect(profileName).toHaveText('Test Profile');
+
+    // Mock the PDF.link method to verify it's called
+    const linkCallDetails = await page.evaluate(() => {
+      return new Promise((resolve) => {
+        // Mock jsPDF to capture link calls
+        window.jspdf = {
+          jsPDF: function(options) {
+            const mockPdf = {
+              addPage: () => mockPdf,
+              addImage: () => mockPdf,
+              save: () => mockPdf,
+              output: () => new Blob(),
+              link: function(x, y, width, height, options) {
+                // Capture link call details
+                resolve({
+                  called: true,
+                  x, y, width, height,
+                  url: options.url
+                });
+                return mockPdf;
+              }
+            };
+            return mockPdf;
+          }
+        };
+        
+        // Trigger PDF generation
+        const previewBtn = document.querySelector('button[title="Preview PDF"]');
+        if (previewBtn) {
+          previewBtn.click();
+        } else {
+          resolve({ called: false, error: 'Preview button not found' });
+        }
+        
+        // Fallback timeout
+        setTimeout(() => {
+          resolve({ called: false, error: 'Timeout - link method not called' });
+        }, 5000);
+      });
+    });
+
+    // Wait for the PDF generation to complete
+    await page.waitForTimeout(3000);
+
+    // Verify that PDF.link was called with correct URL
+    expect(linkCallDetails.called).toBe(true);
+    expect(linkCallDetails.url).toBe('https://linkedin.com/in/testprofile');
+    expect(typeof linkCallDetails.x).toBe('number');
+    expect(typeof linkCallDetails.y).toBe('number');
+    expect(typeof linkCallDetails.width).toBe('number');
+    expect(typeof linkCallDetails.height).toBe('number');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('profile link NOT added when URL is missing', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Set up profile with name but NO URL
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+    await page.fill('input[placeholder="Your Name"]', 'Test Profile No URL');
+    // Leave URL field empty
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Verify profile is visible
+    const profileName = page.locator('.viewport-profile-name');
+    await expect(profileName).toBeVisible();
+    await expect(profileName).toHaveText('Test Profile No URL');
+
+    // Mock jsPDF to detect if link is called
+    const noLinkResult = await page.evaluate(() => {
+      return new Promise((resolve) => {
+        let linkCalled = false;
+        
+        // Mock jsPDF to detect if link is called
+        window.jspdf = {
+          jsPDF: function(options) {
+            const mockPdf = {
+              addPage: () => mockPdf,
+              addImage: () => mockPdf,
+              save: () => mockPdf,
+              output: () => new Blob(),
+              link: function() {
+                linkCalled = true;
+                return mockPdf;
+              }
+            };
+            return mockPdf;
+          }
+        };
+        
+        // Trigger PDF generation
+        const previewBtn = document.querySelector('button[title="Preview PDF"]');
+        if (previewBtn) {
+          previewBtn.click();
+        }
+        
+        setTimeout(() => {
+          resolve({ linkCalled });
+        }, 3000);
+      });
+    });
+
+    await page.waitForTimeout(3500);
+
+    // Verify that PDF.link was NOT called when URL is empty
+    expect(noLinkResult.linkCalled).toBe(false);
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
 });

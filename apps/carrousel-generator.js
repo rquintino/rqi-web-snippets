@@ -426,6 +426,34 @@ function carrouselApp() {
                 
                 const imgData = tempCanvas.toDataURL('image/png');
                 pdf.addImage(imgData, 'PNG', 0, 0, CONFIG.DIMENSIONS.SQUARE.width, targetHeight);
+                
+                // Add clickable link for profile if profile URL is configured
+                if (this.profile.profileUrl && (this.profile.name || this.profile.avatarUrl)) {
+                    try {
+                        const profileElement = document.querySelector('.viewport-avatar');
+                        if (profileElement) {
+                            const profileRect = profileElement.getBoundingClientRect();
+                            const viewportRect = viewport.getBoundingClientRect();
+                            
+                            // Calculate relative position within viewport
+                            const relativeX = (profileRect.left - viewportRect.left) / viewportRect.width;
+                            const relativeY = (profileRect.top - viewportRect.top) / viewportRect.height;
+                            const relativeWidth = profileRect.width / viewportRect.width;
+                            const relativeHeight = profileRect.height / viewportRect.height;
+                            
+                            // Convert to PDF coordinates
+                            const linkX = relativeX * CONFIG.DIMENSIONS.SQUARE.width;
+                            const linkY = relativeY * targetHeight;
+                            const linkWidth = relativeWidth * CONFIG.DIMENSIONS.SQUARE.width;
+                            const linkHeight = relativeHeight * targetHeight;
+                            
+                            // Add link annotation to PDF
+                            pdf.link(linkX, linkY, linkWidth, linkHeight, { url: this.profile.profileUrl });
+                        }
+                    } catch (error) {
+                        console.warn('Failed to add profile link to PDF:', error);
+                    }
+                }
             }
             
             // Restore the original slide index
