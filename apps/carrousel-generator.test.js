@@ -20,11 +20,40 @@ test.describe('Carousel Generator', () => {
     await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
     await page.waitForLoadState('networkidle');
     
+    // Check that the page has loaded
+    await expect(page.locator('h1')).toContainText('LinkedIn Carousel Generator');
+    
     // Check no JavaScript page errors
     expect(pageErrors).toEqual([]);
     
     // Check no console errors - this MUST be at the end
     expect(errors).toEqual([]);
+  });
+
+  test('empty avatar button is clickable and opens profile config', async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    
+    // First add a slide so the avatar area is visible
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+    
+    // Check that profile config modal is initially hidden
+    await expect(page.locator('.modal-overlay')).toBeHidden();
+    
+    // Find the empty avatar button (when no profile is set)
+    const emptyAvatarButton = page.locator('.viewport-add-profile');
+    
+    // Verify the empty avatar button is visible and clickable
+    await expect(emptyAvatarButton).toBeVisible();
+    await expect(emptyAvatarButton).toBeEnabled();
+    
+    // Click the empty avatar button
+    await emptyAvatarButton.click();
+    
+    // Verify that the profile config modal opens
+    await expect(page.locator('.modal-overlay')).toBeVisible();
+    await expect(page.locator('.modal-container h3')).toContainText('Profile Configuration');
   });
 
   test('keyboard navigation skips slides when adding many slides', async ({ page }) => {

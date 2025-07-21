@@ -877,6 +877,7 @@ h1 {font-size:1.25rem;font-weight:600}
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: 0.7;
+  pointer-events: auto;
 }
 
 .viewport-add-profile:hover {
