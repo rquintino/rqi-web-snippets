@@ -89,6 +89,11 @@ Comprehensive analysis dashboard for development costs and complexity across all
 
 <img src="apps/dev-cost-analyzer.jpeg" alt="Development Cost Analyzer" height="180">
 
+### [LinkedIn Carousel Generator](https://rquintino.github.io/rqi-web-snippets/apps/carrousel-generator.html)
+Create professional LinkedIn carousel slides with drag-and-drop image upload, resizable text callouts, profile integration, and PDF export functionality
+
+<img src="apps/carrousel-generator.jpeg" alt="LinkedIn Carousel Generator" height="180">
+
 ## Usage
 
 1. Simply clone the repository
