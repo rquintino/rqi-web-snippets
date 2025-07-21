@@ -975,4 +975,722 @@ test.describe('Carousel Generator', () => {
     
     expect(errors).toEqual([]);
   });
+
+  test('profile position options work correctly', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Open profile configuration modal using the add profile button
+    await page.click('[title="Add Profile"]');
+    await page.waitForTimeout(300);
+
+    // Check that the position dropdown exists and has correct options
+    const positionSelect = page.locator('select[x-model="profile.position"]');
+    await expect(positionSelect).toBeVisible();
+
+    // Check all position options are available
+    const options = await positionSelect.locator('option').allTextContents();
+    expect(options).toEqual(['Bottom Right', 'Bottom Left', 'Top Right', 'Top Left']);
+
+    // Add some profile info to make avatar visible
+    await page.fill('input[x-model="profile.name"]', 'Test User');
+    await page.waitForTimeout(100);
+
+    // Test each position
+    const positions = [
+      { value: 'bottom-right', class: 'position-bottom-right' },
+      { value: 'bottom-left', class: 'position-bottom-left' },
+      { value: 'top-right', class: 'position-top-right' },
+      { value: 'top-left', class: 'position-top-left' }
+    ];
+
+    for (const position of positions) {
+      // Select the position
+      await positionSelect.selectOption(position.value);
+      await page.waitForTimeout(100);
+
+      // Close modal
+      await page.click('.modal-header .btn-icon');
+      await page.waitForTimeout(100);
+
+      // Check that the avatar has the correct position class
+      const avatar = page.locator('.viewport-avatar');
+      await expect(avatar).toHaveClass(new RegExp(position.class));
+
+      // Re-open modal for next iteration (except last)
+      if (position !== positions[positions.length - 1]) {
+        await page.click('.viewport-avatar');
+        await page.waitForTimeout(100);
+      }
+    }
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('swipe icon appears only on first slide and selection works', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // The app automatically creates first slide on init, so we should be on slide 1 (index 0)
+    const slideIndicator = page.locator('.slide-indicator');
+    const slideIndicatorText = await slideIndicator.textContent();
+    console.log(`Debug on init: Slide indicator shows: ${slideIndicatorText}`);
+    
+    // Wait for Alpine.js to render the swipe icon
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    await page.waitForTimeout(300);
+    
+    // Check swipe icon is visible on first slide (activeSlide === 0)
+    await expect(swipeIcon).toBeVisible();
+
+    // Add second slide (this will navigate to the new slide automatically)
+    await page.click('[title="Add Slide"]');
+    await page.waitForTimeout(300);
+
+    // Now we should be on slide 2 (index 1), swipe icon should NOT be visible
+    await expect(swipeIcon).not.toBeVisible();
+
+    // Navigate back to first slide (index 0)
+    await page.click('[title="Previous Slide"]');
+    await page.waitForTimeout(300);
+
+    // Swipe icon should be visible again on first slide
+    await expect(swipeIcon).toBeVisible();
+
+    // Click swipe icon to open selection menu (should work now)
+    await swipeIcon.click();
+    await page.waitForTimeout(200);
+
+    // Check that selection menu is visible
+    const selectionMenu = page.locator('.swipe-icon-menu');
+    await expect(selectionMenu).toBeVisible();
+
+    // Check that menu has header
+    const menuHeader = page.locator('.swipe-menu-header');
+    await expect(menuHeader).toHaveText('Choose Swipe Icon');
+
+    // Check that all icons are present
+    const iconButtons = page.locator('.swipe-menu-item');
+    const iconCount = await iconButtons.count();
+    expect(iconCount).toBe(8); // Should have 8 different icons
+
+    // Test selecting a different icon (force click to avoid element overlap)
+    const chevronRightIcon = page.locator('.swipe-menu-item').filter({ hasText: 'Chevron Right' });
+    await chevronRightIcon.click({ force: true });
+    await page.waitForTimeout(100);
+
+    // Menu should close after selection
+    await expect(selectionMenu).not.toBeVisible();
+
+    // Swipe icon display should show the new icon
+    const iconDisplay = page.locator('.swipe-icon-display');
+    await expect(iconDisplay).toHaveText('›');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('font size adjustment affects all callouts immediately', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Add a callout to test font size changes
+    await page.click('[title="Add Text Callout"]');
+    await page.waitForTimeout(300);
+
+    // Find the callout and get initial font size
+    const callout = page.locator('.text-callout').first();
+    await expect(callout).toBeVisible();
+
+    // Check initial font size (should be 16px default)
+    const initialStyle = await callout.getAttribute('style');
+    expect(initialStyle).toContain('font-size: 16px');
+
+    // Find and test the font size slider
+    const fontSlider = page.locator('.viewport-font-slider');
+    await expect(fontSlider).toBeVisible();
+
+    // Find the font size display
+    const fontSizeDisplay = page.locator('.viewport-font-size');
+    await expect(fontSizeDisplay).toHaveText('16px');
+
+    // Change font size to 24px using evaluate to set value
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '24';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(200);
+
+    // Check that font size display updated
+    await expect(fontSizeDisplay).toHaveText('24px');
+
+    // Check that callout font size updated immediately
+    const updatedStyle = await callout.getAttribute('style');
+    expect(updatedStyle).toContain('font-size: 24px');
+
+    // Add a second callout to verify it also gets the new font size
+    await page.click('[title="Add Text Callout"]');
+    await page.waitForTimeout(300);
+
+    const secondCallout = page.locator('.text-callout').nth(1);
+    await expect(secondCallout).toBeVisible();
+
+    // Second callout should also have the current font size
+    const secondCalloutStyle = await secondCallout.getAttribute('style');
+    expect(secondCalloutStyle).toContain('font-size: 24px');
+
+    // Test min/max bounds by trying to set font size too low
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '5';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(200);
+
+    // Should be clamped to minimum (8px)
+    await expect(fontSizeDisplay).toHaveText('8px');
+    const minStyle = await callout.getAttribute('style');
+    expect(minStyle).toContain('font-size: 8px');
+
+    // Test max bounds
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '50';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(200);
+
+    // Should be clamped to maximum (32px)
+    await expect(fontSizeDisplay).toHaveText('32px');
+    const maxStyle = await callout.getAttribute('style');
+    expect(maxStyle).toContain('font-size: 32px');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('font size changes are visually applied to callout display elements', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Add a callout
+    await page.click('[title="Add Text Callout"]');
+    await page.waitForTimeout(500);
+
+    // Wait for the callout to appear and be ready
+    const callout = page.locator('.text-callout').first();
+    await expect(callout).toBeVisible();
+    
+    // Check initial computed font size of the display element (should inherit from parent)
+    const initialComputedFontSize = await page.evaluate(() => {
+      const displayElement = document.querySelector('.callout-display');
+      if (!displayElement) return 'element not found';
+      return window.getComputedStyle(displayElement).fontSize;
+    });
+    console.log(`Initial computed font size: ${initialComputedFontSize}`);
+
+    // Change font size to 24px
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '24';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(300);
+
+    // Check that the computed font size of the display element has changed
+    const updatedComputedFontSize = await page.evaluate(() => {
+      const displayElement = document.querySelector('.callout-display');
+      return window.getComputedStyle(displayElement).fontSize;
+    });
+    console.log(`Updated computed font size: ${updatedComputedFontSize}`);
+
+    // The computed font size should now be 24px
+    expect(updatedComputedFontSize).toBe('24px');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('swipe icon click handler investigation', async ({ page }) => {
+    const errors = [];
+    const consoleLogs = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      } else if (msg.type() === 'log') {
+        consoleLogs.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Wait for first slide to be created
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    await expect(swipeIcon).toBeVisible();
+
+    // Check if there are overlapping elements
+    const overlappingElements = await page.evaluate(() => {
+      const swipeIcon = document.querySelector('.viewport-swipe-icon');
+      if (!swipeIcon) return 'swipe icon not found';
+      
+      const rect = swipeIcon.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      // Get element at the center of swipe icon
+      const elementAtCenter = document.elementFromPoint(centerX, centerY);
+      
+      return {
+        swipeIconRect: {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height
+        },
+        elementAtCenter: elementAtCenter ? {
+          tagName: elementAtCenter.tagName,
+          className: elementAtCenter.className,
+          title: elementAtCenter.title
+        } : 'no element found'
+      };
+    });
+
+    console.log('Overlapping elements analysis:', JSON.stringify(overlappingElements, null, 2));
+
+    // Try a regular click first
+    try {
+      await swipeIcon.click({ timeout: 1000 });
+      console.log('Regular click succeeded');
+    } catch (error) {
+      console.log('Regular click failed:', error.message);
+      
+      // Try force click
+      try {
+        await swipeIcon.click({ force: true });
+        console.log('Force click succeeded');
+      } catch (forceError) {
+        console.log('Force click also failed:', forceError.message);
+      }
+    }
+
+    // Check if the menu is now visible first
+    const selectionMenu = page.locator('.swipe-icon-menu');
+    const menuVisible = await selectionMenu.isVisible();
+    console.log(`Selection menu visible after click: ${menuVisible}`);
+
+    // Try to manually call the method to see if it works
+    const manualToggleResult = await page.evaluate(() => {
+      try {
+        const body = document.body;
+        const alpineData = Alpine.$data(body);
+        if (alpineData && typeof alpineData.toggleSwipeIconSelection === 'function') {
+          alpineData.toggleSwipeIconSelection();
+          return 'method called successfully';
+        } else {
+          return 'method not found or not a function';
+        }
+      } catch (error) {
+        return 'error: ' + error.message;
+      }
+    });
+    console.log('Manual method call result:', manualToggleResult);
+
+    // Check menu visibility after manual call
+    const menuVisibleAfterManual = await selectionMenu.isVisible();
+    console.log(`Menu visible after manual call: ${menuVisibleAfterManual}`);
+
+    // Show captured console logs
+    console.log('Console logs captured:', consoleLogs);
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('profile position persistence across page refreshes', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Open profile config
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+
+    // Set profile name and change position to top-left
+    await page.fill('input[placeholder="Your Name"]', 'Test User');
+    await page.selectOption('.modal-content select', 'top-left');
+    await page.waitForTimeout(300);
+
+    // Close modal
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Verify profile is positioned top-left
+    const profileElement = await page.locator('.viewport-avatar');
+    const hasTopLeftClass = await profileElement.evaluate(el => el.classList.contains('position-top-left'));
+    expect(hasTopLeftClass).toBe(true);
+
+    // Refresh the page
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Check that position is still top-left after refresh
+    const profileAfterRefresh = await page.locator('.viewport-avatar');
+    const stillHasTopLeftClass = await profileAfterRefresh.evaluate(el => el.classList.contains('position-top-left'));
+    expect(stillHasTopLeftClass).toBe(true);
+
+    // Check name is still there
+    const profileName = await page.textContent('.viewport-profile-name');
+    expect(profileName).toBe('Test User');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('swipe icon appears only on first slide and persists setting', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Should be on slide 1/1, swipe icon should be visible
+    let swipeIcon = page.locator('.viewport-swipe-icon');
+    let isSwipeVisible = await swipeIcon.isVisible();
+    expect(isSwipeVisible).toBe(true);
+
+    // Verify it shows the default swipe icon
+    const defaultIcon = await page.textContent('.swipe-icon-display');
+    expect(defaultIcon).toBe('→'); // Default is swipe-right
+
+    // Add another slide
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+
+    // Should now be on slide 2/2, swipe icon should NOT be visible
+    isSwipeVisible = await swipeIcon.isVisible();
+    expect(isSwipeVisible).toBe(false);
+
+    // Go back to first slide
+    await page.click('button[title="Previous Slide"]');
+    await page.waitForTimeout(300);
+
+    // Should be on slide 1/2, swipe icon should be visible again
+    isSwipeVisible = await swipeIcon.isVisible();
+    expect(isSwipeVisible).toBe(true);
+
+    // Click the swipe icon to open selection menu
+    await swipeIcon.click({ force: true });
+    await page.waitForTimeout(300);
+
+    // Check that menu is visible
+    const menu = page.locator('.swipe-icon-menu');
+    const menuVisible = await menu.isVisible();
+    expect(menuVisible).toBe(true);
+
+    // Select a different icon (chevron-right)
+    await page.click('.swipe-menu-item[title="Chevron Right"]');
+    await page.waitForTimeout(300);
+
+    // Check that the icon changed
+    const newIcon = await page.textContent('.swipe-icon-display');
+    expect(newIcon).toBe('›');
+
+    // Refresh page to check persistence
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Should still show the chevron icon on first slide
+    const persistedIcon = await page.textContent('.swipe-icon-display');
+    expect(persistedIcon).toBe('›');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('font size slider respects minimum and maximum boundaries', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Add a callout to test font sizes on
+    await page.click('button[title="Add Text Callout"]');
+    await page.waitForTimeout(500);
+
+    const slider = page.locator('.viewport-font-slider');
+    const callout = page.locator('.callout-display').first();
+
+    // Test minimum boundary (8px) - set via JavaScript since browsers handle range differently
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '5';
+      slider.dispatchEvent(new Event('input'));
+    });
+    await page.waitForTimeout(200);
+
+    // Should be clamped to minimum
+    let displayedSize = await page.textContent('.viewport-font-size');
+    expect(displayedSize).toBe('8px');
+
+    let computedSize = await callout.evaluate(el => window.getComputedStyle(el).fontSize);
+    expect(computedSize).toBe('8px');
+
+    // Test maximum boundary (32px)
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '40';
+      slider.dispatchEvent(new Event('input'));
+    });
+    await page.waitForTimeout(200);
+
+    // Should be clamped to maximum
+    displayedSize = await page.textContent('.viewport-font-size');
+    expect(displayedSize).toBe('32px');
+
+    computedSize = await callout.evaluate(el => window.getComputedStyle(el).fontSize);
+    expect(computedSize).toBe('32px');
+
+    // Test valid range (middle value)
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '20';
+      slider.dispatchEvent(new Event('input'));
+    });
+    await page.waitForTimeout(200);
+
+    displayedSize = await page.textContent('.viewport-font-size');
+    expect(displayedSize).toBe('20px');
+
+    computedSize = await callout.evaluate(el => window.getComputedStyle(el).fontSize);
+    expect(computedSize).toBe('20px');
+
+    // Verify slider attributes are correct
+    const minValue = await slider.getAttribute('min');
+    const maxValue = await slider.getAttribute('max');
+    const stepValue = await slider.getAttribute('step');
+
+    expect(minValue).toBe('8');
+    expect(maxValue).toBe('32');
+    expect(stepValue).toBe('1');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('all three features work together without conflicts', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Step 1: Set up profile with custom position
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+    await page.fill('input[placeholder="Your Name"]', 'Test Profile');
+    await page.selectOption('.modal-content select', 'top-right');
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Verify profile is in top-right position
+    const profile = page.locator('.viewport-avatar');
+    const hasTopRightClass = await profile.evaluate(el => el.classList.contains('position-top-right'));
+    expect(hasTopRightClass).toBe(true);
+
+    // Step 2: Change swipe icon to hand gesture
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    await swipeIcon.click({ force: true });
+    await page.waitForTimeout(300);
+    await page.click('.swipe-menu-item[title="Hand Gesture"]');
+    await page.waitForTimeout(300);
+
+    // Verify swipe icon changed
+    const iconText = await page.textContent('.swipe-icon-display');
+    expect(iconText).toBe('👉');
+
+    // Step 3: Add callout and adjust font size
+    await page.click('button[title="Add Text Callout"]');
+    await page.waitForTimeout(500);
+
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '28';
+      slider.dispatchEvent(new Event('input'));
+    });
+    await page.waitForTimeout(300);
+
+    // Verify font size applied
+    const callout = page.locator('.callout-display').first();
+    const fontSize = await callout.evaluate(el => window.getComputedStyle(el).fontSize);
+    expect(fontSize).toBe('28px');
+
+    // Step 4: Add second slide and verify swipe icon only on first
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+
+    // Should be on slide 2, no swipe icon
+    const swipeIconVisible = await swipeIcon.isVisible();
+    expect(swipeIconVisible).toBe(false);
+
+    // Profile should still be visible (it's global across all slides)
+    const profileVisible = await profile.isVisible();
+    expect(profileVisible).toBe(true);
+
+    // Step 5: Go back to first slide, verify everything still works
+    await page.click('button[title="Previous Slide"]');
+    await page.waitForTimeout(300);
+
+    // All features should be restored on slide 1
+    const swipeIconVisibleAgain = await swipeIcon.isVisible();
+    expect(swipeIconVisibleAgain).toBe(true);
+
+    const profileVisibleAgain = await profile.isVisible();
+    expect(profileVisibleAgain).toBe(true);
+
+    const iconTextAgain = await page.textContent('.swipe-icon-display');
+    expect(iconTextAgain).toBe('👉');
+
+    const fontSizeDisplay = await page.textContent('.viewport-font-size');
+    expect(fontSizeDisplay).toBe('28px');
+
+    // Step 6: Test that all settings persist after refresh
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Make sure we're on first slide (swipe icon only shows on first slide)
+    const slideIndicator = await page.textContent('.slide-indicator');
+    if (slideIndicator !== '1/2') {
+      // Click previous button to get to slide 1
+      await page.click('button[title="Previous Slide"]');
+      await page.waitForTimeout(300);
+    }
+
+    // Check all features persisted
+    const persistedProfile = page.locator('.viewport-avatar');
+    const persistedSwipeIcon = page.locator('.viewport-swipe-icon');
+    
+    const profileStillTopRight = await persistedProfile.evaluate(el => el.classList.contains('position-top-right'));
+    expect(profileStillTopRight).toBe(true);
+
+    const swipeIconStillVisible = await persistedSwipeIcon.isVisible();
+    expect(swipeIconStillVisible).toBe(true);
+
+    const iconStillHandGesture = await page.textContent('.swipe-icon-display');
+    expect(iconStillHandGesture).toBe('👉');
+
+    const fontSizeStillLarge = await page.textContent('.viewport-font-size');
+    expect(fontSizeStillLarge).toBe('28px');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
 });

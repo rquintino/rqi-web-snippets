@@ -16,6 +16,32 @@ Key methods:
 */
 
 function carrouselApp() {
+    // Configuration constants
+    const CONFIG = {
+        DEBOUNCE_TIME: {
+            KEYBOARD: 150,
+            PREVIEW_REFRESH: 500,
+            INTERACTION_SETUP: 100
+        },
+        FONT_SIZE: {
+            MIN: 8,
+            MAX: 32,
+            DEFAULT: 16
+        },
+        DIMENSIONS: {
+            SQUARE: { width: 1080, height: 1080 },
+            PORTRAIT: { width: 1080, height: 1350 }
+        },
+        STORAGE_KEYS: {
+            DATA: 'carrousel-data',
+            DARK_MODE: 'carrousel-dark'
+        },
+        AVATAR: {
+            MAX_SIZE: 5 * 1024 * 1024 // 5MB
+        },
+        DEFAULT_CALLOUT_POSITION: { x: 50, y: 50 }
+    };
+
     return {
         slides: [],
         activeSlide: 0,
@@ -33,19 +59,43 @@ function carrouselApp() {
         profile: {
             avatarUrl: '',
             name: '',
-            profileUrl: ''
+            profileUrl: '',
+            position: 'bottom-right'
         },
+        swipeIcon: {
+            enabled: true,
+            selected: 'swipe-right',
+            showSelection: false
+        },
+        calloutFontSize: CONFIG.FONT_SIZE.DEFAULT,
+        availableSwipeIcons: [
+            { id: 'swipe-right', name: 'Swipe Right', icon: '→' },
+            { id: 'swipe-left', name: 'Swipe Left', icon: '←' },
+            { id: 'chevron-right', name: 'Chevron Right', icon: '›' },
+            { id: 'chevron-left', name: 'Chevron Left', icon: '‹' },
+            { id: 'double-chevron', name: 'Double Chevron', icon: '»' },
+            { id: 'finger-swipe', name: 'Finger Swipe', icon: '👆' },
+            { id: 'hand-gesture', name: 'Hand Gesture', icon: '👉' },
+            { id: 'scroll-icon', name: 'Scroll Icon', icon: '⇢' }
+        ],
 
         async init() {
-            await this.loadFromStorage();
-            await this.loadDarkModePreference();
-            this.setupKeyboardShortcuts();
-            this.setupPasteHandler();
-            this.setupInteractJS();
+            await Promise.all([
+                this.loadFromStorage(),
+                this.loadDarkModePreference()
+            ]);
+            
+            this.setupEventHandlers();
             
             if (this.slides.length === 0) {
                 this.addSlide();
             }
+        },
+
+        setupEventHandlers() {
+            this.setupKeyboardShortcuts();
+            this.setupPasteHandler();
+            this.setupInteractJS();
         },
 
         generateId() {
@@ -53,52 +103,68 @@ function carrouselApp() {
         },
 
         addSlide() {
-            const newSlide = {
+            const newSlide = this.createSlideStructure();
+            this.slides.push(newSlide);
+            this.setActiveSlide(this.slides.length - 1);
+            this.saveAndRefresh();
+        },
+
+        createSlideStructure() {
+            return {
                 id: this.generateId(),
                 bgSrc: null,
                 bgPosition: { x: 0, y: 0 },
                 bgSize: { width: null, height: null },
                 callouts: []
             };
-            
-            this.slides.push(newSlide);
-            this.activeSlide = this.slides.length - 1;
-            this.saveToStorage();
-            this.refreshPreview();
         },
 
         duplicateSlide() {
             if (this.slides.length === 0) return;
             
             const currentSlide = this.getCurrentSlide();
-            const duplicatedSlide = {
-                ...JSON.parse(JSON.stringify(currentSlide)),
-                id: this.generateId()
-            };
+            const duplicatedSlide = this.deepCloneSlide(currentSlide);
             
             this.slides.splice(this.activeSlide + 1, 0, duplicatedSlide);
-            this.activeSlide = this.activeSlide + 1;
-            this.saveToStorage();
-            this.refreshPreview();
+            this.setActiveSlide(this.activeSlide + 1);
+            this.saveAndRefresh();
+        },
+
+        deepCloneSlide(slide) {
+            return {
+                ...JSON.parse(JSON.stringify(slide)),
+                id: this.generateId()
+            };
         },
 
         deleteSlide() {
             if (this.slides.length === 0) return;
             
             this.slides.splice(this.activeSlide, 1);
-            this.activeSlide = Math.min(this.activeSlide, Math.max(0, this.slides.length - 1));
+            this.activeSlide = this.clampActiveSlideIndex();
             
-            this.saveToStorage();
-            this.refreshPreview();
+            this.saveAndRefresh();
+        },
+
+        clampActiveSlideIndex() {
+            return Math.min(this.activeSlide, Math.max(0, this.slides.length - 1));
         },
 
         setActiveSlide(index) {
-            if (index >= 0 && index < this.slides.length) {
+            if (this.isValidSlideIndex(index)) {
                 this.activeSlide = index;
-                this.$nextTick(() => {
-                    setTimeout(() => this.setupInteractions(), 100);
-                });
+                this.scheduleInteractionSetup();
             }
+        },
+
+        isValidSlideIndex(index) {
+            return index >= 0 && index < this.slides.length;
+        },
+
+        scheduleInteractionSetup() {
+            this.$nextTick(() => {
+                setTimeout(() => this.setupInteractions(), CONFIG.DEBOUNCE_TIME.INTERACTION_SETUP);
+            });
         },
 
         getCurrentSlide() {
@@ -107,6 +173,10 @@ function carrouselApp() {
 
 
         updateAspectRatio() {
+            this.saveAndRefresh();
+        },
+
+        saveAndRefresh() {
             this.saveToStorage();
             this.refreshPreview();
         },
@@ -118,13 +188,15 @@ function carrouselApp() {
 
         handleFileSelect(event) {
             const file = event.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                this.processImageFile(file);
-            }
+            this.handleImageFile(file);
         },
 
         handleDrop(event) {
             const file = event.dataTransfer.files[0];
+            this.handleImageFile(file);
+        },
+
+        handleImageFile(file) {
             if (file && file.type.startsWith('image/')) {
                 this.processImageFile(file);
             }
@@ -135,42 +207,58 @@ function carrouselApp() {
             reader.onload = (e) => {
                 const slide = this.getCurrentSlide();
                 if (slide) {
-                    const img = new Image();
-                    img.onload = () => {
-                        // Set image at natural size, centered in canvas
-                        slide.bgSrc = e.target.result;
-                        slide.bgSize = { width: img.naturalWidth, height: img.naturalHeight };
-                        slide.bgPosition = { x: 0, y: 0 };
-                        this.saveToStorage();
-                        this.refreshPreview();
-                        
-                        // Setup interaction after image loads
-                        this.$nextTick(() => {
-                            setTimeout(() => this.setupBackgroundImageInteraction(), 100);
-                        });
-                    };
-                    img.src = e.target.result;
+                    this.loadImageToSlide(e.target.result, slide);
                 }
             };
             reader.readAsDataURL(file);
         },
 
+        loadImageToSlide(imageSrc, slide) {
+            const img = new Image();
+            img.onload = () => {
+                this.setSlideImage(slide, imageSrc, img);
+                this.saveAndRefresh();
+                this.scheduleBackgroundImageInteraction();
+            };
+            img.src = imageSrc;
+        },
+
+        setSlideImage(slide, src, img) {
+            slide.bgSrc = src;
+            slide.bgSize = { width: img.naturalWidth, height: img.naturalHeight };
+            slide.bgPosition = { x: 0, y: 0 };
+        },
+
+        scheduleBackgroundImageInteraction() {
+            this.$nextTick(() => {
+                setTimeout(() => this.setupBackgroundImageInteraction(), CONFIG.DEBOUNCE_TIME.INTERACTION_SETUP);
+            });
+        },
+
         setupPasteHandler() {
             window.addEventListener('paste', (e) => {
-                // Skip image paste if user is typing in inputs or editable elements
-                if (e.target.tagName === 'INPUT' || 
-                    e.target.tagName === 'TEXTAREA' || 
-                    e.target.contentEditable === 'true') return;
-                    
-                const items = e.clipboardData.items;
-                for (let item of items) {
-                    if (item.type.startsWith('image/')) {
-                        const file = item.getAsFile();
-                        this.processImageFile(file);
-                        break;
-                    }
+                if (this.shouldSkipImagePaste(e.target)) return;
+                
+                const imageFile = this.extractImageFromClipboard(e.clipboardData);
+                if (imageFile) {
+                    this.processImageFile(imageFile);
                 }
             });
+        },
+
+        shouldSkipImagePaste(target) {
+            return target.tagName === 'INPUT' || 
+                   target.tagName === 'TEXTAREA' || 
+                   target.contentEditable === 'true';
+        },
+
+        extractImageFromClipboard(clipboardData) {
+            for (let item of clipboardData.items) {
+                if (item.type.startsWith('image/')) {
+                    return item.getAsFile();
+                }
+            }
+            return null;
         },
 
         setupKeyboardShortcuts() {
@@ -420,8 +508,12 @@ function carrouselApp() {
 
         async toggleDark() {
             this.isDark = !this.isDark;
+            await this.saveDarkModePreference();
+        },
+
+        async saveDarkModePreference() {
             try {
-                await window.setItem('carrousel-dark', JSON.stringify(this.isDark));
+                await window.setItem(CONFIG.STORAGE_KEYS.DARK_MODE, JSON.stringify(this.isDark));
             } catch (error) {
                 console.error('Failed to save dark mode preference:', error);
             }
@@ -441,18 +533,24 @@ function carrouselApp() {
         },
 
         async saveToStorage() {
-            const data = {
+            const data = this.createSaveData();
+            try {
+                await window.setItem(CONFIG.STORAGE_KEYS.DATA, JSON.stringify(data));
+            } catch (error) {
+                console.error('Failed to save to storage:', error);
+            }
+        },
+
+        createSaveData() {
+            return {
                 slides: this.slides,
                 activeSlide: this.activeSlide,
                 aspectRatio: this.aspectRatio,
                 profile: this.profile,
+                swipeIcon: this.swipeIcon,
+                calloutFontSize: this.calloutFontSize,
                 timestamp: Date.now()
             };
-            try {
-                await window.setItem('carrousel-data', JSON.stringify(data));
-            } catch (error) {
-                console.error('Failed to save to storage:', error);
-            }
         },
 
         async loadFromStorage() {
@@ -471,6 +569,12 @@ function carrouselApp() {
                 if (data.profile) {
                     this.profile = { ...this.profile, ...data.profile };
                 }
+                if (data.swipeIcon) {
+                    this.swipeIcon = { ...this.swipeIcon, ...data.swipeIcon };
+                }
+                if (typeof data.calloutFontSize === 'number') {
+                    this.calloutFontSize = data.calloutFontSize;
+                }
             } catch (error) {
                 console.error('Failed to load from storage:', error);
             }
@@ -478,7 +582,7 @@ function carrouselApp() {
 
         async loadDarkModePreference() {
             try {
-                const darkMode = await window.getItem('carrousel-dark');
+                const darkMode = await window.getItem(CONFIG.STORAGE_KEYS.DARK_MODE);
                 this.isDark = darkMode ? JSON.parse(darkMode) : false;
             } catch (error) {
                 console.error('Failed to load dark mode preference:', error);
@@ -487,8 +591,30 @@ function carrouselApp() {
         },
 
         saveProfile() {
+            this.saveAndRefresh();
+        },
+
+        getSelectedSwipeIcon() {
+            return this.availableSwipeIcons.find(icon => icon.id === this.swipeIcon.selected) || this.availableSwipeIcons[0];
+        },
+
+        selectSwipeIcon(iconId) {
+            this.swipeIcon.selected = iconId;
+            this.swipeIcon.showSelection = false;
             this.saveToStorage();
-            this.refreshPreview();
+        },
+
+        toggleSwipeIconSelection() {
+            this.swipeIcon.showSelection = !this.swipeIcon.showSelection;
+        },
+
+        updateCalloutFontSize(size) {
+            this.calloutFontSize = this.clampFontSize(parseInt(size));
+            this.saveAndRefresh();
+        },
+
+        clampFontSize(size) {
+            return Math.max(CONFIG.FONT_SIZE.MIN, Math.min(CONFIG.FONT_SIZE.MAX, size));
         },
 
         triggerAvatarUpload() {
@@ -590,32 +716,40 @@ function carrouselApp() {
             const slide = this.getCurrentSlide();
             if (!slide) return;
             
+            this.ensureCalloutsArray(slide);
+            const newCallout = this.createCallout();
+            
+            slide.callouts.push(newCallout);
+            this.saveAndRefresh();
+            
+            this.scheduleCalloutSetupAndEdit(newCallout.id, slide);
+        },
+
+        ensureCalloutsArray(slide) {
             if (!slide.callouts) {
                 slide.callouts = [];
             }
+        },
 
-            const newCallout = {
+        createCallout() {
+            return {
                 id: this.generateId(),
-                x: 50,
-                y: 50,
+                x: CONFIG.DEFAULT_CALLOUT_POSITION.x,
+                y: CONFIG.DEFAULT_CALLOUT_POSITION.y,
                 text: 'Click to edit text...',
                 editing: false,
                 zIndex: 10
             };
+        },
 
-            slide.callouts.push(newCallout);
-            this.saveToStorage();
-            this.refreshPreview();
-
-            // Setup interaction after callout is added
+        scheduleCalloutSetupAndEdit(calloutId, slide) {
             this.$nextTick(() => {
                 setTimeout(() => {
-                    this.setupCalloutInteraction(newCallout.id);
+                    this.setupCalloutInteraction(calloutId);
                     
-                    // Start editing the new callout
-                    const calloutInArray = slide.callouts.find(c => c.id === newCallout.id);
-                    if (calloutInArray) {
-                        this.editCallout(calloutInArray);
+                    const callout = slide.callouts.find(c => c.id === calloutId);
+                    if (callout) {
+                        this.editCallout(callout);
                     }
                 }, 200);
             });
@@ -634,8 +768,7 @@ function carrouselApp() {
 
         finishEditingCallout(callout) {
             callout.editing = false;
-            this.saveToStorage();
-            this.refreshPreview();
+            this.saveAndRefresh();
         },
 
         deleteCallout(calloutId) {
@@ -644,13 +777,18 @@ function carrouselApp() {
             
             slide.callouts = slide.callouts.filter(c => c.id !== calloutId);
             
-            // Clean up interaction
-            if (typeof interact !== 'undefined') {
+            this.cleanupCalloutInteraction(calloutId);
+            this.saveAndRefresh();
+        },
+
+        cleanupCalloutInteraction(calloutId) {
+            if (this.isInteractAvailable()) {
                 interact(`#callout-${calloutId}`).unset();
             }
-            
-            this.saveToStorage();
-            this.refreshPreview();
+        },
+
+        isInteractAvailable() {
+            return typeof interact !== 'undefined';
         },
 
         setupCalloutInteraction(calloutId) {
