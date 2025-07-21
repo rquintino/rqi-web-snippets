@@ -626,6 +626,7 @@ function carrouselApp() {
         updateIconSizes() {
             // Base sizes (default 50% bigger than original)
             const baseProfileSize = 2.25; // rem - was 1.5rem, now 50% bigger
+            const baseProfileTextSize = 0.875; // rem - base profile text size
             const baseSwipeSize = 3.75; // rem - was 2.5rem, now 50% bigger  
             const baseSwipeFontSize = 1.8; // rem - was 1.2rem, now 50% bigger
             
@@ -634,12 +635,14 @@ function carrouselApp() {
             
             // Calculate new sizes
             const profileSize = baseProfileSize * scaleFactor;
+            const profileTextSize = baseProfileTextSize * scaleFactor;
             const swipeSize = baseSwipeSize * scaleFactor;
             const swipeFontSize = baseSwipeFontSize * scaleFactor;
             
             // Update CSS custom properties
             const root = document.documentElement;
             root.style.setProperty('--profile-avatar-size', `${profileSize}rem`);
+            root.style.setProperty('--profile-text-size', `${profileTextSize}rem`);
             root.style.setProperty('--swipe-icon-size', `${swipeSize}rem`);
             root.style.setProperty('--swipe-icon-font-size', `${swipeFontSize}rem`);
         },

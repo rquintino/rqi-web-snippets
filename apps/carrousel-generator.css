@@ -18,6 +18,7 @@
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --profile-avatar-size: 2.25rem;
+  --profile-text-size: 0.875rem;
   --swipe-icon-size: 3.75rem;
   --swipe-icon-font-size: 1.8rem;
 }
@@ -449,7 +450,7 @@ h1 {font-size:1.25rem;font-weight:600}
 }
 
 .viewport-profile-name {
-  font-size: 0.875rem;
+  font-size: var(--profile-text-size);
   font-weight: 500;
   color: var(--fg);
   white-space: nowrap;

@@ -2391,4 +2391,107 @@ test.describe('Carousel Generator', () => {
     expect(pageErrors).toEqual([]);
     expect(errors).toEqual([]);
   });
+
+  test('font size slider affects profile text size like callouts and icons', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Set up a profile with a name to test text scaling
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+    await page.fill('input[placeholder="Your Name"]', 'Test Profile Name');
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Check initial profile text font size (should be scaled from base 0.875rem based on default 16px)
+    const profileText = page.locator('.viewport-profile-name');
+    await expect(profileText).toBeVisible();
+
+    const initialFontSize = await profileText.evaluate(el => {
+      return window.getComputedStyle(el).fontSize;
+    });
+
+    // At default 16px callout size, profile text should be 0.875rem = 14px
+    expect(parseFloat(initialFontSize)).toBeCloseTo(14, 1);
+
+    // Change font size to 24px using slider
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '24';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(300);
+
+    // Check that profile text font size scaled accordingly
+    const scaledFontSize = await profileText.evaluate(el => {
+      return window.getComputedStyle(el).fontSize;
+    });
+
+    // At 24px callout size (1.5x scale), profile text should be 0.875rem * 1.5 = 1.3125rem = 21px
+    expect(parseFloat(scaledFontSize)).toBeCloseTo(21, 1);
+
+    // Test minimum boundary
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '8';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(300);
+
+    const minFontSize = await profileText.evaluate(el => {
+      return window.getComputedStyle(el).fontSize;
+    });
+
+    // At 8px callout size (0.5x scale), profile text should be 0.875rem * 0.5 = 0.4375rem = 7px
+    expect(parseFloat(minFontSize)).toBeCloseTo(7, 1);
+
+    // Test maximum boundary
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '32';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(300);
+
+    const maxFontSize = await profileText.evaluate(el => {
+      return window.getComputedStyle(el).fontSize;
+    });
+
+    // At 32px callout size (2x scale), profile text should be 0.875rem * 2 = 1.75rem = 28px
+    expect(parseFloat(maxFontSize)).toBeCloseTo(28, 1);
+
+    // Verify it works with profile avatar and swipe icon scaling too
+    const profileAvatar = page.locator('.viewport-profile-avatar');
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+
+    const avatarSize = await profileAvatar.evaluate(el => {
+      return window.getComputedStyle(el).width;
+    });
+
+    const swipeSize = await swipeIcon.evaluate(el => {
+      return window.getComputedStyle(el).width;
+    });
+
+    // At 32px font size (2x scale):
+    // Profile avatar: 2.25rem * 2 = 4.5rem = 72px
+    // Swipe icon: 3.75rem * 2 = 7.5rem = 120px
+    expect(parseFloat(avatarSize)).toBeCloseTo(72, 1);
+    expect(parseFloat(swipeSize)).toBeCloseTo(120, 1);
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
 });
