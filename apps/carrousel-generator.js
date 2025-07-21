@@ -54,7 +54,8 @@ function carrouselApp() {
                 id: this.generateId(),
                 bgSrc: null,
                 bgPosition: { x: 0, y: 0 },
-                bgSize: { width: null, height: null }
+                bgSize: { width: null, height: null },
+                callouts: []
             };
             
             this.slides.push(newSlide);
@@ -99,6 +100,7 @@ function carrouselApp() {
                 this.$nextTick(() => {
                     setTimeout(() => {
                         this.setupBackgroundImageInteraction();
+                        this.setupAllCalloutInteractions();
                     }, 100);
                 });
             }
@@ -242,6 +244,7 @@ function carrouselApp() {
                 if (typeof interact !== 'undefined') {
                     this.setupThumbnailDragSort();
                     this.setupBackgroundImageInteraction();
+                    this.setupAllCalloutInteractions();
                 }
             });
         },
@@ -622,7 +625,11 @@ function carrouselApp() {
                 const storedData = await window.getItem('carrousel-data');
                 const data = storedData ? JSON.parse(storedData) : {};
                 if (data.slides && Array.isArray(data.slides)) {
-                    this.slides = data.slides;
+                    // Ensure backward compatibility - add callouts array if missing
+                    this.slides = data.slides.map(slide => ({
+                        ...slide,
+                        callouts: slide.callouts || []
+                    }));
                     this.activeSlide = Math.max(0, Math.min(data.activeSlide || 0, this.slides.length - 1));
                     this.aspectRatio = data.aspectRatio || 'square';
                 }
@@ -753,6 +760,121 @@ function carrouselApp() {
                         this.refreshPreview();
                     }
                 }
+            });
+        },
+
+        // Callout methods
+        addCallout() {
+            const slide = this.getCurrentSlide();
+            if (!slide) return;
+            
+            if (!slide.callouts) {
+                slide.callouts = [];
+            }
+
+            const newCallout = {
+                id: this.generateId(),
+                x: 50,
+                y: 50,
+                text: 'Click to edit text...',
+                editing: false,
+                zIndex: 10
+            };
+
+            slide.callouts.push(newCallout);
+            this.saveToStorage();
+            this.refreshPreview();
+
+            // Setup interaction after callout is added
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this.setupCalloutInteraction(newCallout.id);
+                    
+                    // Start editing the new callout
+                    const calloutInArray = slide.callouts.find(c => c.id === newCallout.id);
+                    if (calloutInArray) {
+                        this.editCallout(calloutInArray);
+                    }
+                }, 200);
+            });
+        },
+
+        editCallout(callout) {
+            callout.editing = true;
+            this.$nextTick(() => {
+                const textarea = document.querySelector(`#callout-${callout.id} .callout-editor`);
+                if (textarea) {
+                    textarea.focus();
+                    textarea.select();
+                }
+            });
+        },
+
+        finishEditingCallout(callout) {
+            callout.editing = false;
+            this.saveToStorage();
+            this.refreshPreview();
+        },
+
+        deleteCallout(calloutId) {
+            const slide = this.getCurrentSlide();
+            if (!slide || !slide.callouts) return;
+            
+            slide.callouts = slide.callouts.filter(c => c.id !== calloutId);
+            
+            // Clean up interaction
+            if (typeof interact !== 'undefined') {
+                interact(`#callout-${calloutId}`).unset();
+            }
+            
+            this.saveToStorage();
+            this.refreshPreview();
+        },
+
+        setupCalloutInteraction(calloutId) {
+            if (typeof interact === 'undefined') return;
+            
+            const selector = `#callout-${calloutId}`;
+            const element = document.querySelector(selector);
+            if (!element) {
+                setTimeout(() => this.setupCalloutInteraction(calloutId), 100);
+                return;
+            }
+
+            // Remove any existing interaction
+            interact(selector).unset();
+
+            // Simple draggable - similar to background image
+            interact(selector).draggable({
+                listeners: {
+                    move: (event) => {
+                        const slide = this.getCurrentSlide();
+                        if (!slide) return;
+                        
+                        const callout = slide.callouts?.find(c => c.id === calloutId);
+                        if (!callout) return;
+
+                        callout.x += event.dx;
+                        callout.y += event.dy;
+
+                        // Update position immediately like background image does
+                        event.target.style.left = callout.x + 'px';
+                        event.target.style.top = callout.y + 'px';
+                    },
+                    end: () => {
+                        this.saveToStorage();
+                        this.refreshPreview();
+                    }
+                }
+            });
+        },
+
+        setupAllCalloutInteractions() {
+            const slide = this.getCurrentSlide();
+            if (!slide || !slide.callouts) return;
+
+            slide.callouts.forEach(callout => {
+                this.setupCalloutInteraction(callout.id);
             });
         }
     };

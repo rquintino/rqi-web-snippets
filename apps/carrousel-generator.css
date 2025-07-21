@@ -994,3 +994,96 @@ h1 {font-size:1.25rem;font-weight:600}
     max-height: 315px !important;
   }
 }
+
+.text-callout {
+position: absolute;
+background: var(--bg);
+border: 2px solid var(--primary);
+border-radius: 8px;
+box-shadow: var(--shadow-lg);
+padding: 8px;
+z-index: 100;
+user-select: none;
+cursor: move;
+display: inline-block;
+max-width: 300px;
+min-width: 80px;
+word-wrap: break-word;
+pointer-events: auto;
+}
+
+.text-callout:hover {
+border-color: var(--success);
+}
+
+.text-callout.interact-dragging {
+opacity: 0.8;
+transform: rotate(2deg);
+}
+
+.text-callout.interact-resizing {
+opacity: 0.9;
+}
+
+.callout-display {
+white-space: pre-wrap;
+word-wrap: break-word;
+font-size: 14px;
+line-height: 1.4;
+cursor: text;
+padding: 2px;
+}
+
+.callout-display:hover {
+background: rgba(59, 130, 246, 0.1);
+border-radius: 4px;
+}
+
+.callout-editor {
+background: var(--gray-50);
+border: 1px solid var(--primary);
+border-radius: 4px;
+outline: none;
+resize: none;
+font-family: inherit;
+font-size: 14px;
+line-height: 1.4;
+color: var(--fg);
+padding: 2px;
+min-width: 100px;
+min-height: 20px;
+}
+
+.text-callout.editing {
+border-color: var(--success);
+box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.callout-delete {
+position: absolute;
+top: -8px;
+right: -8px;
+width: 20px;
+height: 20px;
+background: var(--danger);
+color: white;
+border: none;
+border-radius: 50%;
+cursor: pointer;
+font-size: 12px;
+font-weight: bold;
+display: flex;
+align-items: center;
+justify-content: center;
+opacity: 0;
+transition: opacity 0.2s ease;
+}
+
+.text-callout:hover .callout-delete {
+opacity: 1;
+}
+
+.callout-delete:hover {
+background: #dc2626;
+transform: scale(1.1);
+}
