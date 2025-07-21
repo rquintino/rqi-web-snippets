@@ -33,42 +33,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-7a1 1 0 011-1h2a1 1 0 011 1v7a1 1 0 001 1m-6 0h6"></path>
                 </svg>
             </button>
-            <h1>LinkedIn Carousel Generator</h1>
         </div>
         
         <div class="header-center">
-            <button @click="addSlide()" class="btn-primary" title="Add Slide">
-                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                New Slide
-            </button>
-            
-            <button @click="duplicateSlide()" class="btn-secondary" :disabled="slides.length === 0" title="Duplicate Slide">
-                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                </svg>
-                Duplicate
-            </button>
-            
-            <button @click="deleteSlide()" class="btn-danger" :disabled="slides.length === 0" title="Delete Slide">
-                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-                Delete
-            </button>
-            
-            <select x-model="aspectRatio" @change="updateAspectRatio()" class="select">
-                <option value="square">Square (1:1)</option>
-                <option value="portrait">Portrait (4:5)</option>
-            </select>
-            
-            <button @click="exportPDF()" class="btn-success" :disabled="slides.length === 0" title="Export to PDF">
-                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                Export PDF
-            </button>
+            <h1>LinkedIn Carousel Generator</h1>
         </div>
         
         <div class="header-right">
@@ -92,112 +60,112 @@
         </div>
     </header>
 
-    <div class="main-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h3>Slides</h3>
-                <span class="slide-count" x-text="`${slides.length} slides`"></span>
-            </div>
-            
-            <div class="thumbnails" id="thumbnails-container">
-                <template x-for="(slide, index) in slides" :key="slide.id">
-                    <div 
-                        class="thumbnail" 
-                        :class="{ 'active': index === activeSlide }"
-                        @click="setActiveSlide(index)"
-                        :data-slide-id="slide.id"
-                    >
-                        <div class="thumbnail-preview" :class="aspectRatio">
-                            <div 
-                                class="thumbnail-bg"
-                                :style="slide.bgSrc ? `background-image: url(${slide.bgSrc})` : ''"
-                            ></div>
-                            <div class="thumbnail-number" x-text="index + 1"></div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </aside>
-
+    <div class="main-container" :class="{ 'with-preview': showPreview }">
         <main class="canvas-container">
             <div class="canvas-wrapper" x-show="slides.length > 0">
                 <div 
                     class="canvas" 
-                    :class="aspectRatio"
                     id="canvas"
                     @dragover.prevent
                     @drop.prevent="handleDrop($event)"
                 >
-                    <div 
-                        class="canvas-bg"
-                        :style="getCurrentSlide()?.bgSrc ? `background-image: url(${getCurrentSlide().bgSrc})` : ''"
-                        @click="triggerImageUpload()"
+                    <!-- Background image for current slide -->
+                    <img 
+                        x-show="getCurrentSlide()?.bgSrc"
+                        :src="getCurrentSlide()?.bgSrc"
+                        :id="`bg-image-${activeSlide}`"
+                        class="canvas-bg-image"
+                        :style="`transform: translate(${getCurrentSlide()?.bgPosition?.x || 0}px, ${getCurrentSlide()?.bgPosition?.y || 0}px); width: ${getCurrentSlide()?.bgSize?.width || 'auto'}px; height: ${getCurrentSlide()?.bgSize?.height || 'auto'}px;`"
+                        draggable="false"
+                        @load="setupBackgroundImageInteraction()"
                     >
-                        <div x-show="!getCurrentSlide()?.bgSrc" class="upload-prompt">
-                            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+
+                    <!-- Upload prompt when no image -->
+                    <div x-show="!getCurrentSlide()?.bgSrc" class="upload-prompt" @click="triggerImageUpload()">
+                        <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p>Click to upload image or drag & drop</p>
+                        <p class="upload-hint">You can also paste from clipboard (Ctrl+V)</p>
+                    </div>
+
+
+                    <!-- Viewport frame (crop area) -->
+                    <div class="viewport" :class="aspectRatio" id="viewport">
+                        <!-- Viewport Action Buttons -->
+                        <div class="viewport-actions">
+                            <!-- Navigation Controls -->
+                            <button @click="setActiveSlide(activeSlide - 1)" class="viewport-btn" :disabled="activeSlide === 0" title="Previous Slide">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                            </button>
+                            
+                            <div class="slide-indicator" x-text="`${activeSlide + 1}/${slides.length}`"></div>
+                            
+                            <button @click="setActiveSlide(activeSlide + 1)" class="viewport-btn" :disabled="activeSlide >= slides.length - 1" title="Next Slide">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- Separator -->
+                            <div class="viewport-separator"></div>
+
+                            <button @click="addSlide()" class="viewport-btn" title="Add Slide">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                            </button>
+                            
+                            <button @click="duplicateSlide()" class="viewport-btn" :disabled="slides.length === 0" title="Duplicate Slide">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                            </button>
+                            
+                            <button @click="deleteSlide()" class="viewport-btn" :disabled="slides.length === 0" title="Delete Slide">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                            
+                            <select x-model="aspectRatio" @change="updateAspectRatio()" class="viewport-select">
+                                <option value="square">1:1</option>
+                                <option value="portrait">4:5</option>
+                            </select>
+                            
+                            <button @click="previewPDF()" class="viewport-btn" :disabled="slides.length === 0" title="Preview PDF">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                            
+                            <button @click="exportPDF()" class="viewport-btn" :disabled="slides.length === 0" title="Export PDF">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Clickable Profile -->
+                        <div x-show="profile.name || profile.avatarUrl" class="viewport-avatar" @click="showProfileConfig = true" title="Edit Profile">
+                            <div class="viewport-profile-info">
+                                <img x-show="profile.avatarUrl" :src="profile.avatarUrl" :alt="profile.name" class="viewport-profile-avatar">
+                                <span x-show="profile.name" x-text="profile.name" class="viewport-profile-name"></span>
+                            </div>
+                        </div>
+
+                        <!-- Add Profile Button when empty -->
+                        <div x-show="!profile.name && !profile.avatarUrl" class="viewport-add-profile" @click="showProfileConfig = true" title="Add Profile">
+                            <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                             </svg>
-                            <p>Click to upload image or drag & drop</p>
-                            <p class="upload-hint">You can also paste from clipboard (Ctrl+V)</p>
                         </div>
                     </div>
-
-                    <div 
-                        x-show="getCurrentSlide()?.hasCallout"
-                        class="callout"
-                        :class="{
-                            'has-tail': getCurrentSlide()?.calloutTail?.enabled,
-                            'tail-top': getCurrentSlide()?.calloutTail?.enabled && getCurrentSlide()?.calloutTail?.position === 'top',
-                            'tail-bottom': getCurrentSlide()?.calloutTail?.enabled && getCurrentSlide()?.calloutTail?.position === 'bottom',
-                            'tail-left': getCurrentSlide()?.calloutTail?.enabled && getCurrentSlide()?.calloutTail?.position === 'left',
-                            'tail-right': getCurrentSlide()?.calloutTail?.enabled && getCurrentSlide()?.calloutTail?.position === 'right'
-                        }"
-                        :id="`callout-${activeSlide}`"
-                        contenteditable="true"
-                        @blur="updateCalloutText($event)"
-                        @keydown.enter.prevent="$event.target.blur()"
-                        x-text="getCurrentSlide()?.calloutText || 'Click to edit text'"
-                    ></div>
                 </div>
 
-                <div class="canvas-controls">
-                    <button 
-                        @click="toggleCallout()" 
-                        class="btn-icon"
-                        :class="{ 'active': getCurrentSlide()?.hasCallout }"
-                        title="Toggle Text Callout"
-                    >
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                        </svg>
-                    </button>
-                    
-                    <div x-show="getCurrentSlide()?.hasCallout" class="callout-tail-controls">
-                        <button 
-                            @click="toggleCalloutTail()" 
-                            class="btn-icon btn-small"
-                            :class="{ 'active': getCurrentSlide()?.calloutTail?.enabled }"
-                            title="Toggle Speech Bubble Tail"
-                        >
-                            <svg class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </button>
-                        
-                        <select 
-                            x-show="getCurrentSlide()?.calloutTail?.enabled"
-                            :value="getCurrentSlide()?.calloutTail?.position || 'bottom'"
-                            @change="updateCalloutTailPosition($event.target.value)"
-                            class="select-small"
-                            title="Tail Position"
-                        >
-                            <option value="top">Top</option>
-                            <option value="bottom">Bottom</option>
-                            <option value="left">Left</option>
-                            <option value="right">Right</option>
-                        </select>
-                    </div>
-                </div>
             </div>
 
             <div x-show="slides.length === 0" class="empty-state">
@@ -208,9 +176,41 @@
                 <p>Click "New Slide" to get started with your LinkedIn carousel</p>
             </div>
         </main>
+
+        <!-- PDF Preview Right Pane -->
+        <aside x-show="showPreview" class="preview-pane">
+            <div class="preview-header">
+                <h3>PDF Preview</h3>
+                <div class="preview-controls">
+                    <button @click="downloadPreviewedPDF()" class="btn-success btn-small">
+                        <svg class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Download
+                    </button>
+                    <button @click="closePreview()" class="btn-icon" title="Close Preview">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="preview-content">
+                <iframe x-show="previewUrl && !isPreviewLoading" :src="previewUrl" class="preview-iframe"></iframe>
+                
+                <!-- Preview Loading Overlay -->
+                <div x-show="isPreviewLoading" class="preview-loading">
+                    <div class="preview-loading-content">
+                        <div class="spinner"></div>
+                        <p>Generating preview...</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
     </div>
 
     <input type="file" id="imageInput" accept="image/*" @change="handleFileSelect($event)" style="display: none;">
+    <input type="file" id="avatarInput" accept="image/*" @change="handleAvatarUpload($event)" style="display: none;">
 
     <div x-show="isExporting" class="loading-overlay">
         <div class="loading-content">
@@ -219,7 +219,51 @@
         </div>
     </div>
 
-    <div class="version">v2025-01-20.3</div>
+    <!-- Profile Config Modal -->
+    <div x-show="showProfileConfig" class="modal-overlay" @click.self="showProfileConfig = false">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>Profile Configuration</h3>
+                <button @click="showProfileConfig = false" class="btn-icon" title="Close">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="config-field">
+                    <label>Avatar</label>
+                    <div class="avatar-upload">
+                        <div class="avatar-preview" @click="triggerAvatarUpload()">
+                            <img x-show="profile.avatarUrl" :src="profile.avatarUrl" alt="Avatar" class="avatar-img">
+                            <div x-show="!profile.avatarUrl" class="avatar-placeholder">
+                                <svg class="avatar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="avatar-actions">
+                            <button @click="triggerAvatarUpload()" class="btn-small">Upload</button>
+                            <button x-show="profile.avatarUrl" @click="removeAvatar()" class="btn-small btn-danger-small">Remove</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="config-field">
+                    <label>Name</label>
+                    <input type="text" x-model="profile.name" @input="saveProfile()" placeholder="Your Name" class="input-small">
+                </div>
+                
+                <div class="config-field">
+                    <label>Profile URL</label>
+                    <input type="url" x-model="profile.profileUrl" @input="saveProfile()" placeholder="https://linkedin.com/in/..." class="input-small">
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="version">v2025-01-20.39-MOVED-UP-10PX</div>
 
     <script src="shared/shared.js"></script>
     <script src="carrousel.js"></script>

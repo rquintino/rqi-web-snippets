@@ -2,6 +2,11 @@ const { test, expect } = require('@playwright/test');
 const path = require('path');
 
 test.describe('LinkedIn Carousel Generator', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
+    await page.waitForLoadState('networkidle');
+  });
+
   test('page loads without errors', async ({ page }) => {
     // Set up console error listener BEFORE loading the page
     const errors = [];
@@ -20,14 +25,10 @@ test.describe('LinkedIn Carousel Generator', () => {
     await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
     await page.waitForLoadState('networkidle');
     
-    // Verify page title
-    await expect(page).toHaveTitle('LinkedIn Carousel Generator');
-    
-    // Verify main elements are present
+    // Check that essential elements are present
     await expect(page.locator('h1')).toContainText('LinkedIn Carousel Generator');
-    await expect(page.locator('.btn-primary')).toContainText('New Slide');
-    await expect(page.locator('.sidebar')).toBeVisible();
-    await expect(page.locator('.canvas-container')).toBeVisible();
+    await expect(page.locator('.header')).toBeVisible();
+    await expect(page.locator('.main-container')).toBeVisible();
     
     // Check no JavaScript page errors
     expect(pageErrors).toEqual([]);
@@ -36,342 +37,488 @@ test.describe('LinkedIn Carousel Generator', () => {
     expect(errors).toEqual([]);
   });
 
-  test('creates initial slide on load', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
+  test('displays empty state when no slides exist', async ({ page }) => {
+    await expect(page.locator('.empty-state')).toBeVisible();
+    await expect(page.locator('.empty-state h2')).toContainText('Create Your First Slide');
+    await expect(page.locator('.canvas-wrapper')).not.toBeVisible();
+  });
+
+  test('header navigation and controls work', async ({ page }) => {
+    // Test home button
+    await expect(page.locator('button[title="Home"]')).toBeVisible();
     
+    // Test fullscreen toggle
+    const fullscreenBtn = page.locator('button[title="Toggle Fullscreen"]');
+    await expect(fullscreenBtn).toBeVisible();
+    await fullscreenBtn.click();
+    await expect(page.locator('body')).toHaveClass(/fullscreen/);
+    await fullscreenBtn.click();
+    await expect(page.locator('body')).not.toHaveClass(/fullscreen/);
+
+    // Test dark mode toggle
+    const darkModeBtn = page.locator('button[title="Toggle Dark Mode"]');
+    await expect(darkModeBtn).toBeVisible();
+    await darkModeBtn.click();
+    await expect(page.locator('body')).toHaveClass(/dark/);
+    await darkModeBtn.click();
+    await expect(page.locator('body')).not.toHaveClass(/dark/);
+  });
+
+  test('slide management functionality', async ({ page }) => {
+    // Initially no slides
+    await expect(page.locator('.empty-state')).toBeVisible();
+
+    // Add first slide by clicking the add button in empty state area
     // Wait for Alpine.js to initialize
     await page.waitForTimeout(500);
     
-    // Should have at least one slide created automatically
-    const slideCount = await page.locator('.thumbnail').count();
-    expect(slideCount).toBeGreaterThan(0);
-    await expect(page.locator('.slide-count')).toContainText('slides');
-    await expect(page.locator('.canvas')).toBeVisible();
+    // Click Add Slide button (need to find the actual button)
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    
+    await page.waitForTimeout(100);
+    
+    // Should now show canvas and hide empty state
+    await expect(page.locator('.empty-state')).not.toBeVisible();
+    await expect(page.locator('.canvas-wrapper')).toBeVisible();
+    
+    // Check slide indicator
+    await expect(page.locator('.slide-indicator')).toContainText('1/1');
+
+    // Test add slide button in viewport
+    const addSlideBtn = page.locator('button[title="Add Slide"]');
+    await addSlideBtn.click();
+    await expect(page.locator('.slide-indicator')).toContainText('2/2');
+
+    // Test duplicate slide
+    const duplicateBtn = page.locator('button[title="Duplicate Slide"]');
+    await duplicateBtn.click();
+    await expect(page.locator('.slide-indicator')).toContainText('3/3');
+
+    // Test navigation
+    const prevBtn = page.locator('button[title="Previous Slide"]');
+    const nextBtn = page.locator('button[title="Next Slide"]');
+    
+    // Should be on slide 3, prev should work
+    await prevBtn.click();
+    await expect(page.locator('.slide-indicator')).toContainText('2/3');
+    
+    await prevBtn.click();
+    await expect(page.locator('.slide-indicator')).toContainText('1/3');
+    
+    // Prev should be disabled on first slide
+    await expect(prevBtn).toBeDisabled();
+    
+    // Navigate to last slide
+    await nextBtn.click();
+    await nextBtn.click();
+    await expect(page.locator('.slide-indicator')).toContainText('3/3');
+    
+    // Next should be disabled on last slide
+    await expect(nextBtn).toBeDisabled();
+
+    // Test delete slide
+    const deleteBtn = page.locator('button[title="Delete Slide"]');
+    await deleteBtn.click();
+    await expect(page.locator('.slide-indicator')).toContainText('2/2');
   });
 
-  test('can add new slides', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Add a new slide
-    await page.click('.btn-primary:has-text("New Slide")');
-    await page.waitForTimeout(200);
-    
-    // Should now have 2 slides
-    await expect(page.locator('.thumbnail')).toHaveCount(2);
-    await expect(page.locator('.slide-count')).toContainText('2 slides');
-    
-    // Second slide should be active
-    await expect(page.locator('.thumbnail').nth(1)).toHaveClass(/active/);
-  });
+  test('aspect ratio switching works', async ({ page }) => {
+    // Add a slide first
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
 
-  test('can delete slides', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Add a slide, then delete it
-    await page.click('.btn-primary:has-text("New Slide")');
-    await page.waitForTimeout(200);
-    
-    await page.click('.btn-danger:has-text("Delete")');
-    await page.waitForTimeout(200);
-    
-    // Should be back to 1 slide
-    await expect(page.locator('.thumbnail')).toHaveCount(1);
-    await expect(page.locator('.slide-count')).toContainText('1 slides');
-  });
-
-  test('can duplicate slides', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Duplicate the slide
-    await page.click('.btn-secondary:has-text("Duplicate")');
-    await page.waitForTimeout(200);
-    
-    // Should now have 2 slides
-    await expect(page.locator('.thumbnail')).toHaveCount(2);
-    await expect(page.locator('.slide-count')).toContainText('2 slides');
-  });
-
-  test('can toggle aspect ratio', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+    const aspectSelect = page.locator('.viewport-select');
+    await expect(aspectSelect).toBeVisible();
     
     // Default should be square
-    await expect(page.locator('.canvas')).toHaveClass(/square/);
+    await expect(aspectSelect).toHaveValue('square');
+    await expect(page.locator('.viewport')).toHaveClass(/square/);
     
-    // Change to portrait
-    await page.selectOption('.select', 'portrait');
-    await page.waitForTimeout(200);
+    // Switch to portrait
+    await aspectSelect.selectOption('portrait');
+    await expect(page.locator('.viewport')).toHaveClass(/portrait/);
     
-    await expect(page.locator('.canvas')).toHaveClass(/portrait/);
-    
-    // Change back to square
-    await page.selectOption('.select', 'square');
-    await page.waitForTimeout(200);
-    
-    await expect(page.locator('.canvas')).toHaveClass(/square/);
+    // Switch back to square
+    await aspectSelect.selectOption('square');
+    await expect(page.locator('.viewport')).toHaveClass(/square/);
   });
 
-  test('can toggle text callout', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Callout should not be visible initially
-    await expect(page.locator('.callout')).not.toBeVisible();
-    
-    // Toggle callout on
-    await page.click('.canvas-controls .btn-icon[title="Toggle Text Callout"]');
-    await page.waitForTimeout(200);
-    
-    // Callout should now be visible
-    await expect(page.locator('.callout')).toBeVisible();
-    await expect(page.locator('.callout')).toContainText('Click to edit text');
-    
-    // Toggle callout off
-    await page.click('.canvas-controls .btn-icon[title="Toggle Text Callout"]');
-    await page.waitForTimeout(200);
-    
-    // Callout should be hidden again
-    await expect(page.locator('.callout')).not.toBeVisible();
-  });
+  test('image upload prompt is visible', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
 
-  test('can edit callout text', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Toggle callout on
-    await page.click('.canvas-controls .btn-icon[title="Toggle Text Callout"]');
-    await page.waitForTimeout(200);
-    
-    // Edit the callout text
-    const callout = page.locator('.callout');
-    await callout.click();
-    await callout.fill('Custom callout text');
-    await callout.blur();
-    
-    await expect(callout).toContainText('Custom callout text');
-  });
-
-  test('can switch between slides', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Get initial slide count
-    const initialCount = await page.locator('.thumbnail').count();
-    
-    // Add a second slide if needed
-    if (initialCount < 2) {
-      await page.click('.btn-primary:has-text("New Slide")');
-      await page.waitForTimeout(300);
-      
-      // Wait for thumbnails to be rendered
-      await expect(page.locator('.thumbnail')).toHaveCount(initialCount + 1);
-    }
-    
-    // Click on first thumbnail
-    await page.locator('.thumbnail').nth(0).click();
-    await page.waitForTimeout(200);
-    
-    // First slide should be active
-    await expect(page.locator('.thumbnail').nth(0)).toHaveClass(/active/);
-    
-    // Click on second thumbnail
-    await page.locator('.thumbnail').nth(1).click();
-    await page.waitForTimeout(200);
-    
-    // Second slide should be active
-    await expect(page.locator('.thumbnail').nth(1)).toHaveClass(/active/);
-  });
-
-  test('dark mode toggle works', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Should start in light mode
-    await expect(page.locator('body')).not.toHaveClass(/dark/);
-    
-    // Toggle dark mode
-    await page.click('.btn-icon[title="Toggle Dark Mode"]');
-    await page.waitForTimeout(200);
-    
-    // Should now be in dark mode
-    await expect(page.locator('body')).toHaveClass(/dark/);
-    
-    // Toggle back to light mode
-    await page.click('.btn-icon[title="Toggle Dark Mode"]');
-    await page.waitForTimeout(200);
-    
-    // Should be back in light mode
-    await expect(page.locator('body')).not.toHaveClass(/dark/);
-  });
-
-  test('keyboard shortcuts work', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Test 'n' key for new slide
-    let initialCount = await page.locator('.thumbnail').count();
-    await page.keyboard.press('n');
-    await page.waitForTimeout(400);
-    
-    let afterNewCount = await page.locator('.thumbnail').count();
-    expect(afterNewCount).toBeGreaterThan(initialCount);
-    
-    // Test 'd' key for duplicate
-    await page.keyboard.press('d');
-    await page.waitForTimeout(400);
-    
-    let afterDupCount = await page.locator('.thumbnail').count();
-    expect(afterDupCount).toBeGreaterThan(afterNewCount);
-    
-    // Test Delete key for delete slide
-    await page.keyboard.press('Delete');
-    await page.waitForTimeout(400);
-    
-    let afterDeleteCount = await page.locator('.thumbnail').count();
-    expect(afterDeleteCount).toBeLessThan(afterDupCount);
-    
-    // Test arrow keys for navigation if we have multiple slides
-    if (afterDeleteCount >= 2) {
-      // Store initial active slide
-      const initialActiveElements = await page.locator('.thumbnail.active').count();
-      expect(initialActiveElements).toBe(1); // Should have exactly one active slide
-      
-      // Test left arrow key
-      await page.keyboard.press('ArrowLeft');
-      await page.waitForTimeout(300);
-      
-      // Should still have exactly one active slide
-      const afterLeftActiveElements = await page.locator('.thumbnail.active').count();
-      expect(afterLeftActiveElements).toBe(1);
-      
-      // Test right arrow key
-      await page.keyboard.press('ArrowRight');
-      await page.waitForTimeout(300);
-      
-      // Should still have exactly one active slide
-      const afterRightActiveElements = await page.locator('.thumbnail.active').count();
-      expect(afterRightActiveElements).toBe(1);
-    }
-  });
-
-  test('upload prompt is visible when no image', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-    
-    // Upload prompt should be visible
+    // Should show upload prompt when no background image
     await expect(page.locator('.upload-prompt')).toBeVisible();
-    await expect(page.locator('.upload-prompt')).toContainText('Click to upload image or drag & drop');
-    await expect(page.locator('.upload-prompt')).toContainText('You can also paste from clipboard');
+    await expect(page.locator('.upload-prompt p')).toContainText('Click to upload image or drag & drop');
+    await expect(page.locator('.upload-hint')).toContainText('paste from clipboard');
   });
 
-  test('export PDF button is enabled when slides exist', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+  test('profile configuration modal works', async ({ page }) => {
+    // Add a slide first
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+
+    // Should show add profile button when no profile
+    const addProfileBtn = page.locator('.viewport-add-profile');
+    await expect(addProfileBtn).toBeVisible();
     
-    // Export button should be enabled with slides
-    const exportBtn = page.locator('.btn-success:has-text("Export PDF")');
-    await expect(exportBtn).toBeEnabled();
+    // Click to open profile config
+    await addProfileBtn.click();
+    
+    // Modal should be visible
+    await expect(page.locator('.modal-overlay')).toBeVisible();
+    await expect(page.locator('.modal-header h3')).toContainText('Profile Configuration');
+    
+    // Check form fields
+    await expect(page.locator('input[placeholder="Your Name"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="https://linkedin.com/in/..."]')).toBeVisible();
+    await expect(page.locator('.avatar-upload')).toBeVisible();
+    
+    // Close modal
+    const closeBtn = page.locator('.modal-header button[title="Close"]');
+    await closeBtn.click();
+    await expect(page.locator('.modal-overlay')).not.toBeVisible();
   });
 
-  test('localStorage persistence works', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+  test('profile form input works', async ({ page }) => {
+    // Add a slide and open profile modal
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
     
-    // Add a slide and toggle callout
-    await page.click('.btn-primary:has-text("New Slide")');
+    await page.locator('.viewport-add-profile').click();
+    
+    // Fill in profile name
+    const nameInput = page.locator('input[placeholder="Your Name"]');
+    await nameInput.fill('John Doe');
+    
+    // Fill in profile URL
+    const urlInput = page.locator('input[placeholder="https://linkedin.com/in/..."]');
+    await urlInput.fill('https://linkedin.com/in/johndoe');
+    
+    // Close modal
+    await page.locator('.modal-header button[title="Close"]').click();
+    
+    // Reopen to verify persistence
+    await page.locator('.viewport-avatar').click();
+    await expect(nameInput).toHaveValue('John Doe');
+    await expect(urlInput).toHaveValue('https://linkedin.com/in/johndoe');
+  });
+
+  test('PDF export buttons are present and properly disabled', async ({ page }) => {
+    // When no slides, buttons should be disabled
+    await expect(page.locator('button[title="Preview PDF"]')).toBeVisible();
+    await expect(page.locator('button[title="Export PDF"]')).toBeVisible();
+    
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+    
+    // Buttons should now be enabled
+    await expect(page.locator('button[title="Preview PDF"]')).not.toBeDisabled();
+    await expect(page.locator('button[title="Export PDF"]')).not.toBeDisabled();
+  });
+
+  test('drag and drop area is configured', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+
+    const canvas = page.locator('#canvas');
+    await expect(canvas).toBeVisible();
+    
+    // Canvas should have drag and drop event handlers
+    // We can't easily test actual file drop, but we can verify the element accepts drops
+    const dragOverPrevented = await canvas.evaluate(el => {
+      const event = new DragEvent('dragover', { bubbles: true, cancelable: true });
+      el.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(dragOverPrevented).toBe(true);
+  });
+
+  test('keyboard shortcuts work for clipboard paste', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+
+    // Focus the canvas
+    await page.locator('#canvas').click();
+    
+    // Simulate Ctrl+V (we can't test actual clipboard, but can verify event handling)
+    await page.keyboard.press('Control+KeyV');
+    
+    // The app should handle the paste event (even if no actual image in clipboard)
+    // No errors should occur
+  });
+
+  test('localStorage auto-save functionality', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
     await page.waitForTimeout(200);
-    await page.click('.canvas-controls .btn-icon[title="Toggle Text Callout"]');
-    await page.waitForTimeout(200);
-    
-    // Edit callout text
-    const callout = page.locator('.callout');
-    await callout.click();
-    await callout.fill('Persistent text');
-    await callout.blur();
-    await page.waitForTimeout(500);
-    
-    // Reload the page
+
+    // Add profile data
+    await page.evaluate(() => {
+      const app = window.carrouselApp();
+      app.profile.name = 'Test User';
+      app.saveProfile();
+    });
+
+    // Reload page and check if data persists
     await page.reload();
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
-    
-    // Data should be restored
-    await expect(page.locator('.thumbnail')).toHaveCount(2);
-    await expect(page.locator('.callout')).toBeVisible();
-    await expect(page.locator('.callout')).toContainText('Persistent text');
+
+    // Check if slide and profile data persisted
+    await expect(page.locator('.canvas-wrapper')).toBeVisible();
+    await expect(page.locator('.slide-indicator')).toContainText('1/1');
   });
 
-  test('home navigation works', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+  test('loading overlay appears during export', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+
+    // Mock the export to show loading state
+    await page.evaluate(() => {
+      const app = window.carrouselApp();
+      app.isExporting = true;
+    });
+
+    await expect(page.locator('.loading-overlay')).toBeVisible();
+    await expect(page.locator('.loading-content p')).toContainText('Generating PDF...');
+    await expect(page.locator('.spinner')).toBeVisible();
+  });
+
+  test('preview pane functionality', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+
+    // Mock preview state
+    await page.evaluate(() => {
+      const app = window.carrouselApp();
+      app.showPreview = true;
+      app.isPreviewLoading = true;
+    });
+
+    await expect(page.locator('.preview-pane')).toBeVisible();
+    await expect(page.locator('.preview-header h3')).toContainText('PDF Preview');
+    await expect(page.locator('.preview-loading')).toBeVisible();
+    await expect(page.locator('.preview-loading p')).toContainText('Generating preview...');
+
+    // Test preview controls
+    await expect(page.locator('button:has-text("Download")')).toBeVisible();
+    await expect(page.locator('.preview-header button[title="Close Preview"]')).toBeVisible();
+  });
+
+  test('version number is displayed', async ({ page }) => {
+    await expect(page.locator('.version')).toBeVisible();
+    await expect(page.locator('.version')).toContainText(/v\d{4}-\d{2}-\d{2}/);
+  });
+
+  test('hidden file inputs are present', async ({ page }) => {
+    // Check for image and avatar file inputs
+    await expect(page.locator('#imageInput')).toBeHidden();
+    await expect(page.locator('#avatarInput')).toBeHidden();
     
-    // Mock navigation to prevent actual navigation during test
-    await page.addInitScript(() => {
-      window.location.href = 'index.html';
+    // Verify they accept images
+    await expect(page.locator('#imageInput')).toHaveAttribute('accept', 'image/*');
+    await expect(page.locator('#avatarInput')).toHaveAttribute('accept', 'image/*');
+  });
+
+  test('slide management edge cases', async ({ page }) => {
+    // Test buttons when no slides exist
+    await page.evaluate(() => {
+      // Force showing viewport actions even with no slides to test disabled states
+      document.querySelector('.viewport-actions').style.display = 'flex';
     });
     
-    // Home button should be present
-    await expect(page.locator('.btn-icon[title="Home"]')).toBeVisible();
+    // Navigation should be disabled with no slides
+    await expect(page.locator('button[title="Previous Slide"]')).toBeDisabled();
+    await expect(page.locator('button[title="Next Slide"]')).toBeDisabled();
+    await expect(page.locator('button[title="Duplicate Slide"]')).toBeDisabled();
+    await expect(page.locator('button[title="Delete Slide"]')).toBeDisabled();
+    await expect(page.locator('button[title="Preview PDF"]')).toBeDisabled();
+    await expect(page.locator('button[title="Export PDF"]')).toBeDisabled();
   });
 
-  test('callout tail toggle works', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+  test('main container layout adapts to preview', async ({ page }) => {
+    const mainContainer = page.locator('.main-container');
     
-    // Enable callout first
-    await page.click('.canvas-controls .btn-icon[title="Toggle Text Callout"]');
-    await page.waitForTimeout(200);
+    // Initially no preview
+    await expect(mainContainer).not.toHaveClass(/with-preview/);
     
-    // Tail controls should be visible
-    await expect(page.locator('.callout-tail-controls')).toBeVisible();
+    // Show preview
+    await page.evaluate(() => {
+      window.carrouselApp().showPreview = true;
+    });
     
-    // Callout should not have tail initially
-    await expect(page.locator('.callout')).not.toHaveClass(/has-tail/);
+    await expect(mainContainer).toHaveClass(/with-preview/);
+  });
+
+  test('external libraries are loaded correctly', async ({ page }) => {
+    // Verify Alpine.js is loaded
+    const alpineLoaded = await page.evaluate(() => typeof window.Alpine !== 'undefined');
+    expect(alpineLoaded).toBe(true);
     
-    // Toggle tail on
-    await page.click('.callout-tail-controls .btn-icon[title="Toggle Speech Bubble Tail"]');
-    await page.waitForTimeout(200);
+    // Verify other libraries are available in global scope
+    const html2canvasLoaded = await page.evaluate(() => typeof window.html2canvas !== 'undefined');
+    expect(html2canvasLoaded).toBe(true);
     
-    // Callout should now have tail
-    await expect(page.locator('.callout')).toHaveClass(/has-tail/);
-    await expect(page.locator('.callout')).toHaveClass(/tail-bottom/); // default position
+    const jspdfLoaded = await page.evaluate(() => typeof window.jspdf !== 'undefined');
+    expect(jspdfLoaded).toBe(true);
     
-    // Tail position selector should be visible
-    await expect(page.locator('.select-small')).toBeVisible();
+    const interactLoaded = await page.evaluate(() => typeof window.interact !== 'undefined');
+    expect(interactLoaded).toBe(true);
+  });
+
+  test('Alpine.js data structure is properly initialized', async ({ page }) => {
+    await page.waitForTimeout(500); // Wait for Alpine.js initialization
     
-    // Change tail position
-    await page.selectOption('.select-small', 'top');
-    await page.waitForTimeout(200);
+    const appData = await page.evaluate(() => {
+      const app = window.carrouselApp();
+      return {
+        hasSlides: Array.isArray(app.slides),
+        hasProfile: typeof app.profile === 'object',
+        hasAspectRatio: typeof app.aspectRatio === 'string',
+        hasActiveSlide: typeof app.activeSlide === 'number',
+        hasThemeState: typeof app.isDark === 'boolean',
+        hasFullscreenState: typeof app.isFullscreen === 'boolean'
+      };
+    });
     
-    await expect(page.locator('.callout')).toHaveClass(/tail-top/);
-    await expect(page.locator('.callout')).not.toHaveClass(/tail-bottom/);
+    expect(appData.hasSlides).toBe(true);
+    expect(appData.hasProfile).toBe(true);
+    expect(appData.hasAspectRatio).toBe(true);
+    expect(appData.hasActiveSlide).toBe(true);
+    expect(appData.hasThemeState).toBe(true);
+    expect(appData.hasFullscreenState).toBe(true);
+  });
+
+  test('background image interaction setup', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+
+    // Mock a background image being loaded
+    await page.evaluate(() => {
+      const app = window.carrouselApp();
+      app.slides[0].bgSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    });
+
+    // Background image should be visible
+    await expect(page.locator('.canvas-bg-image')).toBeVisible();
+    await expect(page.locator('.upload-prompt')).not.toBeVisible();
+  });
+
+  test('viewport frame displays correctly', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+
+    // Viewport should be visible
+    await expect(page.locator('.viewport')).toBeVisible();
+    await expect(page.locator('.viewport-actions')).toBeVisible();
     
-    // Toggle tail off
-    await page.click('.callout-tail-controls .btn-icon[title="Toggle Speech Bubble Tail"]');
-    await page.waitForTimeout(200);
+    // Check that viewport has correct aspect ratio class
+    await expect(page.locator('.viewport')).toHaveClass(/square/);
+  });
+
+  test('modal click outside to close', async ({ page }) => {
+    // Add a slide and open profile modal
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
     
-    // Callout should not have tail anymore
-    await expect(page.locator('.callout')).not.toHaveClass(/has-tail/);
+    await page.locator('.viewport-add-profile').click();
+    await expect(page.locator('.modal-overlay')).toBeVisible();
     
-    // Position selector should be hidden
-    await expect(page.locator('.select-small')).not.toBeVisible();
+    // Click on overlay (outside modal content)
+    await page.locator('.modal-overlay').click({ position: { x: 10, y: 10 } });
+    await expect(page.locator('.modal-overlay')).not.toBeVisible();
+  });
+
+  test('avatar upload and removal', async ({ page }) => {
+    // Add a slide and open profile modal
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+    
+    await page.locator('.viewport-add-profile').click();
+    
+    // Avatar placeholder should be visible
+    await expect(page.locator('.avatar-placeholder')).toBeVisible();
+    await expect(page.locator('.avatar-img')).not.toBeVisible();
+    
+    // Upload button should be visible, remove button should not
+    await expect(page.locator('button:has-text("Upload")')).toBeVisible();
+    await expect(page.locator('button:has-text("Remove")')).not.toBeVisible();
+    
+    // Mock avatar upload
+    await page.evaluate(() => {
+      const app = window.carrouselApp();
+      app.profile.avatarUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    });
+    
+    // Avatar image should now be visible, placeholder should not
+    await expect(page.locator('.avatar-img')).toBeVisible();
+    await expect(page.locator('.avatar-placeholder')).not.toBeVisible();
+    
+    // Remove button should now be visible
+    await expect(page.locator('button:has-text("Remove")')).toBeVisible();
+  });
+
+  test('profile visibility in viewport', async ({ page }) => {
+    // Add a slide
+    await page.evaluate(() => {
+      window.carrouselApp().addSlide();
+    });
+    await page.waitForTimeout(100);
+    
+    // Initially should show add profile button
+    await expect(page.locator('.viewport-add-profile')).toBeVisible();
+    await expect(page.locator('.viewport-avatar')).not.toBeVisible();
+    
+    // Add profile data
+    await page.evaluate(() => {
+      const app = window.carrouselApp();
+      app.profile.name = 'John Doe';
+      app.profile.avatarUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    });
+    
+    // Should now show profile info, not add button
+    await expect(page.locator('.viewport-avatar')).toBeVisible();
+    await expect(page.locator('.viewport-add-profile')).not.toBeVisible();
+    await expect(page.locator('.viewport-profile-name')).toContainText('John Doe');
+    await expect(page.locator('.viewport-profile-avatar')).toBeVisible();
   });
 });

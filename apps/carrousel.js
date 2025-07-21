@@ -7,7 +7,6 @@ Key methods:
 - duplicateSlide(): Clones current slide
 - deleteSlide(): Removes current slide with index management
 - handleImageUpload(): Processes image files via drag/drop, paste, or file input
-- toggleCallout(): Adds/removes text callout with drag/resize functionality
 - exportPDF(): Generates PDF using html2canvas and jsPDF
 - saveToStorage(): Auto-saves to IndexedDB for persistence (with localStorage fallback)
 - loadFromStorage(): Loads data from IndexedDB storage
@@ -21,6 +20,17 @@ function carrouselApp() {
         isDark: false, // Will be loaded in init()
         isFullscreen: false,
         isExporting: false,
+        isPreviewLoading: false,
+        showProfileConfig: false,
+        showPreview: false,
+        previewUrl: null,
+        currentPDF: null,
+        previewRefreshTimeout: null,
+        profile: {
+            avatarUrl: '',
+            name: '',
+            profileUrl: ''
+        },
 
         async init() {
             await this.loadFromStorage();
@@ -42,19 +52,14 @@ function carrouselApp() {
             const newSlide = {
                 id: this.generateId(),
                 bgSrc: null,
-                hasCallout: false,
-                calloutText: 'Click to edit text',
-                calloutPosition: { x: 25, y: 25, width: 50, height: 20 },
-                calloutTail: { enabled: false, position: 'bottom', offset: 50 }
+                bgPosition: { x: 0, y: 0 },
+                bgSize: { width: null, height: null }
             };
             
             this.slides.push(newSlide);
             this.activeSlide = this.slides.length - 1;
             this.saveToStorage();
-            
-            this.$nextTick(() => {
-                this.setupCalloutInteraction();
-            });
+            this.refreshPreview();
         },
 
         duplicateSlide() {
@@ -69,10 +74,7 @@ function carrouselApp() {
             this.slides.splice(this.activeSlide + 1, 0, duplicatedSlide);
             this.activeSlide = this.activeSlide + 1;
             this.saveToStorage();
-            
-            this.$nextTick(() => {
-                this.setupCalloutInteraction();
-            });
+            this.refreshPreview();
         },
 
         deleteSlide() {
@@ -87,13 +89,16 @@ function carrouselApp() {
             }
             
             this.saveToStorage();
+            this.refreshPreview();
         },
 
         setActiveSlide(index) {
             if (index >= 0 && index < this.slides.length) {
                 this.activeSlide = index;
                 this.$nextTick(() => {
-                    this.setupCalloutInteraction();
+                    setTimeout(() => {
+                        this.setupBackgroundImageInteraction();
+                    }, 100);
                 });
             }
         },
@@ -102,49 +107,12 @@ function carrouselApp() {
             return this.slides[this.activeSlide] || null;
         },
 
+
         updateAspectRatio() {
             this.saveToStorage();
+            this.refreshPreview();
         },
 
-        toggleCallout() {
-            const slide = this.getCurrentSlide();
-            if (!slide) return;
-            
-            slide.hasCallout = !slide.hasCallout;
-            this.saveToStorage();
-            
-            this.$nextTick(() => {
-                this.setupCalloutInteraction();
-            });
-        },
-
-        updateCalloutText(event) {
-            const slide = this.getCurrentSlide();
-            if (!slide) return;
-            
-            slide.calloutText = event.target.textContent || 'Click to edit text';
-            this.saveToStorage();
-        },
-
-        toggleCalloutTail() {
-            const slide = this.getCurrentSlide();
-            if (!slide || !slide.hasCallout) return;
-            
-            if (!slide.calloutTail) {
-                slide.calloutTail = { enabled: false, position: 'bottom', offset: 50 };
-            }
-            
-            slide.calloutTail.enabled = !slide.calloutTail.enabled;
-            this.saveToStorage();
-        },
-
-        updateCalloutTailPosition(position) {
-            const slide = this.getCurrentSlide();
-            if (!slide || !slide.hasCallout || !slide.calloutTail) return;
-            
-            slide.calloutTail.position = position;
-            this.saveToStorage();
-        },
 
         triggerImageUpload() {
             document.getElementById('imageInput').click();
@@ -169,8 +137,23 @@ function carrouselApp() {
             reader.onload = (e) => {
                 const slide = this.getCurrentSlide();
                 if (slide) {
-                    slide.bgSrc = e.target.result;
-                    this.saveToStorage();
+                    const img = new Image();
+                    img.onload = () => {
+                        // Set image at natural size, centered in canvas
+                        slide.bgSrc = e.target.result;
+                        slide.bgSize = { width: img.naturalWidth, height: img.naturalHeight };
+                        slide.bgPosition = { x: 0, y: 0 };
+                        this.saveToStorage();
+                        this.refreshPreview();
+                        
+                        // Setup interaction after image loads
+                        this.$nextTick(() => {
+                            setTimeout(() => {
+                                this.setupBackgroundImageInteraction();
+                            }, 100);
+                        });
+                    };
+                    img.src = e.target.result;
                 }
             };
             reader.readAsDataURL(file);
@@ -178,6 +161,11 @@ function carrouselApp() {
 
         setupPasteHandler() {
             window.addEventListener('paste', (e) => {
+                // Skip image paste if user is typing in inputs or editable elements
+                if (e.target.tagName === 'INPUT' || 
+                    e.target.tagName === 'TEXTAREA' || 
+                    e.target.contentEditable === 'true') return;
+                    
                 const items = e.clipboardData.items;
                 for (let item of items) {
                     if (item.type.startsWith('image/')) {
@@ -191,7 +179,10 @@ function carrouselApp() {
 
         setupKeyboardShortcuts() {
             document.addEventListener('keydown', (e) => {
-                if (e.target.contentEditable === 'true') return;
+                // Skip shortcuts if user is typing in inputs or editable elements
+                if (e.target.contentEditable === 'true' || 
+                    e.target.tagName === 'INPUT' || 
+                    e.target.tagName === 'TEXTAREA') return;
                 
                 switch(e.key.toLowerCase()) {
                     case 'n':
@@ -237,7 +228,7 @@ function carrouselApp() {
             this.$nextTick(() => {
                 if (typeof interact !== 'undefined') {
                     this.setupThumbnailDragSort();
-                    this.setupCalloutInteraction();
+                    this.setupBackgroundImageInteraction();
                 }
             });
         },
@@ -280,44 +271,6 @@ function carrouselApp() {
             });
         },
 
-        setupCalloutInteraction() {
-            if (typeof interact === 'undefined') return;
-            
-            const calloutId = `#callout-${this.activeSlide}`;
-            
-            interact(calloutId).draggable({
-                listeners: {
-                    move(event) {
-                        const target = event.target;
-                        const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-                        const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-                        
-                        target.style.transform = `translate(${x}px, ${y}px)`;
-                        target.setAttribute('data-x', x);
-                        target.setAttribute('data-y', y);
-                    }
-                }
-            }).resizable({
-                edges: { left: true, right: true, bottom: true, top: true },
-                listeners: {
-                    move(event) {
-                        const target = event.target;
-                        let x = (parseFloat(target.getAttribute('data-x')) || 0);
-                        let y = (parseFloat(target.getAttribute('data-y')) || 0);
-                        
-                        target.style.width = event.rect.width + 'px';
-                        target.style.height = event.rect.height + 'px';
-                        
-                        x += event.deltaRect.left;
-                        y += event.deltaRect.top;
-                        
-                        target.style.transform = `translate(${x}px, ${y}px)`;
-                        target.setAttribute('data-x', x);
-                        target.setAttribute('data-y', y);
-                    }
-                }
-            });
-        },
 
         reorderSlides(draggedId, targetId) {
             const draggedIndex = this.slides.findIndex(slide => slide.id === draggedId);
@@ -356,17 +309,89 @@ function carrouselApp() {
                     
                     this.setActiveSlide(i);
                     await this.$nextTick();
+                    await new Promise(resolve => setTimeout(resolve, 300));
                     
-                    const canvas = document.getElementById('canvas');
-                    const canvasData = await html2canvas(canvas, {
-                        backgroundColor: '#ffffff',
+                    const slide = this.getCurrentSlide();
+                    const viewport = document.getElementById('viewport');
+                    const targetWidth = isSquare ? 1080 : 1080;
+                    const targetHeight = isSquare ? 1080 : 1350;
+                    
+                    // Create a temporary canvas to compose the final image
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = targetWidth;
+                    tempCanvas.height = targetHeight;
+                    const ctx = tempCanvas.getContext('2d');
+                    
+                    // Fill with white background
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, targetWidth, targetHeight);
+                    
+                    // If there's a background image, draw it first
+                    if (slide?.bgSrc) {
+                        try {
+                            const bgImg = new Image();
+                            bgImg.crossOrigin = 'anonymous';
+                            
+                            await new Promise((resolve, reject) => {
+                                bgImg.onload = resolve;
+                                bgImg.onerror = reject;
+                                bgImg.src = slide.bgSrc;
+                            });
+                            
+                            // Get viewport dimensions
+                            const viewportRect = viewport.getBoundingClientRect();
+                            const canvas = document.getElementById('canvas');
+                            const canvasRect = canvas.getBoundingClientRect();
+                            
+                            // Calculate the actual visible portion of the background image
+                            const bgElement = document.getElementById(`bg-image-${i}`);
+                            if (bgElement) {
+                                const bgRect = bgElement.getBoundingClientRect();
+                                
+                                // Calculate the intersection between bg image and viewport
+                                const intersectLeft = Math.max(viewportRect.left, bgRect.left);
+                                const intersectTop = Math.max(viewportRect.top, bgRect.top);
+                                const intersectRight = Math.min(viewportRect.right, bgRect.right);
+                                const intersectBottom = Math.min(viewportRect.bottom, bgRect.bottom);
+                                
+                                if (intersectRight > intersectLeft && intersectBottom > intersectTop) {
+                                    // Calculate source coordinates on the original image
+                                    const scaleX = bgImg.naturalWidth / bgRect.width;
+                                    const scaleY = bgImg.naturalHeight / bgRect.height;
+                                    
+                                    const srcX = (intersectLeft - bgRect.left) * scaleX;
+                                    const srcY = (intersectTop - bgRect.top) * scaleY;
+                                    const srcWidth = (intersectRight - intersectLeft) * scaleX;
+                                    const srcHeight = (intersectBottom - intersectTop) * scaleY;
+                                    
+                                    // Calculate destination coordinates on the export canvas
+                                    const destX = (intersectLeft - viewportRect.left) * (targetWidth / viewportRect.width);
+                                    const destY = (intersectTop - viewportRect.top) * (targetHeight / viewportRect.height);
+                                    const destWidth = (intersectRight - intersectLeft) * (targetWidth / viewportRect.width);
+                                    const destHeight = (intersectBottom - intersectTop) * (targetHeight / viewportRect.height);
+                                    
+                                    // Draw the cropped portion
+                                    ctx.drawImage(bgImg, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
+                                }
+                            }
+                        } catch (error) {
+                            console.warn('Failed to load background image for export:', error);
+                        }
+                    }
+                    
+                    // Now capture the viewport overlay content (profile info, etc.)
+                    const overlayCanvas = await html2canvas(viewport, {
+                        backgroundColor: null,
                         useCORS: true,
-                        scale: 2,
-                        width: isSquare ? 540 : 540,
-                        height: isSquare ? 540 : 675
+                        allowTaint: true,
+                        scale: 2
                     });
                     
-                    const imgData = canvasData.toDataURL('image/png');
+                    // Draw the overlay on top
+                    ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
+                    
+                    // Convert to data URL and add to PDF
+                    const imgData = tempCanvas.toDataURL('image/png');
                     pdf.addImage(imgData, 'PNG', 0, 0, 1080, isSquare ? 1080 : 1350);
                 }
                 
@@ -377,6 +402,169 @@ function carrouselApp() {
             } finally {
                 this.isExporting = false;
             }
+        },
+
+        async previewPDF() {
+            if (this.slides.length === 0) return;
+            
+            this.isPreviewLoading = true;
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const isSquare = this.aspectRatio === 'square';
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'px',
+                    format: [1080, isSquare ? 1080 : 1350]
+                });
+                
+                for (let i = 0; i < this.slides.length; i++) {
+                    if (i > 0) pdf.addPage();
+                    
+                    this.setActiveSlide(i);
+                    await this.$nextTick();
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    const slide = this.getCurrentSlide();
+                    const viewport = document.getElementById('viewport');
+                    const targetWidth = isSquare ? 1080 : 1080;
+                    const targetHeight = isSquare ? 1080 : 1350;
+                    
+                    // Create a temporary canvas to compose the final image
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = targetWidth;
+                    tempCanvas.height = targetHeight;
+                    const ctx = tempCanvas.getContext('2d');
+                    
+                    // Fill with white background
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, targetWidth, targetHeight);
+                    
+                    // If there's a background image, draw it first
+                    if (slide?.bgSrc) {
+                        try {
+                            const bgImg = new Image();
+                            bgImg.crossOrigin = 'anonymous';
+                            
+                            await new Promise((resolve, reject) => {
+                                bgImg.onload = resolve;
+                                bgImg.onerror = reject;
+                                bgImg.src = slide.bgSrc;
+                            });
+                            
+                            // Get viewport dimensions
+                            const viewportRect = viewport.getBoundingClientRect();
+                            const canvas = document.getElementById('canvas');
+                            const canvasRect = canvas.getBoundingClientRect();
+                            
+                            // Calculate the actual visible portion of the background image
+                            const bgElement = document.getElementById(`bg-image-${i}`);
+                            if (bgElement) {
+                                const bgRect = bgElement.getBoundingClientRect();
+                                
+                                // Calculate the intersection between bg image and viewport
+                                const intersectLeft = Math.max(viewportRect.left, bgRect.left);
+                                const intersectTop = Math.max(viewportRect.top, bgRect.top);
+                                const intersectRight = Math.min(viewportRect.right, bgRect.right);
+                                const intersectBottom = Math.min(viewportRect.bottom, bgRect.bottom);
+                                
+                                if (intersectRight > intersectLeft && intersectBottom > intersectTop) {
+                                    // Calculate source coordinates on the original image
+                                    const scaleX = bgImg.naturalWidth / bgRect.width;
+                                    const scaleY = bgImg.naturalHeight / bgRect.height;
+                                    
+                                    const srcX = (intersectLeft - bgRect.left) * scaleX;
+                                    const srcY = (intersectTop - bgRect.top) * scaleY;
+                                    const srcWidth = (intersectRight - intersectLeft) * scaleX;
+                                    const srcHeight = (intersectBottom - intersectTop) * scaleY;
+                                    
+                                    // Calculate destination coordinates on the export canvas
+                                    const destX = (intersectLeft - viewportRect.left) * (targetWidth / viewportRect.width);
+                                    const destY = (intersectTop - viewportRect.top) * (targetHeight / viewportRect.height);
+                                    const destWidth = (intersectRight - intersectLeft) * (targetWidth / viewportRect.width);
+                                    const destHeight = (intersectBottom - intersectTop) * (targetHeight / viewportRect.height);
+                                    
+                                    // Draw the cropped portion
+                                    ctx.drawImage(bgImg, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
+                                }
+                            }
+                        } catch (error) {
+                            console.warn('Failed to load background image for export:', error);
+                        }
+                    }
+                    
+                    // Now capture the viewport overlay content (profile info, etc.)
+                    const overlayCanvas = await html2canvas(viewport, {
+                        backgroundColor: null,
+                        useCORS: true,
+                        allowTaint: true,
+                        scale: 2
+                    });
+                    
+                    // Draw the overlay on top
+                    ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
+                    
+                    // Convert to data URL and add to PDF
+                    const imgData = tempCanvas.toDataURL('image/png');
+                    pdf.addImage(imgData, 'PNG', 0, 0, 1080, isSquare ? 1080 : 1350);
+                }
+                
+                // Create blob URL for preview
+                const pdfBlob = pdf.output('blob');
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+                
+                // Store for download later
+                this.currentPDF = pdf;
+                this.previewUrl = pdfUrl;
+                this.showPreview = true;
+                
+            } catch (error) {
+                console.error('Preview failed:', error);
+                alert('Preview failed. Please try again.');
+            } finally {
+                this.isPreviewLoading = false;
+            }
+        },
+
+        closePreview() {
+            this.showPreview = false;
+            if (this.previewUrl) {
+                URL.revokeObjectURL(this.previewUrl);
+                this.previewUrl = null;
+            }
+            if (this.previewRefreshTimeout) {
+                clearTimeout(this.previewRefreshTimeout);
+                this.previewRefreshTimeout = null;
+            }
+            this.currentPDF = null;
+        },
+
+        downloadPreviewedPDF() {
+            if (this.currentPDF) {
+                this.currentPDF.save('linkedin-carousel.pdf');
+            }
+        },
+
+        async refreshPreview() {
+            if (!this.showPreview) return;
+            
+            // Debounce the refresh to avoid too many rapid updates
+            if (this.previewRefreshTimeout) {
+                clearTimeout(this.previewRefreshTimeout);
+            }
+            
+            this.previewRefreshTimeout = setTimeout(async () => {
+                if (this.showPreview) {
+                    // Close current preview first
+                    if (this.previewUrl) {
+                        URL.revokeObjectURL(this.previewUrl);
+                        this.previewUrl = null;
+                    }
+                    
+                    // Generate new preview (previewPDF sets isPreviewLoading)
+                    await this.previewPDF();
+                }
+            }, 500); // 500ms debounce
         },
 
         async toggleDark() {
@@ -406,6 +594,7 @@ function carrouselApp() {
                 slides: this.slides,
                 activeSlide: this.activeSlide,
                 aspectRatio: this.aspectRatio,
+                profile: this.profile,
                 timestamp: Date.now()
             };
             try {
@@ -424,6 +613,9 @@ function carrouselApp() {
                     this.activeSlide = Math.max(0, Math.min(data.activeSlide || 0, this.slides.length - 1));
                     this.aspectRatio = data.aspectRatio || 'square';
                 }
+                if (data.profile) {
+                    this.profile = { ...this.profile, ...data.profile };
+                }
             } catch (error) {
                 console.error('Failed to load from storage:', error);
             }
@@ -437,6 +629,118 @@ function carrouselApp() {
                 console.error('Failed to load dark mode preference:', error);
                 this.isDark = false;
             }
+        },
+
+        saveProfile() {
+            this.saveToStorage();
+            this.refreshPreview();
+        },
+
+        triggerAvatarUpload() {
+            document.getElementById('avatarInput').click();
+        },
+
+        async handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file.');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                alert('Please select an image smaller than 5MB.');
+                return;
+            }
+
+            try {
+                const base64 = await this.fileToBase64(file);
+                this.profile.avatarUrl = base64;
+                this.saveProfile();
+            } catch (error) {
+                console.error('Error processing avatar:', error);
+                alert('Error uploading avatar. Please try again.');
+            }
+
+            // Clear the input
+            event.target.value = '';
+        },
+
+        fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        },
+
+        removeAvatar() {
+            this.profile.avatarUrl = '';
+            this.saveProfile();
+        },
+
+        setupBackgroundImageInteraction() {
+            if (typeof interact === 'undefined') return;
+            
+            const imageId = `bg-image-${this.activeSlide}`;
+            const imageElement = document.getElementById(imageId);
+            
+            if (!imageElement) return;
+            
+            // Remove any existing interaction
+            interact(`#${imageId}`).unset();
+            
+            interact(`#${imageId}`).draggable({
+                listeners: {
+                    move: (event) => {
+                        const slide = this.getCurrentSlide();
+                        if (!slide) return;
+                        
+                        slide.bgPosition.x += event.dx;
+                        slide.bgPosition.y += event.dy;
+                        
+                        event.target.style.transform = 
+                            `translate(${slide.bgPosition.x}px, ${slide.bgPosition.y}px)`;
+                    },
+                    end: () => {
+                        this.saveToStorage();
+                        this.refreshPreview();
+                    }
+                }
+            }).resizable({
+                edges: { left: true, right: true, bottom: true, top: true },
+                modifiers: [
+                    interact.modifiers.aspectRatio({
+                        ratio: 'preserve'
+                    })
+                ],
+                listeners: {
+                    move: (event) => {
+                        const slide = this.getCurrentSlide();
+                        if (!slide) return;
+                        
+                        // Update size
+                        slide.bgSize.width = event.rect.width;
+                        slide.bgSize.height = event.rect.height;
+                        
+                        // Update position if edges moved
+                        slide.bgPosition.x += event.deltaRect.left;
+                        slide.bgPosition.y += event.deltaRect.top;
+                        
+                        // Apply styles
+                        event.target.style.width = event.rect.width + 'px';
+                        event.target.style.height = event.rect.height + 'px';
+                        event.target.style.transform = 
+                            `translate(${slide.bgPosition.x}px, ${slide.bgPosition.y}px)`;
+                    },
+                    end: () => {
+                        this.saveToStorage();
+                        this.refreshPreview();
+                    }
+                }
+            });
         }
     };
 }
