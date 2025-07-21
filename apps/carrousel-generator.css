@@ -701,7 +701,7 @@ h1 {font-size:1.25rem;font-weight:600}
 }
 
 .main-container.with-preview {
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: 1fr 450px;
 }
 
 .preview-pane {
@@ -739,9 +739,10 @@ h1 {font-size:1.25rem;font-weight:600}
   padding: 16px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  overflow: hidden;
+  align-items: flex-start;
+  overflow: auto;
   position: relative;
+  min-height: 0;
 }
 
 .preview-iframe {
@@ -750,6 +751,8 @@ h1 {font-size:1.25rem;font-weight:600}
   border: none;
   border-radius: 8px;
   box-shadow: var(--shadow);
+  transform: scale(1);
+  transform-origin: top left;
 }
 
 .preview-loading {
