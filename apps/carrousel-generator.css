@@ -159,7 +159,7 @@ h1 {font-size:1.25rem;font-weight:600}
 .main-container {
   display: grid;
   grid-template-columns: 1fr;
-  height: calc(100vh - 20px);
+  height: calc(100vh - 60px);
   overflow: hidden;
 }
 
@@ -701,7 +701,7 @@ h1 {font-size:1.25rem;font-weight:600}
 }
 
 .main-container.with-preview {
-  grid-template-columns: 1fr 450px;
+  grid-template-columns: 1fr 315px;
 }
 
 .preview-pane {
@@ -709,7 +709,7 @@ h1 {font-size:1.25rem;font-weight:600}
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px);
+  height: calc(100vh - 60px);
   overflow: hidden;
 }
 
@@ -736,23 +736,21 @@ h1 {font-size:1.25rem;font-weight:600}
 
 .preview-content {
   flex: 1;
-  padding: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  overflow: auto;
+  padding: 0;
+  display: block;
+  overflow: hidden;
   position: relative;
   min-height: 0;
 }
 
 .preview-iframe {
-  width: 100%;
+  width: 143%;
   height: 100%;
   border: none;
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  transform: scale(1);
+  transform: scale(0.7);
   transform-origin: top left;
+  overflow: hidden;
+  margin: 0;
 }
 
 .preview-loading {
