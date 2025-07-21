@@ -43,6 +43,7 @@ body {
   color: var(--fg);
   line-height: 1.5;
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 .fullscreen {position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999}
