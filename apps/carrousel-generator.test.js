@@ -993,6 +993,13 @@ test.describe('Carousel Generator', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
+    // Move swipe icon to middle-right to avoid conflicts with profile avatar in any corner
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    await swipeIcon.click({ button: 'right' }); // Move to top-right
+    await page.waitForTimeout(100);
+    await swipeIcon.click({ button: 'right' }); // Move to middle-right
+    await page.waitForTimeout(200);
+
     // Open profile configuration modal using the add profile button
     await page.click('[title="Add Profile"]');
     await page.waitForTimeout(300);
@@ -1628,6 +1635,12 @@ test.describe('Carousel Generator', () => {
     expect(swipeHasNewPosition).toBe(true);
 
     // Clear profile to check add profile button positioning
+    // First move swipe icon to middle-right to avoid overlap with profile avatar
+    await swipeIcon.click({ button: 'right' }); // Move to top-right
+    await page.waitForTimeout(100);
+    await swipeIcon.click({ button: 'right' }); // Move to middle-right
+    await page.waitForTimeout(200);
+    
     await page.click('.viewport-avatar'); // Open profile modal
     await page.waitForTimeout(300);
     await page.fill('input[placeholder="Your Name"]', ''); // Clear name
@@ -2117,6 +2130,263 @@ test.describe('Carousel Generator', () => {
 
     const fontSizeStillLarge = await page.textContent('.viewport-font-size');
     expect(fontSizeStillLarge).toBe('28px');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('swipe icon location options work correctly', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Should be on first slide with swipe icon visible
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    await expect(swipeIcon).toBeVisible();
+
+    // Initially should have default bottom-right location
+    const initialClass = await swipeIcon.getAttribute('class');
+    expect(initialClass).toContain('swipe-bottom-right');
+
+    // Test right-click to change location to top-right
+    await swipeIcon.click({ button: 'right' });
+    await page.waitForTimeout(300);
+
+    const topRightClass = await swipeIcon.getAttribute('class');
+    expect(topRightClass).toContain('swipe-top-right');
+
+    // Test another right-click to change to middle-right
+    await swipeIcon.click({ button: 'right' });
+    await page.waitForTimeout(300);
+
+    const middleRightClass = await swipeIcon.getAttribute('class');
+    expect(middleRightClass).toContain('swipe-middle-right');
+
+    // Test another right-click to cycle back to bottom-right
+    await swipeIcon.click({ button: 'right' });
+    await page.waitForTimeout(300);
+
+    const backToBottomClass = await swipeIcon.getAttribute('class');
+    expect(backToBottomClass).toContain('swipe-bottom-right');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('swipe icon location persists across page refreshes', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Change swipe icon to middle-right position
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    await swipeIcon.click({ button: 'right' }); // bottom-right -> top-right
+    await page.waitForTimeout(200);
+    await swipeIcon.click({ button: 'right' }); // top-right -> middle-right
+    await page.waitForTimeout(200);
+
+    // Verify it's in middle-right position
+    const middleRightClass = await swipeIcon.getAttribute('class');
+    expect(middleRightClass).toContain('swipe-middle-right');
+
+    // Refresh page
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Verify position persisted
+    const swipeIconAfterRefresh = page.locator('.viewport-swipe-icon');
+    const persistedClass = await swipeIconAfterRefresh.getAttribute('class');
+    expect(persistedClass).toContain('swipe-middle-right');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('swipe icon menu positioning adapts to icon location', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    const swipeMenu = page.locator('.swipe-icon-menu');
+
+    // Test bottom-right position (default)
+    await swipeIcon.click({ force: true });
+    await page.waitForTimeout(200);
+
+    await expect(swipeMenu).toBeVisible();
+    let menuClass = await swipeMenu.getAttribute('class');
+    expect(menuClass).toContain('menu-bottom-right');
+
+    // Close menu
+    await page.click('body');
+    await page.waitForTimeout(200);
+
+    // Change to top-right and test menu positioning
+    await swipeIcon.click({ button: 'right' });
+    await page.waitForTimeout(200);
+    await swipeIcon.click({ force: true });
+    await page.waitForTimeout(200);
+
+    menuClass = await swipeMenu.getAttribute('class');
+    expect(menuClass).toContain('menu-top-right');
+
+    // Close menu
+    await page.click('body');
+    await page.waitForTimeout(200);
+
+    // Change to middle-right and test menu positioning
+    await swipeIcon.click({ button: 'right' });
+    await page.waitForTimeout(200);
+    await swipeIcon.click({ force: true });
+    await page.waitForTimeout(200);
+
+    menuClass = await swipeMenu.getAttribute('class');
+    expect(menuClass).toContain('menu-middle-right');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('swipe icon title updates with current location', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+
+    // Check initial title (bottom-right)
+    let title = await swipeIcon.getAttribute('title');
+    expect(title).toContain('bottom-right');
+
+    // Change to top-right
+    await swipeIcon.click({ button: 'right' });
+    await page.waitForTimeout(200);
+
+    title = await swipeIcon.getAttribute('title');
+    expect(title).toContain('top-right');
+
+    // Change to middle-right
+    await swipeIcon.click({ button: 'right' });
+    await page.waitForTimeout(200);
+
+    title = await swipeIcon.getAttribute('title');
+    expect(title).toContain('middle-right');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('swipe icon location dropdown selector works correctly', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    
+    // Open swipe icon menu
+    await swipeIcon.click({ force: true });
+    await page.waitForTimeout(300);
+
+    // Check that the location selector is visible
+    const locationSelect = page.locator('.swipe-location-select');
+    await expect(locationSelect).toBeVisible();
+
+    // Check initial value is bottom-right
+    const initialValue = await locationSelect.inputValue();
+    expect(initialValue).toBe('bottom-right');
+
+    // Change to top-right using dropdown
+    await locationSelect.selectOption('top-right');
+    await page.waitForTimeout(300);
+
+    // Close menu
+    await page.click('body');
+    await page.waitForTimeout(200);
+
+    // Verify swipe icon moved to top-right
+    const swipeIconClass = await swipeIcon.getAttribute('class');
+    expect(swipeIconClass).toContain('swipe-top-right');
+
+    // Open menu again and verify dropdown shows correct value
+    await swipeIcon.click({ force: true });
+    await page.waitForTimeout(200);
+
+    const newValue = await locationSelect.inputValue();
+    expect(newValue).toBe('top-right');
+
+    // Change to middle-right
+    await locationSelect.selectOption('middle-right');
+    await page.waitForTimeout(300);
+
+    // Close menu
+    await page.click('body');
+    await page.waitForTimeout(200);
+
+    // Verify swipe icon moved to middle-right
+    const middleRightClass = await swipeIcon.getAttribute('class');
+    expect(middleRightClass).toContain('swipe-middle-right');
 
     expect(pageErrors).toEqual([]);
     expect(errors).toEqual([]);

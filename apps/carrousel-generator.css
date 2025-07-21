@@ -725,8 +725,6 @@ h1 {font-size:1.25rem;font-weight:600}
 
 .viewport-swipe-icon {
   position: absolute;
-  bottom: 10%;
-  right: 5rem;
   z-index: 300;
   background: rgba(255,255,255,0.95);
   border: 1px solid var(--border);
@@ -743,10 +741,33 @@ h1 {font-size:1.25rem;font-weight:600}
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
+.viewport-swipe-icon.swipe-bottom-right {
+  bottom: 10%;
+  right: 2rem;
+}
+
+.viewport-swipe-icon.swipe-top-right {
+  top: 10%;
+  right: 2rem;
+}
+
+.viewport-swipe-icon.swipe-middle-right {
+  top: 50%;
+  right: 2rem;
+  transform: translateY(-50%);
+}
+
 .viewport-swipe-icon:hover {
   background: rgba(255,255,255,1);
-  transform: scale(1.1);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.viewport-swipe-icon:hover:not(.swipe-middle-right) {
+  transform: scale(1.1);
+}
+
+.viewport-swipe-icon.swipe-middle-right:hover {
+  transform: translateY(-50%) scale(1.1);
 }
 
 .swipe-icon-display {
@@ -756,8 +777,6 @@ h1 {font-size:1.25rem;font-weight:600}
 
 .swipe-icon-menu {
   position: absolute;
-  bottom: calc(10% + 4rem);
-  right: 5rem;
   z-index: 310;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -766,6 +785,22 @@ h1 {font-size:1.25rem;font-weight:600}
   min-width: 200px;
   max-width: 300px;
   pointer-events: all;
+}
+
+.swipe-icon-menu.menu-bottom-right {
+  bottom: calc(10% + 4rem);
+  right: 5rem;
+}
+
+.swipe-icon-menu.menu-top-right {
+  top: calc(10% + 4rem);
+  right: 5rem;
+}
+
+.swipe-icon-menu.menu-middle-right {
+  top: 50%;
+  right: 5rem;
+  transform: translateY(-50%);
 }
 
 .swipe-menu-header {
@@ -813,6 +848,40 @@ h1 {font-size:1.25rem;font-weight:600}
   font-size: 0.7rem;
   text-align: center;
   line-height: 1.2;
+}
+
+.swipe-menu-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 0.5rem 0;
+}
+
+.swipe-menu-location {
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.swipe-location-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-600);
+}
+
+.swipe-location-select {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.875rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.swipe-location-select:focus {
+  border-color: var(--primary);
 }
 
 .modal-overlay {

@@ -65,7 +65,8 @@ function carrouselApp() {
         swipeIcon: {
             enabled: true,
             selected: 'swipe-right',
-            showSelection: false
+            showSelection: false,
+            location: 'bottom-right'
         },
         calloutFontSize: CONFIG.FONT_SIZE.DEFAULT,
         availableSwipeIcons: [
@@ -607,6 +608,13 @@ function carrouselApp() {
 
         toggleSwipeIconSelection() {
             this.swipeIcon.showSelection = !this.swipeIcon.showSelection;
+        },
+
+        toggleSwipeIconLocation() {
+            const locations = ['bottom-right', 'top-right', 'middle-right'];
+            const currentIndex = locations.indexOf(this.swipeIcon.location);
+            this.swipeIcon.location = locations[(currentIndex + 1) % locations.length];
+            this.saveToStorage();
         },
 
         updateCalloutFontSize(size) {

@@ -186,12 +186,12 @@
                         </div>
 
                         <!-- Swipe Icon (only on first slide) - positioned inside viewport -->
-                        <div x-show="activeSlide === 0 && swipeIcon.enabled && slides.length > 0" class="viewport-swipe-icon" @click="toggleSwipeIconSelection()" title="Change swipe icon">
+                        <div x-show="activeSlide === 0 && swipeIcon.enabled && slides.length > 0" class="viewport-swipe-icon" :class="'swipe-' + swipeIcon.location" @click="toggleSwipeIconSelection()" @contextmenu.prevent="toggleSwipeIconLocation()" :title="'Change swipe icon (right-click to change position: ' + swipeIcon.location + ')'">
                             <span class="swipe-icon-display" x-text="getSelectedSwipeIcon().icon"></span>
                         </div>
 
                         <!-- Swipe Icon Selection Menu -->
-                        <div x-show="swipeIcon.showSelection" class="swipe-icon-menu" @click.away="swipeIcon.showSelection = false">
+                        <div x-show="swipeIcon.showSelection" class="swipe-icon-menu" :class="'menu-' + swipeIcon.location" @click.away="swipeIcon.showSelection = false">
                             <div class="swipe-menu-header">Choose Swipe Icon</div>
                             <div class="swipe-menu-grid">
                                 <template x-for="icon in availableSwipeIcons" :key="icon.id">
@@ -205,6 +205,15 @@
                                         <small x-text="icon.name"></small>
                                     </button>
                                 </template>
+                            </div>
+                            <div class="swipe-menu-separator"></div>
+                            <div class="swipe-menu-location">
+                                <label class="swipe-location-label">Position</label>
+                                <select x-model="swipeIcon.location" @change="saveToStorage()" class="swipe-location-select">
+                                    <option value="bottom-right">Bottom Right</option>
+                                    <option value="top-right">Top Right</option>
+                                    <option value="middle-right">Middle Right</option>
+                                </select>
                             </div>
                         </div>
 
@@ -341,7 +350,7 @@
     </div>
 
 
-    <div class="version">v2025-01-21.71</div>
+    <div class="version">v2025-01-21.73</div>
 
     <script src="shared/shared.js"></script>
     <script src="carrousel-generator.js"></script>
