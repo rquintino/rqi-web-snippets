@@ -19,6 +19,7 @@ function carrouselApp() {
         aspectRatio: 'square',
         isDark: false, // Will be loaded in init()
         isFullscreen: false,
+        lastKeyTime: 0, // For debouncing keyboard navigation
         isExporting: false,
         isPreviewLoading: false,
         showProfileConfig: false,
@@ -212,11 +213,23 @@ function carrouselApp() {
                         break;
                     case 'arrowleft':
                         if (this.activeSlide > 0) {
+                            // Debounce keyboard navigation to prevent rapid fire
+                            const now = Date.now();
+                            if (now - this.lastKeyTime < 150) return; // 150ms debounce
+                            this.lastKeyTime = now;
+                            
+                            e.preventDefault();
                             this.setActiveSlide(this.activeSlide - 1);
                         }
                         break;
                     case 'arrowright':
                         if (this.activeSlide < this.slides.length - 1) {
+                            // Debounce keyboard navigation to prevent rapid fire
+                            const now = Date.now();
+                            if (now - this.lastKeyTime < 150) return; // 150ms debounce
+                            this.lastKeyTime = now;
+                            
+                            e.preventDefault();
                             this.setActiveSlide(this.activeSlide + 1);
                         }
                         break;
