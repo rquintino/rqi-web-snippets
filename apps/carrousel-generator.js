@@ -86,6 +86,7 @@ function carrouselApp() {
             ]);
             
             this.setupEventHandlers();
+            this.updateIconSizes(); // Set initial icon sizes based on font size
             
             if (this.slides.length === 0) {
                 this.addSlide();
@@ -285,7 +286,7 @@ function carrouselApp() {
                     case 'backspace':
                         if (!e.ctrlKey && !e.metaKey) {
                             e.preventDefault();
-                            this.deleteSlide();
+                            this.deleteSelectedImageOrCallout();
                         }
                         break;
                     case 'e':
@@ -298,7 +299,7 @@ function carrouselApp() {
                         if (this.activeSlide > 0) {
                             // Debounce keyboard navigation to prevent rapid fire
                             const now = Date.now();
-                            if (now - this.lastKeyTime < 150) return; // 150ms debounce
+                            if (now - this.lastKeyTime < CONFIG.DEBOUNCE_TIME.KEYBOARD) return;
                             this.lastKeyTime = now;
                             
                             e.preventDefault();
@@ -309,7 +310,7 @@ function carrouselApp() {
                         if (this.activeSlide < this.slides.length - 1) {
                             // Debounce keyboard navigation to prevent rapid fire
                             const now = Date.now();
-                            if (now - this.lastKeyTime < 150) return; // 150ms debounce
+                            if (now - this.lastKeyTime < CONFIG.DEBOUNCE_TIME.KEYBOARD) return;
                             this.lastKeyTime = now;
                             
                             e.preventDefault();
@@ -338,12 +339,15 @@ function carrouselApp() {
         async generatePDF() {
             if (this.slides.length === 0) return null;
             
+            // Store the original slide to restore it after PDF generation
+            const originalSlideIndex = this.activeSlide;
+            
             const { jsPDF } = window.jspdf;
             const isSquare = this.aspectRatio === 'square';
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [1080, isSquare ? 1080 : 1350]
+                format: [CONFIG.DIMENSIONS.SQUARE.width, isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height]
             });
             
             for (let i = 0; i < this.slides.length; i++) {
@@ -355,8 +359,8 @@ function carrouselApp() {
                 
                 const slide = this.getCurrentSlide();
                 const viewport = document.getElementById('viewport');
-                const targetWidth = 1080;
-                const targetHeight = isSquare ? 1080 : 1350;
+                const targetWidth = CONFIG.DIMENSIONS.SQUARE.width;
+                const targetHeight = isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height;
                 
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = targetWidth;
@@ -420,8 +424,12 @@ function carrouselApp() {
                 ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
                 
                 const imgData = tempCanvas.toDataURL('image/png');
-                pdf.addImage(imgData, 'PNG', 0, 0, 1080, targetHeight);
+                pdf.addImage(imgData, 'PNG', 0, 0, CONFIG.DIMENSIONS.SQUARE.width, targetHeight);
             }
+            
+            // Restore the original slide index
+            this.setActiveSlide(originalSlideIndex);
+            await this.$nextTick();
             
             return pdf;
         },
@@ -430,39 +438,35 @@ function carrouselApp() {
             if (this.slides.length === 0) return;
             
             this.isExporting = true;
-            try {
-                const pdf = await this.generatePDF();
-                if (pdf) {
-                    pdf.save('linkedin-carousel.pdf');
-                }
-            } catch (error) {
-                console.error('Export failed:', error);
-                alert('Export failed. Please try again.');
-            } finally {
-                this.isExporting = false;
+            const pdf = await this.safeExecute(
+                () => this.generatePDF(),
+                'Export failed.'
+            );
+            
+            if (pdf) {
+                pdf.save('linkedin-carousel.pdf');
             }
+            this.isExporting = false;
         },
 
         async previewPDF() {
             if (this.slides.length === 0) return;
             
             this.isPreviewLoading = true;
-            try {
-                const pdf = await this.generatePDF();
-                if (pdf) {
-                    const pdfBlob = pdf.output('blob');
-                    const pdfUrl = URL.createObjectURL(pdfBlob);
-                    
-                    this.currentPDF = pdf;
-                    this.previewUrl = pdfUrl;
-                    this.showPreview = true;
-                }
-            } catch (error) {
-                console.error('Preview failed:', error);
-                alert('Preview failed. Please try again.');
-            } finally {
-                this.isPreviewLoading = false;
+            const pdf = await this.safeExecute(
+                () => this.generatePDF(),
+                'Preview failed.'
+            );
+            
+            if (pdf) {
+                const pdfBlob = pdf.output('blob');
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+                
+                this.currentPDF = pdf;
+                this.previewUrl = pdfUrl;
+                this.showPreview = true;
             }
+            this.isPreviewLoading = false;
         },
 
         closePreview() {
@@ -503,7 +507,7 @@ function carrouselApp() {
                     // Generate new preview (previewPDF sets isPreviewLoading)
                     await this.previewPDF();
                 }
-            }, 500); // 500ms debounce
+            }, CONFIG.DEBOUNCE_TIME.PREVIEW_REFRESH);
         },
 
         async toggleDark() {
@@ -590,9 +594,6 @@ function carrouselApp() {
             }
         },
 
-        saveProfile() {
-            this.saveAndRefresh();
-        },
 
         getSelectedSwipeIcon() {
             return this.availableSwipeIcons.find(icon => icon.id === this.swipeIcon.selected) || this.availableSwipeIcons[0];
@@ -610,11 +611,43 @@ function carrouselApp() {
 
         updateCalloutFontSize(size) {
             this.calloutFontSize = this.clampFontSize(parseInt(size));
+            this.updateIconSizes();
             this.saveAndRefresh();
+        },
+
+        updateIconSizes() {
+            // Base sizes (default 50% bigger than original)
+            const baseProfileSize = 2.25; // rem - was 1.5rem, now 50% bigger
+            const baseSwipeSize = 3.75; // rem - was 2.5rem, now 50% bigger  
+            const baseSwipeFontSize = 1.8; // rem - was 1.2rem, now 50% bigger
+            
+            // Scale factor based on font size (16px is default)
+            const scaleFactor = this.calloutFontSize / 16;
+            
+            // Calculate new sizes
+            const profileSize = baseProfileSize * scaleFactor;
+            const swipeSize = baseSwipeSize * scaleFactor;
+            const swipeFontSize = baseSwipeFontSize * scaleFactor;
+            
+            // Update CSS custom properties
+            const root = document.documentElement;
+            root.style.setProperty('--profile-avatar-size', `${profileSize}rem`);
+            root.style.setProperty('--swipe-icon-size', `${swipeSize}rem`);
+            root.style.setProperty('--swipe-icon-font-size', `${swipeFontSize}rem`);
         },
 
         clampFontSize(size) {
             return Math.max(CONFIG.FONT_SIZE.MIN, Math.min(CONFIG.FONT_SIZE.MAX, size));
+        },
+
+        async safeExecute(operation, errorMessage) {
+            try {
+                return await operation();
+            } catch (error) {
+                console.error(errorMessage, error);
+                alert(errorMessage + ' Please try again.');
+                return null;
+            }
         },
 
         triggerAvatarUpload() {
@@ -630,7 +663,7 @@ function carrouselApp() {
                 return;
             }
 
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            if (file.size > CONFIG.AVATAR.MAX_SIZE) {
                 alert('Please select an image smaller than 5MB.');
                 return;
             }
@@ -638,7 +671,7 @@ function carrouselApp() {
             try {
                 const base64 = await this.fileToBase64(file);
                 this.profile.avatarUrl = base64;
-                this.saveProfile();
+                this.saveAndRefresh();
             } catch (error) {
                 console.error('Error processing avatar:', error);
                 alert('Error uploading avatar. Please try again.');
@@ -659,7 +692,7 @@ function carrouselApp() {
 
         removeAvatar() {
             this.profile.avatarUrl = '';
-            this.saveProfile();
+            this.saveAndRefresh();
         },
 
         setupBackgroundImageInteraction() {
@@ -785,6 +818,28 @@ function carrouselApp() {
             if (this.isInteractAvailable()) {
                 interact(`#callout-${calloutId}`).unset();
             }
+        },
+
+        deleteSelectedImageOrCallout() {
+            const slide = this.getCurrentSlide();
+            if (!slide) return;
+            
+            // Check if there's an image to delete first
+            if (slide.bgSrc) {
+                slide.bgSrc = null;
+                slide.bgPosition = { x: 0, y: 0 };
+                slide.bgSize = { width: null, height: null };
+                this.saveAndRefresh();
+                return;
+            }
+            
+            // If no image, delete the first (or most recently added) callout
+            if (slide.callouts && slide.callouts.length > 0) {
+                const lastCallout = slide.callouts[slide.callouts.length - 1];
+                this.deleteCallout(lastCallout.id);
+            }
+            
+            // Note: Never delete slides with delete key - slides should only be deleted via button or 'd' key
         },
 
         isInteractAvailable() {

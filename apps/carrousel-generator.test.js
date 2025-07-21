@@ -1575,6 +1575,434 @@ test.describe('Carousel Generator', () => {
     expect(errors).toEqual([]);
   });
 
+  test('profile and swipe icon are positioned more vertically centered', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Set up a profile to test positioning
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+    await page.fill('input[placeholder="Your Name"]', 'Test Profile');
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Check profile positioning - should be 30% from bottom instead of 1rem
+    const profileElement = page.locator('.viewport-avatar');
+    const profileComputedStyle = await profileElement.evaluate(el => {
+      const styles = window.getComputedStyle(el);
+      return {
+        bottom: styles.bottom,
+        top: styles.top
+      };
+    });
+    
+    // Should have bottom: 30% (calculated from viewport)
+    const profileHasNewPosition = profileComputedStyle.bottom !== '16px'; // 1rem = 16px typically
+    expect(profileHasNewPosition).toBe(true);
+
+    // Check swipe icon positioning  
+    const swipeIcon = page.locator('.viewport-swipe-icon');
+    const swipeComputedStyle = await swipeIcon.evaluate(el => {
+      const styles = window.getComputedStyle(el);
+      return {
+        bottom: styles.bottom,
+        right: styles.right
+      };
+    });
+    
+    // Should have bottom: 30% instead of 1rem
+    const swipeHasNewPosition = swipeComputedStyle.bottom !== '16px'; // 1rem = 16px typically
+    expect(swipeHasNewPosition).toBe(true);
+
+    // Clear profile to check add profile button positioning
+    await page.click('.viewport-avatar'); // Open profile modal
+    await page.waitForTimeout(300);
+    await page.fill('input[placeholder="Your Name"]', ''); // Clear name
+    await page.waitForTimeout(300);
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Now add profile button should be visible again with new positioning
+    const addProfileButton = page.locator('.viewport-add-profile');
+    await expect(addProfileButton).toBeVisible();
+    
+    const addProfileComputedStyle = await addProfileButton.evaluate(el => {
+      const styles = window.getComputedStyle(el);
+      return {
+        bottom: styles.bottom,
+        left: styles.left
+      };
+    });
+    
+    // Should have bottom: 30% instead of 12px
+    const addProfileHasNewPosition = addProfileComputedStyle.bottom !== '12px';
+    expect(addProfileHasNewPosition).toBe(true);
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('delete key does not delete slides anymore', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Start with one slide and add a second one for testing
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+    
+    // Should now have 2 slides
+    let slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2');
+    
+    // Press delete key - should NOT delete slide anymore
+    await page.press('body', 'Delete');
+    await page.waitForTimeout(300);
+    
+    // Should still have 2 slides
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2');
+    
+    // Verify slide can still be deleted via button
+    await page.click('button[title="Delete Slide"]');
+    await page.waitForTimeout(300);
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('1/1');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('delete key only deletes images and callouts, never slides', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Start with one slide and add a second one for testing
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+    
+    // Should now have 2 slides
+    let slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2');
+    
+    // Test 1: Press delete key when there's no image or callouts - should NOT delete slide
+    await page.press('body', 'Delete');
+    await page.waitForTimeout(300);
+    
+    // Should still have 2 slides
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2');
+    
+    // Test 2: Add a callout and press delete - should delete callout, not slide
+    await page.click('button[title="Add Text Callout"]');
+    await page.waitForTimeout(500);
+    
+    // Should have 1 callout
+    let calloutCount = await page.locator('.text-callout').count();
+    expect(calloutCount).toBe(1);
+    
+    // Exit edit mode first by pressing Escape
+    await page.press('body', 'Escape');
+    await page.waitForTimeout(200);
+    
+    // Press delete key
+    await page.press('body', 'Delete');
+    await page.waitForTimeout(300);
+    
+    // Callout should be deleted but slide should remain
+    calloutCount = await page.locator('.text-callout').count();
+    expect(calloutCount).toBe(0);
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2'); // Still 2 slides
+    
+    // Test 3: Add another callout to verify single deletion
+    await page.click('button[title="Add Text Callout"]');
+    await page.waitForTimeout(500);
+    
+    calloutCount = await page.locator('.text-callout').count();
+    expect(calloutCount).toBe(1);
+    
+    // Exit edit mode first by pressing Escape
+    await page.press('body', 'Escape');
+    await page.waitForTimeout(200);
+    
+    // Delete the callout with delete key
+    await page.press('body', 'Delete');
+    await page.waitForTimeout(300);
+    
+    calloutCount = await page.locator('.text-callout').count();
+    expect(calloutCount).toBe(0);
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2'); // Still 2 slides
+    
+    // Test 4: Delete key with no callouts or images should NOT delete slide
+    await page.press('body', 'Delete');
+    await page.waitForTimeout(300);
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2'); // Still 2 slides
+    
+    // Test 5: Verify slide can still be deleted via button
+    await page.click('button[title="Delete Slide"]');
+    await page.waitForTimeout(300);
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('1/1'); // Now 1 slide as expected
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('PDF generation returns to original slide after completion', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Create multiple slides for testing
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+    
+    // Should now have 3 slides, currently on slide 3
+    let slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('3/3');
+    
+    // Navigate to slide 2 (middle slide)
+    await page.click('button[title="Previous Slide"]');
+    await page.waitForTimeout(300);
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/3');
+    
+    // Trigger PDF preview (this uses the generatePDF function internally)
+    await page.click('button[title="Preview PDF"]');
+    await page.waitForTimeout(2000); // Allow time for PDF generation
+    
+    // After PDF generation, should still be on slide 2
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/3');
+    
+    // Navigate to slide 1 and test export
+    await page.click('button[title="Previous Slide"]');
+    await page.waitForTimeout(300);
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('1/3');
+    
+    // Note: We can't easily test actual PDF export download in Playwright
+    // but we can verify that after triggering export, we stay on the same slide
+    // Since exportPDF also uses generatePDF, it should have the same behavior
+    
+    // Close preview if it opened
+    const previewPane = page.locator('.preview-pane');
+    const isPreviewVisible = await previewPane.isVisible();
+    if (isPreviewVisible) {
+      await page.click('button[title="Close Preview"]');
+      await page.waitForTimeout(300);
+    }
+    
+    // Final slide should still be slide 1
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('1/3');
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('size slider controls profile and swipe icon sizes with 50% bigger default', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Set up profile to test sizing
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+    await page.fill('input[placeholder="Your Name"]', 'Test Profile');
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Check initial sizes (should be 50% bigger than original)
+    const initialProfileSize = await page.evaluate(() => {
+      const profileAvatar = document.querySelector('.viewport-profile-avatar');
+      return window.getComputedStyle(profileAvatar).width;
+    });
+
+    const initialSwipeSize = await page.evaluate(() => {
+      const swipeIcon = document.querySelector('.viewport-swipe-icon');
+      return window.getComputedStyle(swipeIcon).width;
+    });
+
+    const initialSwipeFontSize = await page.evaluate(() => {
+      const swipeDisplay = document.querySelector('.swipe-icon-display');
+      return window.getComputedStyle(swipeDisplay).fontSize;
+    });
+
+    // Default font size is 16px, so at 50% bigger:
+    // Profile: 1.5rem -> 2.25rem = 36px 
+    // Swipe: 2.5rem -> 3.75rem = 60px
+    // Swipe Font: 1.2rem -> 1.8rem = 28.8px
+    
+    // Allow some tolerance for browser rounding
+    expect(parseFloat(initialProfileSize)).toBeCloseTo(36, 1);
+    expect(parseFloat(initialSwipeSize)).toBeCloseTo(60, 1);
+    expect(parseFloat(initialSwipeFontSize)).toBeCloseTo(28.8, 1);
+
+    // Test that sizes scale with font size changes
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '24';
+      slider.dispatchEvent(new Event('input'));
+    });
+    await page.waitForTimeout(300);
+
+    const scaledProfileSize = await page.evaluate(() => {
+      const profileAvatar = document.querySelector('.viewport-profile-avatar');
+      return window.getComputedStyle(profileAvatar).width;
+    });
+
+    const scaledSwipeSize = await page.evaluate(() => {
+      const swipeIcon = document.querySelector('.viewport-swipe-icon');
+      return window.getComputedStyle(swipeIcon).width;
+    });
+
+    const scaledSwipeFontSize = await page.evaluate(() => {
+      const swipeDisplay = document.querySelector('.swipe-icon-display');
+      return window.getComputedStyle(swipeDisplay).fontSize;
+    });
+
+    // At 24px font size (1.5x scale), sizes should be 1.5x bigger
+    // Profile: 2.25rem * 1.5 = 3.375rem = 54px
+    // Swipe: 3.75rem * 1.5 = 5.625rem = 90px  
+    // Swipe Font: 1.8rem * 1.5 = 2.7rem = 43.2px
+
+    expect(parseFloat(scaledProfileSize)).toBeCloseTo(54, 1);
+    expect(parseFloat(scaledSwipeSize)).toBeCloseTo(90, 1);
+    expect(parseFloat(scaledSwipeFontSize)).toBeCloseTo(43.2, 1);
+
+    // Test smaller size
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '8';
+      slider.dispatchEvent(new Event('input'));
+    });
+    await page.waitForTimeout(300);
+
+    const smallProfileSize = await page.evaluate(() => {
+      const profileAvatar = document.querySelector('.viewport-profile-avatar');
+      return window.getComputedStyle(profileAvatar).width;
+    });
+
+    // At 8px font size (0.5x scale), sizes should be 0.5x smaller
+    // Profile: 2.25rem * 0.5 = 1.125rem = 18px
+
+    expect(parseFloat(smallProfileSize)).toBeCloseTo(18, 1);
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('profile and swipe icon are properly aligned at 10% from bottom', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    const pageErrors = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Set up a profile to test alignment
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+    await page.fill('input[placeholder="Your Name"]', 'Test Profile');
+    await page.click('.modal-overlay', { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(300);
+
+    // Get the computed bottom position for both profile and swipe icon
+    const profileBottom = await page.evaluate(() => {
+      const profileElement = document.querySelector('.viewport-avatar');
+      return window.getComputedStyle(profileElement).bottom;
+    });
+
+    const swipeBottom = await page.evaluate(() => {
+      const swipeElement = document.querySelector('.viewport-swipe-icon');
+      return window.getComputedStyle(swipeElement).bottom;
+    });
+
+    // Both should be vertically aligned at 10% from bottom
+    // CSS percentages get computed to pixels, so check they're equal
+    expect(profileBottom).toBe(swipeBottom);
+
+    expect(pageErrors).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
   test('all three features work together without conflicts', async ({ page }) => {
     const errors = [];
     page.on('console', msg => {

@@ -319,17 +319,17 @@
                 
                 <div class="config-field">
                     <label>Name</label>
-                    <input type="text" x-model="profile.name" @input="saveProfile()" placeholder="Your Name" class="input-small">
+                    <input type="text" x-model="profile.name" @input="saveAndRefresh()" placeholder="Your Name" class="input-small">
                 </div>
                 
                 <div class="config-field">
                     <label>Profile URL</label>
-                    <input type="url" x-model="profile.profileUrl" @input="saveProfile()" placeholder="https://linkedin.com/in/..." class="input-small">
+                    <input type="url" x-model="profile.profileUrl" @input="saveAndRefresh()" placeholder="https://linkedin.com/in/..." class="input-small">
                 </div>
                 
                 <div class="config-field">
                     <label>Position</label>
-                    <select x-model="profile.position" @change="saveProfile()" class="input-small">
+                    <select x-model="profile.position" @change="saveAndRefresh()" class="input-small">
                         <option value="bottom-right">Bottom Right</option>
                         <option value="bottom-left">Bottom Left</option>
                         <option value="top-right">Top Right</option>
@@ -341,7 +341,7 @@
     </div>
 
 
-    <div class="version">v2025-01-21.61</div>
+    <div class="version">v2025-01-21.71</div>
 
     <script src="shared/shared.js"></script>
     <script src="carrousel-generator.js"></script>
