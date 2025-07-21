@@ -335,13 +335,13 @@ h1 {font-size:1.25rem;font-weight:600}
 }
 
 .with-preview .viewport.square {
-  width: min(60vh, 50vw, 450px);
-  height: min(60vh, 50vw, 450px);
+  width: min(70vh, 60vw, 600px);
+  height: min(70vh, 60vw, 600px);
 }
 
 .with-preview .viewport.portrait {
-  width: min(48vh, 50vw, 360px);
-  height: min(60vh, 62.5vw, 450px);
+  width: min(56vh, 60vw, 480px);
+  height: min(70vh, 75vw, 600px);
 }
 
 .canvas-bg-image {
