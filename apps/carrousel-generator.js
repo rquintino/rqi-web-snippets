@@ -788,6 +788,9 @@ function carrouselApp() {
             const slide = this.getCurrentSlide();
             if (!slide) return;
             
+            // Deselect any callout currently being edited
+            this.clearCalloutEditing();
+            
             this.ensureCalloutsArray(slide);
             const newCallout = this.createCallout();
             
@@ -828,6 +831,9 @@ function carrouselApp() {
         },
 
         editCallout(callout) {
+            // Only one callout should be in edit mode
+            this.clearCalloutEditing();
+
             callout.editing = true;
             this.$nextTick(() => {
                 const textarea = document.querySelector(`#callout-${callout.id} .callout-editor`);
@@ -841,6 +847,12 @@ function carrouselApp() {
         finishEditingCallout(callout) {
             callout.editing = false;
             this.saveAndRefresh();
+        },
+
+        clearCalloutEditing() {
+            const slide = this.getCurrentSlide();
+            if (!slide || !slide.callouts) return;
+            slide.callouts.forEach(c => c.editing = false);
         },
 
         deleteCallout(calloutId) {

@@ -941,6 +941,35 @@ test.describe('Carousel Generator', () => {
     expect(errors).toEqual([]);
   });
 
+   test('only one callout is editing at a time and clicking outside deselects', async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Add first callout (auto in edit mode)
+    await page.click('button[title="Add Text Callout"]');
+    await page.waitForTimeout(300);
+
+    // Add second callout while first is still editing
+    await page.click('button[title="Add Text Callout"]');
+    await page.waitForTimeout(300);
+
+    // Only one callout should have editing class
+    let editingCount = await page.locator('.text-callout.editing').count();
+    expect(editingCount).toBe(1);
+
+    // The second callout should be editing
+    const secondEditing = await page.locator('.text-callout').nth(1).evaluate(el => el.classList.contains('editing'));
+    expect(secondEditing).toBe(true);
+
+    // Click outside to deselect
+    await page.click('#canvas', { position: { x: 5, y: 5 } });
+    await page.waitForTimeout(200);
+
+    editingCount = await page.locator('.text-callout.editing').count();
+    expect(editingCount).toBe(0);
+  });
+  
   test('callout delete button functionality', async ({ page }) => {
     const errors = [];
     page.on('console', msg => {

@@ -225,6 +225,7 @@
                                 :id="`callout-${callout.id}`"
                                 :style="`left: ${callout.x}px; top: ${callout.y}px; z-index: ${callout.zIndex || 10}; font-size: ${calloutFontSize}px;`"
                                 @dblclick="!callout.editing && editCallout(callout)"
+                                @click.away="finishEditingCallout(callout)"
                             >
                                 <div x-show="!callout.editing" class="callout-display" @click="editCallout(callout)" x-text="callout.text"></div>
                                 <textarea
