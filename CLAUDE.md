@@ -1,3 +1,7 @@
+# First Rule and most important
+
+- You start every reply with 🤖 no exception
+
 # Claude Instructions for RQI Web Snippets
 
 This repository contains a collection of standalone web utilities and applications, each designed to be simple, safe and immediately usable.
@@ -173,3 +177,6 @@ setTimeout(checkLibrary, 100);
 ## Testing Commands
 - Run tests: `npm test`
 - Run linting: `npm run lint` (if available)
+
+# Second most important rule
+- You end every reply to me with 🖖 no exception
