@@ -253,7 +253,6 @@ function carrouselApp() {
             const img = new Image();
             img.onload = () => {
                 this.setSlideImage(slide, imageSrc, img);
-                this.saveAndRefresh();
                 this.scheduleBackgroundImageInteraction();
             };
             img.src = imageSrc;
@@ -928,6 +927,8 @@ function carrouselApp() {
             // Only one callout should be in edit mode
             this.clearCalloutEditing();
 
+            // Store original text for change tracking
+            callout.originalText = callout.text;
             callout.editing = true;
             this.selectCallout(callout);
             this.$nextTick(() => {
@@ -940,8 +941,18 @@ function carrouselApp() {
         },
 
         finishEditingCallout(callout) {
+            const originalText = callout.originalText;
+            const newText = callout.text;
+            
             callout.editing = false;
-            this.saveAndRefresh();
+            
+            // Only save and refresh if text actually changed (account for undefined original text)
+            if (originalText !== newText && originalText !== undefined) {
+                this.saveAndRefresh();
+            }
+            
+            // Clean up the temporary originalText property
+            delete callout.originalText;
         },
 
         clearCalloutEditing() {
