@@ -4,6 +4,7 @@
   "main": "common.js",
   "scripts": {
     "test": "playwright test",
+    "test:default": "playwright test --config=playwright.config.default.js",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "screenshots": "node scripts/generate-screenshots.js",

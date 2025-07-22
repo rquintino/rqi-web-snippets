@@ -3,7 +3,7 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './',
-  testMatch: ['**/*.test.js', '**/*.test-*.js'],
+  testMatch: '**/*.test.js',  // Only basic test files, excludes .test-<feature>.js files
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -19,4 +19,4 @@ module.exports = defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-}); 
+});

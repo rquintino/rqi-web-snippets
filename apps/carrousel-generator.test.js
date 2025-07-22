@@ -172,4 +172,195 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     
     expect(errors).toEqual([]);
   });
+
+  test('can add and navigate between slides', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    
+    // Initially at slide 1/1
+    await expect(page.locator('.slide-indicator')).toContainText('1/1');
+    
+    // Add a slide
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+    
+    // Now at slide 2/2
+    await expect(page.locator('.slide-indicator')).toContainText('2/2');
+    
+    // Previous button should be enabled now
+    await expect(page.locator('button[title="Previous Slide"]')).toBeEnabled();
+    
+    // Go back to slide 1
+    await page.click('button[title="Previous Slide"]');
+    await page.waitForTimeout(300);
+    
+    // Now at slide 1/2
+    await expect(page.locator('.slide-indicator')).toContainText('1/2');
+    
+    expect(errors).toEqual([]);
+  });
+
+  test('can add text callouts', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    
+    // Add callout button should be enabled
+    await expect(page.locator('button[title="Add Text Callout"]')).toBeEnabled();
+    
+    // Click to add callout
+    await page.click('button[title="Add Text Callout"]');
+    await page.waitForTimeout(800);
+    
+    // Callout should be created and visible
+    await expect(page.locator('.text-callout')).toBeVisible();
+    
+    expect(errors).toEqual([]);
+  });
+
+  test('dark mode toggle works', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    
+    // Get initial state (could be dark or light depending on settings)
+    const initiallyDark = await page.locator('body').evaluate(el => el.classList.contains('dark'));
+    
+    // Click dark mode toggle
+    await page.click('button[title="Toggle Dark Mode"]');
+    await page.waitForTimeout(300);
+    
+    // Should switch to opposite mode
+    if (initiallyDark) {
+      await expect(page.locator('body')).not.toHaveClass(/dark/);
+    } else {
+      await expect(page.locator('body')).toHaveClass(/dark/);
+    }
+    
+    expect(errors).toEqual([]);
+  });
+
+  test('aspect ratio selector works', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    
+    // Default should be square
+    await expect(page.locator('.viewport')).toHaveClass(/square/);
+    
+    // Change to portrait
+    await page.selectOption('.viewport-select', 'portrait');
+    await page.waitForTimeout(300);
+    
+    // Should switch to portrait
+    await expect(page.locator('.viewport')).toHaveClass(/portrait/);
+    
+    expect(errors).toEqual([]);
+  });
+
+  test('font size slider works', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    
+    // Font size display should show default 16px
+    await expect(page.locator('.viewport-font-size')).toContainText('16px');
+    
+    // Change font size using slider
+    await page.evaluate(() => {
+      const slider = document.querySelector('.viewport-font-slider');
+      slider.value = '24';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(200);
+    
+    // Font size display should update
+    await expect(page.locator('.viewport-font-size')).toContainText('24px');
+    
+    expect(errors).toEqual([]);
+  });
+
+  test('export buttons are present and enabled', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    
+    // Export buttons should exist and be enabled
+    await expect(page.locator('button[title="Preview PDF"]')).toBeVisible();
+    await expect(page.locator('button[title="Preview PDF"]')).toBeEnabled();
+    
+    await expect(page.locator('button[title="Export PDF"]')).toBeVisible();
+    await expect(page.locator('button[title="Export PDF"]')).toBeEnabled();
+    
+    expect(errors).toEqual([]);
+  });
+
+  test('profile configuration opens', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    
+    // Profile add button should be visible
+    await expect(page.locator('.viewport-add-profile')).toBeVisible();
+    
+    // Click to open profile config
+    await page.click('.viewport-add-profile');
+    await page.waitForTimeout(300);
+    
+    // Profile modal should be visible
+    await expect(page.locator('.modal-overlay')).toBeVisible();
+    await expect(page.locator('.modal-content')).toBeVisible();
+    
+    expect(errors).toEqual([]);
+  });
 });
