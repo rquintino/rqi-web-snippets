@@ -56,6 +56,7 @@ function carrouselApp() {
         previewUrl: null,
         currentPDF: null,
         previewRefreshTimeout: null,
+        selected: { type: null, id: null },
         profile: {
             avatarUrl: '',
             name: '',
@@ -69,6 +70,7 @@ function carrouselApp() {
             location: 'bottom-right'
         },
         calloutFontSize: CONFIG.FONT_SIZE.DEFAULT,
+        isProcessingPaste: false,
         availableSwipeIcons: [
             { id: 'swipe-right', name: 'Swipe Right', icon: '→' },
             { id: 'swipe-left', name: 'Swipe Left', icon: '←' },
@@ -85,10 +87,10 @@ function carrouselApp() {
                 this.loadFromStorage(),
                 this.loadDarkModePreference()
             ]);
-            
+
             this.setupEventHandlers();
             this.updateIconSizes(); // Set initial icon sizes based on font size
-            
+
             if (this.slides.length === 0) {
                 this.addSlide();
             }
@@ -117,16 +119,17 @@ function carrouselApp() {
                 bgSrc: null,
                 bgPosition: { x: 0, y: 0 },
                 bgSize: { width: null, height: null },
-                callouts: []
+                callouts: [],
+                images: []
             };
         },
 
         duplicateSlide() {
             if (this.slides.length === 0) return;
-            
+
             const currentSlide = this.getCurrentSlide();
             const duplicatedSlide = this.deepCloneSlide(currentSlide);
-            
+
             this.slides.splice(this.activeSlide + 1, 0, duplicatedSlide);
             this.setActiveSlide(this.activeSlide + 1);
             this.saveAndRefresh();
@@ -141,10 +144,10 @@ function carrouselApp() {
 
         deleteSlide() {
             if (this.slides.length === 0) return;
-            
+
             this.slides.splice(this.activeSlide, 1);
             this.activeSlide = this.clampActiveSlideIndex();
-            
+
             this.saveAndRefresh();
         },
 
@@ -184,13 +187,21 @@ function carrouselApp() {
         },
 
 
-        triggerImageUpload() {
-            document.getElementById('imageInput').click();
+
+        triggerOverlayUpload() {
+            document.getElementById('overlayInput').click();
         },
 
         handleFileSelect(event) {
             const file = event.target.files[0];
             this.handleImageFile(file);
+            event.target.value = ''; // Clear the input
+        },
+
+        handleOverlaySelect(event) {
+            const file = event.target.files[0];
+            this.handleOverlayFile(file);
+            event.target.value = '';
         },
 
         handleDrop(event) {
@@ -200,7 +211,18 @@ function carrouselApp() {
 
         handleImageFile(file) {
             if (file && file.type.startsWith('image/')) {
-                this.processImageFile(file);
+                // If we have slides and current slide has background, add as overlay, otherwise set as background
+                if (this.slides.length > 0 && this.getCurrentSlide()?.bgSrc) {
+                    this.processOverlayFile(file);
+                } else {
+                    this.processImageFile(file);
+                }
+            }
+        },
+
+        handleOverlayFile(file) {
+            if (file && file.type.startsWith('image/')) {
+                this.processOverlayFile(file);
             }
         },
 
@@ -215,12 +237,45 @@ function carrouselApp() {
             reader.readAsDataURL(file);
         },
 
+        processOverlayFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const slide = this.getCurrentSlide();
+                if (slide) {
+                    this.loadOverlayImage(e.target.result, slide);
+                }
+            };
+            reader.readAsDataURL(file);
+        },
+
+
         loadImageToSlide(imageSrc, slide) {
             const img = new Image();
             img.onload = () => {
                 this.setSlideImage(slide, imageSrc, img);
                 this.saveAndRefresh();
                 this.scheduleBackgroundImageInteraction();
+            };
+            img.src = imageSrc;
+        },
+
+
+        loadOverlayImage(imageSrc, slide) {
+            const img = new Image();
+            img.onload = () => {
+                this.ensureImagesArray(slide);
+                const overlay = {
+                    id: this.generateId(),
+                    src: imageSrc,
+                    x: CONFIG.DEFAULT_CALLOUT_POSITION.x,
+                    y: CONFIG.DEFAULT_CALLOUT_POSITION.y,
+                    width: img.naturalWidth,
+                    height: img.naturalHeight,
+                    zIndex: 5
+                };
+                slide.images.push(overlay);
+                this.saveAndRefresh();
+                this.scheduleOverlayInteraction(overlay.id);
             };
             img.src = imageSrc;
         },
@@ -240,18 +295,42 @@ function carrouselApp() {
         setupPasteHandler() {
             window.addEventListener('paste', (e) => {
                 if (this.shouldSkipImagePaste(e.target)) return;
-                
+
                 const imageFile = this.extractImageFromClipboard(e.clipboardData);
                 if (imageFile) {
-                    this.processImageFile(imageFile);
+                    // Prevent multiple simultaneous paste operations
+                    if (this.isProcessingPaste) {
+                        return;
+                    }
+
+                    // Only prevent default if we have an image to process
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    this.isProcessingPaste = true;
+
+                    // Use requestAnimationFrame to ensure this runs after any other paste handlers
+                    requestAnimationFrame(() => {
+                        // If we have slides, add as overlay image, otherwise set as background
+                        if (this.slides.length > 0 && this.getCurrentSlide()) {
+                            this.processOverlayFile(imageFile);
+                        } else {
+                            this.processImageFile(imageFile);
+                        }
+                        
+                        // Reset the flag after a short delay to allow for the next paste
+                        setTimeout(() => {
+                            this.isProcessingPaste = false;
+                        }, 200);
+                    });
                 }
             });
         },
 
         shouldSkipImagePaste(target) {
-            return target.tagName === 'INPUT' || 
-                   target.tagName === 'TEXTAREA' || 
-                   target.contentEditable === 'true';
+            return target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.contentEditable === 'true';
         },
 
         extractImageFromClipboard(clipboardData) {
@@ -266,11 +345,11 @@ function carrouselApp() {
         setupKeyboardShortcuts() {
             document.addEventListener('keydown', (e) => {
                 // Skip shortcuts if user is typing in inputs or editable elements
-                if (e.target.contentEditable === 'true' || 
-                    e.target.tagName === 'INPUT' || 
+                if (e.target.contentEditable === 'true' ||
+                    e.target.tagName === 'INPUT' ||
                     e.target.tagName === 'TEXTAREA') return;
-                
-                switch(e.key.toLowerCase()) {
+
+                switch (e.key.toLowerCase()) {
                     case 'n':
                         if (!e.ctrlKey && !e.metaKey) {
                             e.preventDefault();
@@ -302,7 +381,7 @@ function carrouselApp() {
                             const now = Date.now();
                             if (now - this.lastKeyTime < CONFIG.DEBOUNCE_TIME.KEYBOARD) return;
                             this.lastKeyTime = now;
-                            
+
                             e.preventDefault();
                             this.setActiveSlide(this.activeSlide - 1);
                         }
@@ -313,7 +392,7 @@ function carrouselApp() {
                             const now = Date.now();
                             if (now - this.lastKeyTime < CONFIG.DEBOUNCE_TIME.KEYBOARD) return;
                             this.lastKeyTime = now;
-                            
+
                             e.preventDefault();
                             this.setActiveSlide(this.activeSlide + 1);
                         }
@@ -332,17 +411,19 @@ function carrouselApp() {
 
         setupInteractions() {
             if (typeof interact === 'undefined') return;
-            
+
             this.setupBackgroundImageInteraction();
             this.setupAllCalloutInteractions();
+            this.setupAllImageInteractions();
         },
+
 
         async generatePDF() {
             if (this.slides.length === 0) return null;
-            
+
             // Store the original slide to restore it after PDF generation
             const originalSlideIndex = this.activeSlide;
-            
+
             const { jsPDF } = window.jspdf;
             const isSquare = this.aspectRatio === 'square';
             const pdf = new jsPDF({
@@ -350,63 +431,63 @@ function carrouselApp() {
                 unit: 'px',
                 format: [CONFIG.DIMENSIONS.SQUARE.width, isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height]
             });
-            
+
             for (let i = 0; i < this.slides.length; i++) {
                 if (i > 0) pdf.addPage();
-                
+
                 this.setActiveSlide(i);
                 await this.$nextTick();
                 await new Promise(resolve => setTimeout(resolve, 300));
-                
+
                 const slide = this.getCurrentSlide();
                 const viewport = document.getElementById('viewport');
                 const targetWidth = CONFIG.DIMENSIONS.SQUARE.width;
                 const targetHeight = isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height;
-                
+
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = targetWidth;
                 tempCanvas.height = targetHeight;
                 const ctx = tempCanvas.getContext('2d');
-                
+
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, targetWidth, targetHeight);
-                
+
                 if (slide?.bgSrc) {
                     try {
                         const bgImg = new Image();
                         bgImg.crossOrigin = 'anonymous';
-                        
+
                         await new Promise((resolve, reject) => {
                             bgImg.onload = resolve;
                             bgImg.onerror = reject;
                             bgImg.src = slide.bgSrc;
                         });
-                        
+
                         const viewportRect = viewport.getBoundingClientRect();
                         const bgElement = document.getElementById(`bg-image-${i}`);
-                        
+
                         if (bgElement) {
                             const bgRect = bgElement.getBoundingClientRect();
-                            
+
                             const intersectLeft = Math.max(viewportRect.left, bgRect.left);
                             const intersectTop = Math.max(viewportRect.top, bgRect.top);
                             const intersectRight = Math.min(viewportRect.right, bgRect.right);
                             const intersectBottom = Math.min(viewportRect.bottom, bgRect.bottom);
-                            
+
                             if (intersectRight > intersectLeft && intersectBottom > intersectTop) {
                                 const scaleX = bgImg.naturalWidth / bgRect.width;
                                 const scaleY = bgImg.naturalHeight / bgRect.height;
-                                
+
                                 const srcX = (intersectLeft - bgRect.left) * scaleX;
                                 const srcY = (intersectTop - bgRect.top) * scaleY;
                                 const srcWidth = (intersectRight - intersectLeft) * scaleX;
                                 const srcHeight = (intersectBottom - intersectTop) * scaleY;
-                                
+
                                 const destX = (intersectLeft - viewportRect.left) * (targetWidth / viewportRect.width);
                                 const destY = (intersectTop - viewportRect.top) * (targetHeight / viewportRect.height);
                                 const destWidth = (intersectRight - intersectLeft) * (targetWidth / viewportRect.width);
                                 const destHeight = (intersectBottom - intersectTop) * (targetHeight / viewportRect.height);
-                                
+
                                 ctx.drawImage(bgImg, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
                             }
                         }
@@ -414,19 +495,19 @@ function carrouselApp() {
                         console.warn('Failed to load background image for export:', error);
                     }
                 }
-                
+
                 const overlayCanvas = await html2canvas(viewport, {
                     backgroundColor: null,
                     useCORS: true,
                     allowTaint: true,
                     scale: 2
                 });
-                
+
                 ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
-                
+
                 const imgData = tempCanvas.toDataURL('image/png');
                 pdf.addImage(imgData, 'PNG', 0, 0, CONFIG.DIMENSIONS.SQUARE.width, targetHeight);
-                
+
                 // Add clickable link for profile if profile URL is configured
                 if (this.profile.profileUrl && (this.profile.name || this.profile.avatarUrl)) {
                     try {
@@ -434,19 +515,19 @@ function carrouselApp() {
                         if (profileElement) {
                             const profileRect = profileElement.getBoundingClientRect();
                             const viewportRect = viewport.getBoundingClientRect();
-                            
+
                             // Calculate relative position within viewport
                             const relativeX = (profileRect.left - viewportRect.left) / viewportRect.width;
                             const relativeY = (profileRect.top - viewportRect.top) / viewportRect.height;
                             const relativeWidth = profileRect.width / viewportRect.width;
                             const relativeHeight = profileRect.height / viewportRect.height;
-                            
+
                             // Convert to PDF coordinates
                             const linkX = relativeX * CONFIG.DIMENSIONS.SQUARE.width;
                             const linkY = relativeY * targetHeight;
                             const linkWidth = relativeWidth * CONFIG.DIMENSIONS.SQUARE.width;
                             const linkHeight = relativeHeight * targetHeight;
-                            
+
                             // Add link annotation to PDF
                             pdf.link(linkX, linkY, linkWidth, linkHeight, { url: this.profile.profileUrl });
                         }
@@ -455,23 +536,23 @@ function carrouselApp() {
                     }
                 }
             }
-            
+
             // Restore the original slide index
             this.setActiveSlide(originalSlideIndex);
             await this.$nextTick();
-            
+
             return pdf;
         },
 
         async exportPDF() {
             if (this.slides.length === 0) return;
-            
+
             this.isExporting = true;
             const pdf = await this.safeExecute(
                 () => this.generatePDF(),
                 'Export failed.'
             );
-            
+
             if (pdf) {
                 pdf.save('linkedin-carousel.pdf');
             }
@@ -480,17 +561,17 @@ function carrouselApp() {
 
         async previewPDF() {
             if (this.slides.length === 0) return;
-            
+
             this.isPreviewLoading = true;
             const pdf = await this.safeExecute(
                 () => this.generatePDF(),
                 'Preview failed.'
             );
-            
+
             if (pdf) {
                 const pdfBlob = pdf.output('blob');
                 const pdfUrl = URL.createObjectURL(pdfBlob);
-                
+
                 this.currentPDF = pdf;
                 this.previewUrl = pdfUrl;
                 this.showPreview = true;
@@ -519,12 +600,12 @@ function carrouselApp() {
 
         async refreshPreview() {
             if (!this.showPreview) return;
-            
+
             // Debounce the refresh to avoid too many rapid updates
             if (this.previewRefreshTimeout) {
                 clearTimeout(this.previewRefreshTimeout);
             }
-            
+
             this.previewRefreshTimeout = setTimeout(async () => {
                 if (this.showPreview) {
                     // Close current preview first
@@ -532,7 +613,7 @@ function carrouselApp() {
                         URL.revokeObjectURL(this.previewUrl);
                         this.previewUrl = null;
                     }
-                    
+
                     // Generate new preview (previewPDF sets isPreviewLoading)
                     await this.previewPDF();
                 }
@@ -594,7 +675,8 @@ function carrouselApp() {
                     // Ensure backward compatibility - add callouts array if missing
                     this.slides = data.slides.map(slide => ({
                         ...slide,
-                        callouts: slide.callouts || []
+                        callouts: slide.callouts || [],
+                        images: slide.images || []
                     }));
                     this.activeSlide = Math.max(0, Math.min(data.activeSlide || 0, this.slides.length - 1));
                     this.aspectRatio = data.aspectRatio || 'square';
@@ -657,16 +739,16 @@ function carrouselApp() {
             const baseProfileTextSize = 0.875; // rem - base profile text size
             const baseSwipeSize = 3.75; // rem - was 2.5rem, now 50% bigger  
             const baseSwipeFontSize = 1.8; // rem - was 1.2rem, now 50% bigger
-            
+
             // Scale factor based on font size (16px is default)
             const scaleFactor = this.calloutFontSize / 16;
-            
+
             // Calculate new sizes
             const profileSize = baseProfileSize * scaleFactor;
             const profileTextSize = baseProfileTextSize * scaleFactor;
             const swipeSize = baseSwipeSize * scaleFactor;
             const swipeFontSize = baseSwipeFontSize * scaleFactor;
-            
+
             // Update CSS custom properties
             const root = document.documentElement;
             root.style.setProperty('--profile-avatar-size', `${profileSize}rem`);
@@ -736,26 +818,26 @@ function carrouselApp() {
 
         setupBackgroundImageInteraction() {
             if (typeof interact === 'undefined') return;
-            
+
             const imageId = `bg-image-${this.activeSlide}`;
             const imageElement = document.getElementById(imageId);
             if (!imageElement) return;
-            
+
             const saveChanges = () => {
                 this.saveToStorage();
                 this.refreshPreview();
             };
-            
+
             interact(`#${imageId}`).unset();
             interact(`#${imageId}`).draggable({
                 listeners: {
                     move: (event) => {
                         const slide = this.getCurrentSlide();
                         if (!slide) return;
-                        
+
                         slide.bgPosition.x += event.dx;
                         slide.bgPosition.y += event.dy;
-                        event.target.style.transform = 
+                        event.target.style.transform =
                             `translate(${slide.bgPosition.x}px, ${slide.bgPosition.y}px)`;
                     },
                     end: saveChanges
@@ -767,15 +849,15 @@ function carrouselApp() {
                     move: (event) => {
                         const slide = this.getCurrentSlide();
                         if (!slide) return;
-                        
+
                         slide.bgSize.width = event.rect.width;
                         slide.bgSize.height = event.rect.height;
                         slide.bgPosition.x += event.deltaRect.left;
                         slide.bgPosition.y += event.deltaRect.top;
-                        
+
                         event.target.style.width = event.rect.width + 'px';
                         event.target.style.height = event.rect.height + 'px';
-                        event.target.style.transform = 
+                        event.target.style.transform =
                             `translate(${slide.bgPosition.x}px, ${slide.bgPosition.y}px)`;
                     },
                     end: saveChanges
@@ -787,22 +869,28 @@ function carrouselApp() {
         addCallout() {
             const slide = this.getCurrentSlide();
             if (!slide) return;
-            
+
             // Deselect any callout currently being edited
             this.clearCalloutEditing();
-            
+
             this.ensureCalloutsArray(slide);
             const newCallout = this.createCallout();
-            
+
             slide.callouts.push(newCallout);
             this.saveAndRefresh();
-            
+
             this.scheduleCalloutSetupAndEdit(newCallout.id, slide);
         },
 
         ensureCalloutsArray(slide) {
             if (!slide.callouts) {
                 slide.callouts = [];
+            }
+        },
+
+        ensureImagesArray(slide) {
+            if (!slide.images) {
+                slide.images = [];
             }
         },
 
@@ -813,7 +901,7 @@ function carrouselApp() {
                 y: CONFIG.DEFAULT_CALLOUT_POSITION.y,
                 text: 'Click to edit text...',
                 editing: false,
-                zIndex: 10
+                zIndex: 20
             };
         },
 
@@ -821,7 +909,7 @@ function carrouselApp() {
             this.$nextTick(() => {
                 setTimeout(() => {
                     this.setupCalloutInteraction(calloutId);
-                    
+
                     const callout = slide.callouts.find(c => c.id === calloutId);
                     if (callout) {
                         this.editCallout(callout);
@@ -830,11 +918,18 @@ function carrouselApp() {
             });
         },
 
+        scheduleOverlayInteraction(imageId) {
+            this.$nextTick(() => {
+                setTimeout(() => this.setupOverlayInteraction(imageId), 200);
+            });
+        },
+
         editCallout(callout) {
             // Only one callout should be in edit mode
             this.clearCalloutEditing();
 
             callout.editing = true;
+            this.selectCallout(callout);
             this.$nextTick(() => {
                 const textarea = document.querySelector(`#callout-${callout.id} .callout-editor`);
                 if (textarea) {
@@ -855,12 +950,34 @@ function carrouselApp() {
             slide.callouts.forEach(c => c.editing = false);
         },
 
+        selectCallout(callout) {
+            this.selected = { type: 'callout', id: callout.id };
+        },
+
+        selectImage(image) {
+            this.selected = { type: 'image', id: image.id };
+        },
+
+        isSelectedCallout(callout) {
+            return this.selected.type === 'callout' && this.selected.id === callout.id;
+        },
+
+        isSelectedImage(image) {
+            return this.selected.type === 'image' && this.selected.id === image.id;
+        },
+
+        clearSelection() {
+            this.selected = { type: null, id: null };
+            this.clearCalloutEditing();
+        },
+
+
         deleteCallout(calloutId) {
             const slide = this.getCurrentSlide();
             if (!slide || !slide.callouts) return;
-            
+
             slide.callouts = slide.callouts.filter(c => c.id !== calloutId);
-            
+
             this.cleanupCalloutInteraction(calloutId);
             this.saveAndRefresh();
         },
@@ -873,24 +990,19 @@ function carrouselApp() {
 
         deleteSelectedImageOrCallout() {
             const slide = this.getCurrentSlide();
-            if (!slide) return;
-            
-            // Check if there's an image to delete first
-            if (slide.bgSrc) {
-                slide.bgSrc = null;
-                slide.bgPosition = { x: 0, y: 0 };
-                slide.bgSize = { width: null, height: null };
-                this.saveAndRefresh();
-                return;
+            if (!slide || !this.selected.type) return;
+
+            if (this.selected.type === 'image') {
+                slide.images = (slide.images || []).filter(img => img.id !== this.selected.id);
+                if (this.isInteractAvailable()) {
+                    interact(`#image-${this.selected.id}`).unset();
+                }
+            } else if (this.selected.type === 'callout') {
+                this.deleteCallout(this.selected.id);
             }
-            
-            // If no image, delete the first (or most recently added) callout
-            if (slide.callouts && slide.callouts.length > 0) {
-                const lastCallout = slide.callouts[slide.callouts.length - 1];
-                this.deleteCallout(lastCallout.id);
-            }
-            
-            // Note: Never delete slides with delete key - slides should only be deleted via button or 'd' key
+
+            this.clearSelection();
+            this.saveAndRefresh();
         },
 
         isInteractAvailable() {
@@ -899,10 +1011,10 @@ function carrouselApp() {
 
         setupCalloutInteraction(calloutId) {
             if (typeof interact === 'undefined') return;
-            
+
             const selector = `#callout-${calloutId}`;
             const element = document.querySelector(selector);
-            
+
             if (!element) {
                 setTimeout(() => this.setupCalloutInteraction(calloutId), 100);
                 return;
@@ -911,6 +1023,11 @@ function carrouselApp() {
             interact(selector).unset();
             interact(selector).draggable({
                 listeners: {
+                    start: () => {
+                        const slide = this.getCurrentSlide();
+                        const callout = slide?.callouts?.find(c => c.id === calloutId);
+                        if (callout) this.selectCallout(callout);
+                    },
                     move: (event) => {
                         const slide = this.getCurrentSlide();
                         const callout = slide?.callouts?.find(c => c.id === calloutId);
@@ -935,6 +1052,61 @@ function carrouselApp() {
 
             slide.callouts.forEach(callout => {
                 this.setupCalloutInteraction(callout.id);
+            });
+        },
+
+        setupOverlayInteraction(imageId) {
+            if (typeof interact === 'undefined') return;
+
+            const selector = `#image-${imageId}`;
+            const element = document.querySelector(selector);
+
+            if (!element) {
+                setTimeout(() => this.setupOverlayInteraction(imageId), 100);
+                return;
+            }
+
+            interact(selector).unset();
+            interact(selector).draggable({
+                listeners: {
+                    start: (event) => {
+                        const slide = this.getCurrentSlide();
+                        const img = slide?.images?.find(i => i.id === imageId);
+                        if (img) {
+                            this.selectImage(img);
+                            // Ensure the element starts with the correct position
+                            event.target.style.left = img.x + 'px';
+                            event.target.style.top = img.y + 'px';
+                            event.target.style.transform = 'none';
+                        }
+                    },
+                    move: (event) => {
+                        const slide = this.getCurrentSlide();
+                        const img = slide?.images?.find(i => i.id === imageId);
+                        if (!img) return;
+
+                        img.x += event.dx;
+                        img.y += event.dy;
+                        
+                        // Update the element position directly, bypassing transform
+                        event.target.style.left = img.x + 'px';
+                        event.target.style.top = img.y + 'px';
+                        event.target.style.transform = 'none';
+                    },
+                    end: () => {
+                        this.saveToStorage();
+                        this.refreshPreview();
+                    }
+                }
+            });
+        },
+
+        setupAllImageInteractions() {
+            const slide = this.getCurrentSlide();
+            if (!slide || !slide.images) return;
+
+            slide.images.forEach(img => {
+                this.setupOverlayInteraction(img.id);
             });
         }
     };
