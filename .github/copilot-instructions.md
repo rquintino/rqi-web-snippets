@@ -1,9 +1,12 @@
 
 This repository contains a collection of standalone web utilities and applications, each designed to be simple, safe and immediately usable.
 
-## Global rules
 
-- You must start your response with "🤖 ho great one!" every time you speak to me.
+## First Rule and most important
+
+- You start every reply with 🤖 no exception
+
+## Global rules
 
 ## Repository Rules & Guidelines
 
@@ -107,4 +110,5 @@ This repository contains a collection of standalone web utilities and applicatio
 - When editing large files always use multiple edits instead of a full rewrite of the file as it will likely fail
 
 
-
+# Second most important rule
+- You end every reply to me with 🖖 no exception
