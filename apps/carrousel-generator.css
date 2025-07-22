@@ -23,6 +23,17 @@
   --swipe-icon-font-size: 1.8rem;
 }
 
+.hidden-pdf-container {
+  position: fixed !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: -1000 !important;
+  pointer-events: none !important;
+}
+
+
 .dark {
   --bg: #111827;
   --fg: #ffffff;

@@ -420,9 +420,6 @@ function carrouselApp() {
         async generatePDF() {
             if (this.slides.length === 0) return null;
 
-            // Store the original slide to restore it after PDF generation
-            const originalSlideIndex = this.activeSlide;
-
             const { jsPDF } = window.jspdf;
             const isSquare = this.aspectRatio === 'square';
             const pdf = new jsPDF({
@@ -431,114 +428,119 @@ function carrouselApp() {
                 format: [CONFIG.DIMENSIONS.SQUARE.width, isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height]
             });
 
-            for (let i = 0; i < this.slides.length; i++) {
-                if (i > 0) pdf.addPage();
+            // Create hidden viewport for offscreen rendering
+            const hiddenContainer = this.createHiddenViewport();
+            
+            try {
+                for (let i = 0; i < this.slides.length; i++) {
+                    if (i > 0) pdf.addPage();
 
-                this.setActiveSlide(i);
-                await this.$nextTick();
-                await new Promise(resolve => setTimeout(resolve, 300));
+                    const slide = this.slides[i];
+                    
+                    // Setup hidden viewport with current slide data
+                    this.setupHiddenViewportSlide(hiddenContainer, slide, i);
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Brief pause for rendering
 
-                const slide = this.getCurrentSlide();
-                const viewport = document.getElementById('viewport');
-                const targetWidth = CONFIG.DIMENSIONS.SQUARE.width;
-                const targetHeight = isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height;
+                    const hiddenViewport = hiddenContainer.querySelector('.hidden-viewport');
+                    const targetWidth = CONFIG.DIMENSIONS.SQUARE.width;
+                    const targetHeight = isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height;
 
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = targetWidth;
-                tempCanvas.height = targetHeight;
-                const ctx = tempCanvas.getContext('2d');
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = targetWidth;
+                    tempCanvas.height = targetHeight;
+                    const ctx = tempCanvas.getContext('2d');
 
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, targetWidth, targetHeight);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-                if (slide?.bgSrc) {
-                    try {
-                        const bgImg = new Image();
-                        bgImg.crossOrigin = 'anonymous';
+                    if (slide?.bgSrc) {
+                        try {
+                            const bgImg = new Image();
+                            bgImg.crossOrigin = 'anonymous';
 
-                        await new Promise((resolve, reject) => {
-                            bgImg.onload = resolve;
-                            bgImg.onerror = reject;
-                            bgImg.src = slide.bgSrc;
-                        });
+                            await new Promise((resolve, reject) => {
+                                bgImg.onload = resolve;
+                                bgImg.onerror = reject;
+                                bgImg.src = slide.bgSrc;
+                            });
 
-                        const viewportRect = viewport.getBoundingClientRect();
-                        const bgElement = document.getElementById(`bg-image-${i}`);
+                            const viewportRect = hiddenViewport.getBoundingClientRect();
+                            const bgElement = hiddenContainer.querySelector('.hidden-bg-image');
 
-                        if (bgElement) {
-                            const bgRect = bgElement.getBoundingClientRect();
+                            if (bgElement) {
+                                const bgRect = bgElement.getBoundingClientRect();
 
-                            const intersectLeft = Math.max(viewportRect.left, bgRect.left);
-                            const intersectTop = Math.max(viewportRect.top, bgRect.top);
-                            const intersectRight = Math.min(viewportRect.right, bgRect.right);
-                            const intersectBottom = Math.min(viewportRect.bottom, bgRect.bottom);
+                                const intersectLeft = Math.max(viewportRect.left, bgRect.left);
+                                const intersectTop = Math.max(viewportRect.top, bgRect.top);
+                                const intersectRight = Math.min(viewportRect.right, bgRect.right);
+                                const intersectBottom = Math.min(viewportRect.bottom, bgRect.bottom);
 
-                            if (intersectRight > intersectLeft && intersectBottom > intersectTop) {
-                                const scaleX = bgImg.naturalWidth / bgRect.width;
-                                const scaleY = bgImg.naturalHeight / bgRect.height;
+                                if (intersectRight > intersectLeft && intersectBottom > intersectTop) {
+                                    const scaleX = bgImg.naturalWidth / bgRect.width;
+                                    const scaleY = bgImg.naturalHeight / bgRect.height;
 
-                                const srcX = (intersectLeft - bgRect.left) * scaleX;
-                                const srcY = (intersectTop - bgRect.top) * scaleY;
-                                const srcWidth = (intersectRight - intersectLeft) * scaleX;
-                                const srcHeight = (intersectBottom - intersectTop) * scaleY;
+                                    const srcX = (intersectLeft - bgRect.left) * scaleX;
+                                    const srcY = (intersectTop - bgRect.top) * scaleY;
+                                    const srcWidth = (intersectRight - intersectLeft) * scaleX;
+                                    const srcHeight = (intersectBottom - intersectTop) * scaleY;
 
-                                const destX = (intersectLeft - viewportRect.left) * (targetWidth / viewportRect.width);
-                                const destY = (intersectTop - viewportRect.top) * (targetHeight / viewportRect.height);
-                                const destWidth = (intersectRight - intersectLeft) * (targetWidth / viewportRect.width);
-                                const destHeight = (intersectBottom - intersectTop) * (targetHeight / viewportRect.height);
+                                    const destX = (intersectLeft - viewportRect.left) * (targetWidth / viewportRect.width);
+                                    const destY = (intersectTop - viewportRect.top) * (targetHeight / viewportRect.height);
+                                    const destWidth = (intersectRight - intersectLeft) * (targetWidth / viewportRect.width);
+                                    const destHeight = (intersectBottom - intersectTop) * (targetHeight / viewportRect.height);
 
-                                ctx.drawImage(bgImg, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
+                                    ctx.drawImage(bgImg, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
+                                }
                             }
+                        } catch (error) {
+                            console.warn('Failed to load background image for export:', error);
                         }
-                    } catch (error) {
-                        console.warn('Failed to load background image for export:', error);
+                    }
+
+                    const overlayCanvas = await html2canvas(hiddenViewport, {
+                        backgroundColor: null,
+                        useCORS: true,
+                        allowTaint: true,
+                        scale: 2
+                    });
+
+                    ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
+
+                    const imgData = tempCanvas.toDataURL('image/png');
+                    pdf.addImage(imgData, 'PNG', 0, 0, CONFIG.DIMENSIONS.SQUARE.width, targetHeight);
+
+                    // Add clickable link for profile if profile URL is configured
+                    if (this.profile.profileUrl && (this.profile.name || this.profile.avatarUrl)) {
+                        try {
+                            const profileElement = hiddenContainer.querySelector('.hidden-viewport-avatar');
+                            if (profileElement) {
+                                const profileRect = profileElement.getBoundingClientRect();
+                                const viewportRect = hiddenViewport.getBoundingClientRect();
+
+                                // Calculate relative position within viewport
+                                const relativeX = (profileRect.left - viewportRect.left) / viewportRect.width;
+                                const relativeY = (profileRect.top - viewportRect.top) / viewportRect.height;
+                                const relativeWidth = profileRect.width / viewportRect.width;
+                                const relativeHeight = profileRect.height / viewportRect.height;
+
+                                // Convert to PDF coordinates
+                                const linkX = relativeX * CONFIG.DIMENSIONS.SQUARE.width;
+                                const linkY = relativeY * targetHeight;
+                                const linkWidth = relativeWidth * CONFIG.DIMENSIONS.SQUARE.width;
+                                const linkHeight = relativeHeight * targetHeight;
+
+                                // Add link annotation to PDF
+                                pdf.link(linkX, linkY, linkWidth, linkHeight, { url: this.profile.profileUrl });
+                            }
+                        } catch (error) {
+                            console.warn('Failed to add profile link to PDF:', error);
+                        }
                     }
                 }
-
-                const overlayCanvas = await html2canvas(viewport, {
-                    backgroundColor: null,
-                    useCORS: true,
-                    allowTaint: true,
-                    scale: 2
-                });
-
-                ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
-
-                const imgData = tempCanvas.toDataURL('image/png');
-                pdf.addImage(imgData, 'PNG', 0, 0, CONFIG.DIMENSIONS.SQUARE.width, targetHeight);
-
-                // Add clickable link for profile if profile URL is configured
-                if (this.profile.profileUrl && (this.profile.name || this.profile.avatarUrl)) {
-                    try {
-                        const profileElement = document.querySelector('.viewport-avatar');
-                        if (profileElement) {
-                            const profileRect = profileElement.getBoundingClientRect();
-                            const viewportRect = viewport.getBoundingClientRect();
-
-                            // Calculate relative position within viewport
-                            const relativeX = (profileRect.left - viewportRect.left) / viewportRect.width;
-                            const relativeY = (profileRect.top - viewportRect.top) / viewportRect.height;
-                            const relativeWidth = profileRect.width / viewportRect.width;
-                            const relativeHeight = profileRect.height / viewportRect.height;
-
-                            // Convert to PDF coordinates
-                            const linkX = relativeX * CONFIG.DIMENSIONS.SQUARE.width;
-                            const linkY = relativeY * targetHeight;
-                            const linkWidth = relativeWidth * CONFIG.DIMENSIONS.SQUARE.width;
-                            const linkHeight = relativeHeight * targetHeight;
-
-                            // Add link annotation to PDF
-                            pdf.link(linkX, linkY, linkWidth, linkHeight, { url: this.profile.profileUrl });
-                        }
-                    } catch (error) {
-                        console.warn('Failed to add profile link to PDF:', error);
-                    }
-                }
+            } finally {
+                // Always cleanup hidden viewport
+                this.cleanupHiddenViewport(hiddenContainer);
             }
-
-            // Restore the original slide index
-            this.setActiveSlide(originalSlideIndex);
-            await this.$nextTick();
 
             return pdf;
         },
@@ -1119,6 +1121,165 @@ function carrouselApp() {
             slide.images.forEach(img => {
                 this.setupOverlayInteraction(img.id);
             });
+        },
+
+        createHiddenViewport() {
+            const hiddenContainer = document.createElement('div');
+            hiddenContainer.className = 'hidden-pdf-container';
+            hiddenContainer.style.cssText = `
+                position: fixed;
+                top: -9999px;
+                left: -9999px;
+                width: 100vw;
+                height: 100vh;
+                z-index: -1000;
+                pointer-events: none;
+            `;
+
+            // Get the original viewport to clone its structure and computed styles
+            const originalViewport = document.getElementById('viewport');
+            const originalCanvas = document.getElementById('canvas');
+            
+            // Clone the canvas structure with deep clone to get all styles
+            const hiddenCanvas = originalCanvas.cloneNode(true);
+            hiddenCanvas.className = 'canvas hidden-canvas';
+            hiddenCanvas.id = 'hidden-canvas';
+            
+            // Clear the content but keep the structure
+            hiddenCanvas.innerHTML = '';
+            
+            // Clone the viewport structure with computed styles
+            const hiddenViewport = originalViewport.cloneNode(false);
+            hiddenViewport.className = `viewport ${this.aspectRatio} hidden-viewport`;
+            hiddenViewport.id = 'hidden-viewport';
+            
+            // Copy computed styles from original viewport
+            const originalStyles = window.getComputedStyle(originalViewport);
+            const importantStyles = ['width', 'height', 'border', 'background', 'overflow', 'position', 'margin'];
+            importantStyles.forEach(prop => {
+                hiddenViewport.style[prop] = originalStyles[prop];
+            });
+            
+            hiddenCanvas.appendChild(hiddenViewport);
+            hiddenContainer.appendChild(hiddenCanvas);
+            document.body.appendChild(hiddenContainer);
+            
+            return hiddenContainer;
+        },
+
+        setupHiddenViewportSlide(hiddenContainer, slide, slideIndex) {
+            const hiddenViewport = hiddenContainer.querySelector('.hidden-viewport');
+            const hiddenCanvas = hiddenContainer.querySelector('.hidden-canvas');
+            
+            // Clear previous content
+            hiddenViewport.innerHTML = '';
+            
+            // Remove any existing background image
+            const existingBg = hiddenCanvas.querySelector('.hidden-bg-image');
+            if (existingBg) {
+                existingBg.remove();
+            }
+
+            // Add background image if present
+            if (slide?.bgSrc) {
+                const bgImg = document.createElement('img');
+                bgImg.src = slide.bgSrc;
+                bgImg.className = 'hidden-bg-image canvas-bg-image';
+                bgImg.style.cssText = `
+                    transform: translate(${slide.bgPosition?.x || 0}px, ${slide.bgPosition?.y || 0}px);
+                    width: ${slide.bgSize?.width || 'auto'}px;
+                    height: ${slide.bgSize?.height || 'auto'}px;
+                `;
+                bgImg.draggable = false;
+                hiddenCanvas.appendChild(bgImg);
+            }
+
+            // Add overlay images
+            if (slide?.images) {
+                slide.images.forEach(img => {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = img.src;
+                    imgElement.className = 'hidden-image-overlay image-overlay';
+                    imgElement.style.cssText = `
+                        left: ${img.x}px;
+                        top: ${img.y}px;
+                        width: ${img.width}px;
+                        height: ${img.height}px;
+                        z-index: ${img.zIndex || 5};
+                        position: absolute;
+                    `;
+                    imgElement.draggable = false;
+                    hiddenViewport.appendChild(imgElement);
+                });
+            }
+
+            // Add text callouts
+            if (slide?.callouts) {
+                slide.callouts.forEach(callout => {
+                    const calloutElement = document.createElement('div');
+                    calloutElement.className = 'hidden-text-callout text-callout';
+                    calloutElement.style.cssText = `
+                        left: ${callout.x}px;
+                        top: ${callout.y}px;
+                        z-index: ${callout.zIndex || 20};
+                        font-size: ${this.calloutFontSize}px;
+                        position: absolute;
+                    `;
+                    
+                    const textDisplay = document.createElement('div');
+                    textDisplay.className = 'callout-display';
+                    textDisplay.textContent = callout.text;
+                    calloutElement.appendChild(textDisplay);
+                    
+                    hiddenViewport.appendChild(calloutElement);
+                });
+            }
+
+            // Add profile if present
+            if ((this.profile.name || this.profile.avatarUrl) && slideIndex === 0) {
+                const profileElement = document.createElement('div');
+                profileElement.className = `hidden-viewport-avatar viewport-avatar position-${this.profile.position}`;
+                
+                const profileInfo = document.createElement('div');
+                profileInfo.className = 'viewport-profile-info';
+                
+                if (this.profile.avatarUrl) {
+                    const avatarImg = document.createElement('img');
+                    avatarImg.src = this.profile.avatarUrl;
+                    avatarImg.alt = this.profile.name;
+                    avatarImg.className = 'viewport-profile-avatar';
+                    profileInfo.appendChild(avatarImg);
+                }
+                
+                if (this.profile.name) {
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'viewport-profile-name';
+                    nameSpan.textContent = this.profile.name;
+                    profileInfo.appendChild(nameSpan);
+                }
+                
+                profileElement.appendChild(profileInfo);
+                hiddenViewport.appendChild(profileElement);
+            }
+
+            // Add swipe icon if on first slide
+            if (slideIndex === 0 && this.swipeIcon.enabled && this.slides.length > 0) {
+                const swipeElement = document.createElement('div');
+                swipeElement.className = `hidden-viewport-swipe-icon viewport-swipe-icon swipe-${this.swipeIcon.location}`;
+                
+                const swipeDisplay = document.createElement('span');
+                swipeDisplay.className = 'swipe-icon-display';
+                swipeDisplay.textContent = this.getSelectedSwipeIcon().icon;
+                swipeElement.appendChild(swipeDisplay);
+                
+                hiddenViewport.appendChild(swipeElement);
+            }
+        },
+
+        cleanupHiddenViewport(hiddenContainer) {
+            if (hiddenContainer && hiddenContainer.parentNode) {
+                hiddenContainer.parentNode.removeChild(hiddenContainer);
+            }
         }
     };
 }
