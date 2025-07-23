@@ -100,6 +100,7 @@ function carrouselApp() {
 
         setupEventHandlers() {
             this.setupKeyboardShortcuts();
+            this.setupWheelNavigation();
             this.setupPasteHandler();
             this.setupInteractJS();
         },
@@ -447,6 +448,26 @@ function carrouselApp() {
                         break;
                 }
             });
+        },
+
+        setupWheelNavigation() {
+            document.addEventListener('wheel', (e) => {
+                if (e.target.contentEditable === 'true' ||
+                    e.target.tagName === 'INPUT' ||
+                    e.target.tagName === 'TEXTAREA') return;
+
+                const now = Date.now();
+                if (now - this.lastKeyTime < CONFIG.DEBOUNCE_TIME.KEYBOARD) return;
+                this.lastKeyTime = now;
+
+                if (e.deltaY > 0 && this.activeSlide < this.slides.length - 1) {
+                    e.preventDefault();
+                    this.setActiveSlide(this.activeSlide + 1);
+                } else if (e.deltaY < 0 && this.activeSlide > 0) {
+                    e.preventDefault();
+                    this.setActiveSlide(this.activeSlide - 1);
+                }
+            }, { passive: false });
         },
 
         setupInteractJS() {
