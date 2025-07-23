@@ -1079,6 +1079,11 @@ function carrouselApp() {
                 return;
             }
 
+            const saveChanges = () => {
+                this.saveToStorage();
+                this.refreshPreview();
+            };
+
             interact(selector).unset();
             interact(selector).draggable({
                 listeners: {
@@ -1106,10 +1111,29 @@ function carrouselApp() {
                         event.target.style.top = img.y + 'px';
                         event.target.style.transform = 'none';
                     },
-                    end: () => {
-                        this.saveToStorage();
-                        this.refreshPreview();
-                    }
+                    end: saveChanges
+                }
+            }).resizable({
+                edges: { left: true, right: true, bottom: true, top: true },
+                modifiers: [interact.modifiers.aspectRatio({ ratio: 'preserve' })],
+                listeners: {
+                    move: (event) => {
+                        const slide = this.getCurrentSlide();
+                        const img = slide?.images?.find(i => i.id === imageId);
+                        if (!img) return;
+
+                        img.width = event.rect.width;
+                        img.height = event.rect.height;
+                        img.x += event.deltaRect.left;
+                        img.y += event.deltaRect.top;
+
+                        event.target.style.width = event.rect.width + 'px';
+                        event.target.style.height = event.rect.height + 'px';
+                        event.target.style.left = img.x + 'px';
+                        event.target.style.top = img.y + 'px';
+                        event.target.style.transform = 'none';
+                    },
+                    end: saveChanges
                 }
             });
         },
