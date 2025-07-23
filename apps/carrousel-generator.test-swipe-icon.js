@@ -125,8 +125,8 @@ test.describe('Carousel Generator - Swipe Icon', () => {
     const selectionMenu = page.locator('.swipe-icon-menu');
     await expect(selectionMenu).toBeVisible();
 
-    // Test location dropdown
-    const locationSelect = page.locator('.swipe-location-select');
+    // Test location dropdown (position, not visibility)
+    const locationSelect = page.locator('select[x-model="swipeIcon.location"]');
     await expect(locationSelect).toBeVisible();
 
     // Change to top-right

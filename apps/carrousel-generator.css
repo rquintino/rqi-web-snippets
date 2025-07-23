@@ -121,7 +121,10 @@ body {
 }
 
 .header-left {display:flex;align-items:center;gap:1rem}
-.header-center {display:flex;align-items:center;gap:0.5rem}
+.header-center {display:flex;flex-direction:column;align-items:center;gap:0.25rem}
+.title-emoji {font-size:1.5em;animation:bounce 2s infinite}
+.title-sparkle {font-size:1.2em;animation:sparkle 1.5s ease-in-out infinite}
+.subtitle {font-size:0.875rem;color:var(--gray-500);font-weight:400;text-align:center}
 .header-right {display:flex;align-items:center;gap:0.5rem}
 
 h1 {font-size:1.25rem;font-weight:600}
@@ -338,6 +341,17 @@ h1 {font-size:1.25rem;font-weight:600}
 
 @keyframes spin {
   to {transform:rotate(360deg)}
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {transform:translateY(0)}
+  40% {transform:translateY(-8px)}
+  60% {transform:translateY(-4px)}
+}
+
+@keyframes sparkle {
+  0%, 100% {opacity:1;transform:scale(1)}
+  50% {opacity:0.7;transform:scale(1.1)}
 }
 
 

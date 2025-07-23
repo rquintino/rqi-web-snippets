@@ -61,13 +61,15 @@ function carrouselApp() {
             avatarUrl: '',
             name: '',
             profileUrl: '',
-            position: 'bottom-right'
+            position: 'bottom-right',
+            visibility: 'first' // 'first', 'first-last', 'all'
         },
         swipeIcon: {
             enabled: true,
             selected: 'swipe-right',
             showSelection: false,
-            location: 'bottom-right'
+            location: 'bottom-right',
+            visibility: 'first' // 'first', 'first-last', 'all'
         },
         calloutFontSize: CONFIG.FONT_SIZE.DEFAULT,
         isProcessingPaste: false,
@@ -193,6 +195,34 @@ function carrouselApp() {
 
         getCurrentSlide() {
             return this.slides[this.activeSlide] || null;
+        },
+
+        shouldShowProfile() {
+            if (!this.profile.name && !this.profile.avatarUrl) return false;
+            
+            switch (this.profile.visibility) {
+                case 'first':
+                    return this.activeSlide === 0;
+                case 'first-last':
+                    return this.activeSlide === 0 || this.activeSlide === this.slides.length - 1;
+                case 'all':
+                    return true;
+                default:
+                    return this.activeSlide === 0;
+            }
+        },
+
+        shouldShowSwipeIcon() {
+            if (!this.swipeIcon.enabled || this.slides.length === 0) return false;
+            
+            switch (this.swipeIcon.visibility) {
+                case 'first':
+                    return this.activeSlide === 0;
+                case 'all':
+                    return this.activeSlide < this.slides.length - 1; // All except last
+                default:
+                    return this.activeSlide === 0;
+            }
         },
 
 
@@ -705,7 +735,7 @@ function carrouselApp() {
                     this.profile = { ...this.profile, ...data.profile };
                 }
                 if (data.swipeIcon) {
-                    this.swipeIcon = { ...this.swipeIcon, ...data.swipeIcon };
+                    this.swipeIcon = { ...this.swipeIcon, ...data.swipeIcon, showSelection: false };
                 }
                 if (typeof data.calloutFontSize === 'number') {
                     this.calloutFontSize = data.calloutFontSize;

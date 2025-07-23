@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LinkedIn Carousel Generator</title>
+    <title>🎠 LinkedIn Carousel Generator | Create Stunning Slides</title>
 
     <!-- 
     Functional Requirements:
@@ -40,7 +40,12 @@
         </div>
 
         <div class="header-center">
-            <h1>LinkedIn Carousel Generator</h1>
+            <h1>
+                <span class="title-emoji">🎠</span>
+                LinkedIn Carousel Generator
+                <span class="title-sparkle">✨</span>
+            </h1>
+            <div class="subtitle">Create simple carousel slides</div>
         </div>
 
         <div class="header-right">
@@ -207,7 +212,7 @@
                         </div>
 
                         <!-- Clickable Profile -->
-                        <div x-show="profile.name || profile.avatarUrl" class="viewport-avatar"
+                        <div x-show="shouldShowProfile()" class="viewport-avatar"
                             :class="'position-' + profile.position" @click="showProfileConfig = true"
                             title="Edit Profile">
                             <div class="viewport-profile-info">
@@ -227,8 +232,8 @@
                             </svg>
                         </div>
 
-                        <!-- Swipe Icon (only on first slide) - positioned inside viewport -->
-                        <div x-show="activeSlide === 0 && swipeIcon.enabled && slides.length > 0"
+                        <!-- Swipe Icon - positioned inside viewport -->
+                        <div x-show="shouldShowSwipeIcon()"
                             class="viewport-swipe-icon" :class="'swipe-' + swipeIcon.location"
                             @click="toggleSwipeIconSelection()" @contextmenu.prevent="toggleSwipeIconLocation()"
                             :title="'Change swipe icon (right-click to change position: ' + swipeIcon.location + ')'">
@@ -256,6 +261,14 @@
                                     <option value="bottom-right">Bottom Right</option>
                                     <option value="top-right">Top Right</option>
                                     <option value="middle-right">Middle Right</option>
+                                </select>
+                            </div>
+                            <div class="swipe-menu-location">
+                                <label class="swipe-location-label">Show On</label>
+                                <select x-model="swipeIcon.visibility" @change="saveToStorage()"
+                                    class="swipe-location-select">
+                                    <option value="first">First Slide Only</option>
+                                    <option value="all">All Except Last</option>
                                 </select>
                             </div>
                         </div>
@@ -303,8 +316,8 @@
                         d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
                     </path>
                 </svg>
-                <h2>Create Your First Slide</h2>
-                <p>Click "New Slide" to get started with your LinkedIn carousel</p>
+                <h2>🚀 Create Your First Slide</h2>
+                <p>✨ Click "Add Slide" to start building your amazing LinkedIn carousel!</p>
             </div>
         </main>
 
@@ -408,12 +421,21 @@
                         <option value="top-left">Top Left</option>
                     </select>
                 </div>
+
+                <div class="config-field">
+                    <label>Show Profile On</label>
+                    <select x-model="profile.visibility" @change="saveAndRefresh()" class="input-small">
+                        <option value="first">First Slide Only</option>
+                        <option value="first-last">First & Last Slides</option>
+                        <option value="all">All Slides</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
 
 
-    <div class="version">v2025-01-23.79</div>
+    <div class="version">v2025-01-23.84</div>
 
     <script src="shared/shared.js"></script>
     <script src="carrousel-generator.js"></script>
