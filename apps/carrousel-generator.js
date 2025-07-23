@@ -151,6 +151,25 @@ function carrouselApp() {
             this.saveAndRefresh();
         },
 
+        moveSlideLeft() {
+            if (this.activeSlide > 0) {
+                this.moveSlide(this.activeSlide, this.activeSlide - 1);
+            }
+        },
+
+        moveSlideRight() {
+            if (this.activeSlide < this.slides.length - 1) {
+                this.moveSlide(this.activeSlide, this.activeSlide + 1);
+            }
+        },
+
+        moveSlide(fromIndex, toIndex) {
+            const slide = this.slides.splice(fromIndex, 1)[0];
+            this.slides.splice(toIndex, 0, slide);
+            this.activeSlide = toIndex;
+            this.saveAndRefresh();
+        },
+
         clampActiveSlideIndex() {
             return Math.min(this.activeSlide, Math.max(0, this.slides.length - 1));
         },

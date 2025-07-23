@@ -110,6 +110,26 @@
                             <!-- Separator -->
                             <div class="viewport-separator"></div>
 
+                            <!-- Move Slide Buttons -->
+                            <button @click="moveSlideLeft()" class="viewport-btn"
+                                :disabled="activeSlide === 0 || slides.length <= 1" title="Move Slide Left">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </button>
+
+                            <button @click="moveSlideRight()" class="viewport-btn"
+                                :disabled="activeSlide >= slides.length - 1 || slides.length <= 1" title="Move Slide Right">
+                                <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 8V20m0 0l4-4m-4 4l-4-4m-6 0V8m0 0L3 4m4 4L3 12"></path>
+                                </svg>
+                            </button>
+
+                            <!-- Separator -->
+                            <div class="viewport-separator"></div>
+
                             <button @click="addSlide()" class="viewport-btn" title="Add Slide">
                                 <svg class="viewport-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -393,7 +413,7 @@
     </div>
 
 
-    <div class="version">v2025-01-22.78</div>
+    <div class="version">v2025-01-23.79</div>
 
     <script src="shared/shared.js"></script>
     <script src="carrousel-generator.js"></script>
