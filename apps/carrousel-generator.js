@@ -226,6 +226,34 @@ function carrouselApp() {
             }
         },
 
+        shouldShowProfileForSlide(slideIndex) {
+            if (!this.profile.name && !this.profile.avatarUrl) return false;
+            
+            switch (this.profile.visibility) {
+                case 'first':
+                    return slideIndex === 0;
+                case 'first-last':
+                    return slideIndex === 0 || slideIndex === this.slides.length - 1;
+                case 'all':
+                    return true;
+                default:
+                    return slideIndex === 0;
+            }
+        },
+
+        shouldShowSwipeIconForSlide(slideIndex) {
+            if (!this.swipeIcon.enabled || this.slides.length === 0) return false;
+            
+            switch (this.swipeIcon.visibility) {
+                case 'first':
+                    return slideIndex === 0;
+                case 'all':
+                    return slideIndex < this.slides.length - 1; // All except last
+                default:
+                    return slideIndex === 0;
+            }
+        },
+
 
         updateAspectRatio() {
             this.saveAndRefresh();
@@ -495,7 +523,8 @@ function carrouselApp() {
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [CONFIG.DIMENSIONS.SQUARE.width, isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height]
+                format: [CONFIG.DIMENSIONS.SQUARE.width, isSquare ? CONFIG.DIMENSIONS.SQUARE.height : CONFIG.DIMENSIONS.PORTRAIT.height],
+                compress: true
             });
 
             // Create hidden viewport for offscreen rendering
@@ -576,8 +605,8 @@ function carrouselApp() {
 
                     ctx.drawImage(overlayCanvas, 0, 0, targetWidth, targetHeight);
 
-                    const imgData = tempCanvas.toDataURL('image/png');
-                    pdf.addImage(imgData, 'PNG', 0, 0, CONFIG.DIMENSIONS.SQUARE.width, targetHeight);
+                    const imgData = tempCanvas.toDataURL('image/jpeg', 0.85);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, CONFIG.DIMENSIONS.SQUARE.width, targetHeight);
 
                     // Add clickable link for profile if profile URL is configured
                     if (this.profile.profileUrl && (this.profile.name || this.profile.avatarUrl)) {
@@ -1329,8 +1358,8 @@ function carrouselApp() {
                 });
             }
 
-            // Add profile if present
-            if ((this.profile.name || this.profile.avatarUrl) && slideIndex === 0) {
+            // Add profile if present and visibility settings allow
+            if (this.shouldShowProfileForSlide(slideIndex)) {
                 const profileElement = document.createElement('div');
                 profileElement.className = `hidden-viewport-avatar viewport-avatar position-${this.profile.position}`;
                 
@@ -1356,8 +1385,8 @@ function carrouselApp() {
                 hiddenViewport.appendChild(profileElement);
             }
 
-            // Add swipe icon if on first slide
-            if (slideIndex === 0 && this.swipeIcon.enabled && this.slides.length > 0) {
+            // Add swipe icon if visibility settings allow
+            if (this.shouldShowSwipeIconForSlide(slideIndex)) {
                 const swipeElement = document.createElement('div');
                 swipeElement.className = `hidden-viewport-swipe-icon viewport-swipe-icon swipe-${this.swipeIcon.location}`;
                 
@@ -1377,3 +1406,16 @@ function carrouselApp() {
         }
     };
 }
+
+// Expose app instance globally for testing only
+document.addEventListener('alpine:init', () => {
+    // Only expose in test environments (when window.playwrightTest is set by tests)
+    if (typeof window !== 'undefined' && (window.playwrightTest || location.protocol === 'file:')) {
+        setTimeout(() => {
+            const bodyElement = document.querySelector('body');
+            if (bodyElement && bodyElement._x_dataStack && bodyElement._x_dataStack[0]) {
+                window.carrouselAppInstance = bodyElement._x_dataStack[0];
+            }
+        }, 100);
+    }
+});
