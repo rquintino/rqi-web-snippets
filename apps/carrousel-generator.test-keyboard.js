@@ -39,6 +39,39 @@ test.describe('Carousel Generator - Keyboard Shortcuts', () => {
     expect(errors).toEqual([]);
   });
 
+  test('mouse wheel navigates slides', async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    await page.click('button[title="Add Slide"]');
+    await page.waitForTimeout(500);
+
+    let slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2');
+
+    await page.mouse.wheel(0, -500);
+    await page.waitForTimeout(300);
+
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('1/2');
+
+    await page.mouse.wheel(0, 500);
+    await page.waitForTimeout(300);
+
+    slideIndicator = await page.textContent('.slide-indicator');
+    expect(slideIndicator).toBe('2/2');
+
+    expect(errors).toEqual([]);
+  });
+
   test('keyboard shortcuts work for slide management', async ({ page }) => {
     const errors = [];
     page.on('console', msg => {
