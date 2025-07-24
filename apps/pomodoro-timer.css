@@ -1,0 +1,46 @@
+:root{--bg-light:#f8fafc;--bg-dark:#0f172a;--card-light:#ffffff;--card-dark:#1e293b;--text-light:#1e293b;--text-dark:#f1f5f9;--primary:#ef4444;--primary-hover:#dc2626;--secondary:#6366f1;--success:#10b981;--border-light:#e2e8f0;--border-dark:#334155;--shadow-light:0 10px 25px -3px rgba(0,0,0,0.1),0 4px 6px -2px rgba(0,0,0,0.05);--shadow-dark:0 10px 25px -3px rgba(0,0,0,0.3),0 4px 6px -2px rgba(0,0,0,0.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg-light);color:var(--text-light);transition:all 0.3s ease;min-height:100vh;display:flex;flex-direction:column}
+body.dark{background:var(--bg-dark);color:var(--text-dark)}
+body.fullscreen{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999}
+.top-controls{position:fixed;top:20px;width:100%;display:flex;justify-content:space-between;align-items:center;padding:0 20px;z-index:1000}
+.control-group{display:flex;gap:10px}
+.icon-btn{background:none;border:none;color:inherit;cursor:pointer;padding:8px;border-radius:8px;transition:all 0.2s ease;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{background:rgba(255,255,255,0.1)}
+.dark .icon-btn:hover{background:rgba(255,255,255,0.1)}
+.home-btn{opacity:0.7}
+.home-btn:hover{opacity:1}
+.container{flex:1;display:flex;align-items:center;justify-content:center;padding:80px 20px 20px}
+.timer-card{background:var(--card-light);border-radius:24px;padding:40px;box-shadow:var(--shadow-light);border:1px solid var(--border-light);text-align:center;max-width:400px;width:100%}
+.dark .timer-card{background:var(--card-dark);border-color:var(--border-dark);box-shadow:var(--shadow-dark)}
+.session-type{font-size:1.5rem;font-weight:600;margin-bottom:30px;color:var(--primary)}
+.timer-circle{position:relative;display:inline-block;margin-bottom:30px}
+.progress-ring{transform:rotate(-90deg)}
+.progress-ring-background{fill:none;stroke:var(--border-light);stroke-width:8}
+.dark .progress-ring-background{stroke:var(--border-dark)}
+.progress-ring-progress{fill:none;stroke:var(--primary);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.timer-display{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.time{font-size:3rem;font-weight:700;margin-bottom:8px;font-variant-numeric:tabular-nums}
+.session-count{font-size:0.9rem;opacity:0.7;font-weight:500}
+.timer-controls{display:flex;gap:12px;justify-content:center;margin-bottom:30px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:12px;font-weight:600;cursor:pointer;transition:all 0.2s ease;border:none;font-size:1rem}
+.btn-primary{background:var(--primary);color:white}
+.btn-primary:hover{background:var(--primary-hover);transform:translateY(-1px)}
+.btn-secondary{background:var(--secondary);color:white}
+.btn-secondary:hover{background:#5855eb;transform:translateY(-1px)}
+.btn-outline{background:transparent;color:inherit;border:2px solid var(--border-light)}
+.dark .btn-outline{border-color:var(--border-dark)}
+.btn-outline:hover{background:var(--border-light);transform:translateY(-1px)}
+.dark .btn-outline:hover{background:var(--border-dark)}
+.btn-ghost{background:transparent;color:inherit;border:none;opacity:0.7}
+.btn-ghost:hover{opacity:1;background:rgba(255,255,255,0.05)}
+.settings{margin-bottom:20px;text-align:left;border-top:1px solid var(--border-light);padding-top:20px}
+.dark .settings{border-color:var(--border-dark)}
+.setting-item{margin-bottom:16px}
+.setting-item label{display:block;font-weight:500;margin-bottom:4px;font-size:0.9rem}
+.setting-item input[type="number"]{width:100%;padding:8px 12px;border:1px solid var(--border-light);border-radius:6px;background:var(--card-light);color:inherit;font-size:0.9rem}
+.dark .setting-item input[type="number"]{border-color:var(--border-dark);background:var(--card-dark)}
+.setting-item input[type="checkbox"]{margin-right:8px}
+.settings-toggle{width:100%}
+.version{position:fixed;bottom:10px;right:10px;font-size:0.75rem;opacity:0.5;font-family:monospace}
+@media (max-width:480px){.container{padding:100px 15px 15px}.timer-card{padding:30px 20px}.time{font-size:2.5rem}.timer-controls{gap:8px}.btn{padding:10px 20px;font-size:0.9rem}}
