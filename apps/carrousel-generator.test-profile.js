@@ -1,10 +1,19 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { setupTestPage, expectNoErrors, TIMEOUTS } = require('../test-helpers');
+
+async function setupCarrouselPage(page) {
+  return await setupTestPage(page, 'carrousel-generator.html', false);
+}
 
 test.describe('Carousel Generator - Profile Functionality', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
+  });
+
   test('empty avatar button is clickable and opens profile config', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // First add a slide so the avatar area is visible
     await page.click('button[title="Add Slide"]');
@@ -29,16 +38,6 @@ test.describe('Carousel Generator - Profile Functionality', () => {
   });
 
   test('profile configuration modal opens and closes', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
     
     // Modal should be hidden initially
     await expect(page.locator('.modal-overlay')).toBeHidden();
@@ -59,20 +58,10 @@ test.describe('Carousel Generator - Profile Functionality', () => {
     // Modal should be hidden again
     await expect(page.locator('.modal-overlay')).toBeHidden();
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('profile name input works correctly', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
     
     // Open profile modal
     await page.click('.viewport-add-profile');
@@ -94,25 +83,10 @@ test.describe('Carousel Generator - Profile Functionality', () => {
     const displayedName = await page.textContent('.viewport-profile-name');
     expect(displayedName).toBe('Test User');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('profile position options work correctly', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Set up profile with initial name
     await page.click('.viewport-add-profile');
@@ -149,7 +123,6 @@ test.describe('Carousel Generator - Profile Functionality', () => {
       el.classList.contains('position-top-right'));
     expect(hasTopRightClass).toBe(true);
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });

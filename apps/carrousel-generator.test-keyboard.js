@@ -1,18 +1,20 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+const { setupTestPage, expectNoErrors, TIMEOUTS } = require('../test-helpers');
+
+async function setupCarrouselPage(page) {
+  return await setupTestPage(page, 'carrousel-generator.html', false);
+}
 
 test.describe('Carousel Generator - Keyboard Shortcuts', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
+  });
+
   test('keyboard shortcuts work for slide navigation', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
     
     // Add a slide so we can test navigation
     await page.click('button[title="Add Slide"]');
@@ -36,7 +38,7 @@ test.describe('Carousel Generator - Keyboard Shortcuts', () => {
     slideIndicator = await page.textContent('.slide-indicator');
     expect(slideIndicator).toBe('2/2');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('mouse wheel navigates slides', async ({ page }) => {
@@ -69,7 +71,7 @@ test.describe('Carousel Generator - Keyboard Shortcuts', () => {
     slideIndicator = await page.textContent('.slide-indicator');
     expect(slideIndicator).toBe('2/2');
 
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('keyboard shortcuts work for slide management', async ({ page }) => {
@@ -117,7 +119,7 @@ test.describe('Carousel Generator - Keyboard Shortcuts', () => {
     const finalSlideCount = parseInt(afterDeleting.split('/')[1]);
     expect(finalSlideCount).toBeGreaterThanOrEqual(1);
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('delete key does not delete slides anymore', async ({ page }) => {
@@ -155,8 +157,7 @@ test.describe('Carousel Generator - Keyboard Shortcuts', () => {
     slideIndicator = await page.textContent('.slide-indicator');
     expect(slideIndicator).toBe('3/3');
     
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('delete key only deletes images and callouts, never slides', async ({ page }) => {
@@ -249,7 +250,6 @@ test.describe('Carousel Generator - Keyboard Shortcuts', () => {
     slideIndicator = await page.textContent('.slide-indicator');
     expect(slideIndicator).toBe('2/2'); // Still 2 slides
     
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });

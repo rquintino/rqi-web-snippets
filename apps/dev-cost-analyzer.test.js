@@ -1,31 +1,23 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  waitForChartsReady,
+  TIMEOUTS
+} = require('../test-helpers');
 
 test.describe('Development Cost Analyzer', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupTestPage(page, 'dev-cost-analyzer.html');
+  });
+
   test('page loads without errors', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
-    const warnings = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-      if (msg.type() === 'warning') {
-        warnings.push(msg.text());
-      }
-    });
-
-    // Set up page error listener for JavaScript errors
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'dev-cost-analyzer.html')}`);
-    await page.waitForLoadState('networkidle');
     
-    // Wait for Alpine.js to initialize and charts to render
-    await page.waitForTimeout(500);
+    // Wait for charts to render
+    await waitForChartsReady(page);
     
     // Check page title
     await expect(page).toHaveTitle(/Development Cost Analyzer/);
@@ -40,19 +32,8 @@ test.describe('Development Cost Analyzer', () => {
     await expect(page.locator('#complexityCostChart')).toBeVisible();
     await expect(page.locator('#timeDistributionChart')).toBeVisible();
     
-    // Log warnings for debugging but don't fail on them
-    if (warnings.length > 0) {
-      console.log('Console warnings:', warnings);
-    }
-    
-    // Check no JavaScript page errors
-    if (pageErrors.length > 0) {
-      console.log('Page errors:', pageErrors);
-    }
-    expect(pageErrors).toEqual([]);
-    
-    // Check no console errors - this MUST be at the end
-    expect(errors).toEqual([]);
+    // Check for no loading errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('cost calculator functionality', async ({ page }) => {

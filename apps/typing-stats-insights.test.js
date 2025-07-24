@@ -1,18 +1,18 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
 test.describe('Typing Stats Insights App', () => {
-  test('page loads without errors', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
+  let errorListeners;
 
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupTestPage(page, 'typing-stats-insights.html');
+  });
+
+  test('page loads without errors', async ({ page }) => {
     
     // Check page title
     await expect(page).toHaveTitle(/Typing Stats Insights/);
@@ -23,12 +23,10 @@ test.describe('Typing Stats Insights App', () => {
     await expect(page.locator('.drop-zone')).toBeVisible();
     
     // Check no console errors - this MUST be at the end
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('dark mode toggle works', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Test dark mode toggle
     const darkModeBtn = page.locator('button[title*="Toggle Dark/Light Mode"]');
@@ -44,8 +42,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('file upload UI elements work', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check drop zone
     const dropZone = page.locator('.drop-zone');
@@ -60,8 +56,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('home button navigation works', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     const homeBtn = page.locator('button[title="Home"]');
     await expect(homeBtn).toBeVisible();
@@ -69,8 +63,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('version number is displayed', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     const version = page.locator('.version');
     await expect(version).toBeVisible();
@@ -78,8 +70,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('responsive layout works', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Test mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
@@ -93,8 +83,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('sample JSON data processing simulation', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Test that the Alpine.js app initializes
     await page.waitForFunction(() => {
@@ -111,8 +99,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('chart libraries load correctly', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check that Chart.js loads
     const hasChartJs = await page.evaluate(() => typeof window.Chart !== 'undefined');
@@ -124,8 +110,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('keyboard shortcuts work correctly', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Test 'd' key for dark mode toggle
     await page.keyboard.press('d');
@@ -137,8 +121,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('tooltips appear on hover', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Upload area should show keyboard hint
     await expect(page.locator('.keyboard-hint')).toBeVisible();
@@ -146,8 +128,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('enhanced error handling works', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check that error handling methods exist
     const hasErrorHandling = await page.evaluate(() => {
@@ -159,8 +139,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('performance band styling is applied', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check that performance band CSS classes exist
     const hasBandStyles = await page.evaluate(() => {
@@ -173,8 +151,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('replay controls exist in DOM', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check replay controls exist in DOM (may be hidden until data loads)
     await expect(page.locator('button:has-text("Replay")')).toBeAttached();
@@ -184,8 +160,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('chart metric selectors exist in DOM', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check metric selectors exist in DOM (may be hidden until data loads)
     await expect(page.locator('select#primaryMetric')).toBeAttached();
@@ -200,8 +174,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('advanced coaching analysis methods exist', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check that coaching analysis methods exist
     const hasCoachingMethods = await page.evaluate(() => {
@@ -216,8 +188,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('progress tracking and comparison features exist', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check progress and comparison buttons exist
     await expect(page.locator('button:has-text("Progress")')).toBeAttached();
@@ -236,8 +206,6 @@ test.describe('Typing Stats Insights App', () => {
   });
 
   test('flow analysis features render correctly', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'typing-stats-insights.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check flow analysis section exists
     await expect(page.locator('h3:has-text("Typing Flow Analysis")')).toBeAttached();

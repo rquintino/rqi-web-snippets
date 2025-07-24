@@ -1,8 +1,15 @@
 const { test, expect } = require('@playwright/test');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
 test.describe('Typing Stats App', () => {
+  let errorListeners;
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('file://' + __dirname + '/typing-stats.html');
+    errorListeners = await setupTestPage(page, 'typing-stats.html');
   });
 
   test('loads without network or console errors', async ({ page }) => {

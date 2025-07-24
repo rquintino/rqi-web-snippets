@@ -1,51 +1,35 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
-// Helper function to set up page for testing
-async function setupTestPage(page) {
-  await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
+// Helper function specific to carrousel generator
+async function setupCarrouselPage(page) {
+  const errorListeners = await setupTestPage(page, 'carrousel-generator.html', false);
   // Set test flag for app instance exposure
   await page.evaluate(() => { window.playwrightTest = true; });
-  await page.waitForLoadState('networkidle');
+  return errorListeners;
 }
 
 test.describe('Carousel Generator - Basic Functionality', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+  });
+
   test('page loads without errors', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    // Set up page error listener for JavaScript errors
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await setupTestPage(page);
-    
     // Check that the page has loaded
     await expect(page.locator('h1')).toContainText('LinkedIn Carousel Generator');
     
-    // Check no JavaScript page errors
-    expect(pageErrors).toEqual([]);
-    
-    // Check no console errors - this MUST be at the end
-    expect(errors).toEqual([]);
+    // Check no console errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('initial state has correct elements visible', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    await setupTestPage(page);
     await page.waitForTimeout(1000);
     
     // Check header is visible with title
@@ -66,18 +50,10 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     await expect(page.locator('.version')).toBeVisible();
     await expect(page.locator('.version')).toContainText('v');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('empty state is visible when no slides', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await setupTestPage(page);
     
     // Delete the initial slide to see empty state
     await page.click('button[title="Delete Slide"]');
@@ -90,18 +66,10 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     // Canvas wrapper should be hidden
     await expect(page.locator('.canvas-wrapper')).toBeHidden();
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('canvas is ready for images without background upload prompt', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await setupTestPage(page);
     await page.waitForTimeout(1000);
     
     // Canvas should be visible and ready
@@ -115,7 +83,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     // Upload prompt should no longer exist
     await expect(page.locator('.upload-prompt')).toBeHidden();
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('viewport actions are properly enabled/disabled', async ({ page }) => {
@@ -126,7 +94,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Initially at slide 1/1, so previous should be disabled, next should be disabled
@@ -140,7 +108,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     await expect(page.locator('button[title="Duplicate Slide"]')).toBeEnabled();
     await expect(page.locator('button[title="Delete Slide"]')).toBeEnabled();
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('hidden file inputs exist for image uploads', async ({ page }) => {
@@ -151,7 +119,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     
     // Check that hidden file inputs exist
     const imageInput = page.locator('#imageInput');
@@ -172,7 +140,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     await expect(overlayInput).toHaveAttribute('accept', 'image/*');
     await expect(avatarInput).toHaveAttribute('accept', 'image/*');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('can add and navigate between slides', async ({ page }) => {
@@ -183,7 +151,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Initially at slide 1/1
@@ -206,7 +174,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     // Now at slide 1/2
     await expect(page.locator('.slide-indicator')).toContainText('1/2');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('can add text callouts', async ({ page }) => {
@@ -217,7 +185,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Add callout button should be enabled
@@ -230,7 +198,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     // Callout should be created and visible
     await expect(page.locator('.text-callout')).toBeVisible();
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('dark mode toggle works', async ({ page }) => {
@@ -241,7 +209,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Get initial state (could be dark or light depending on settings)
@@ -258,7 +226,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       await expect(page.locator('body')).toHaveClass(/dark/);
     }
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('aspect ratio selector works', async ({ page }) => {
@@ -269,7 +237,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Default should be square
@@ -282,7 +250,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     // Should switch to portrait
     await expect(page.locator('.viewport')).toHaveClass(/portrait/);
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('font size slider works', async ({ page }) => {
@@ -293,7 +261,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Font size display should show default 16px
@@ -310,7 +278,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     // Font size display should update
     await expect(page.locator('.viewport-font-size')).toContainText('24px');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('export buttons are present and enabled', async ({ page }) => {
@@ -321,7 +289,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Export buttons should exist and be enabled
@@ -331,7 +299,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     await expect(page.locator('button[title="Export PDF"]')).toBeVisible();
     await expect(page.locator('button[title="Export PDF"]')).toBeEnabled();
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('profile configuration opens', async ({ page }) => {
@@ -342,7 +310,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Profile add button should be visible
@@ -356,7 +324,7 @@ test.describe('Carousel Generator - Basic Functionality', () => {
     await expect(page.locator('.modal-overlay')).toBeVisible();
     await expect(page.locator('.modal-content')).toBeVisible();
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });
 
@@ -369,7 +337,7 @@ test.describe('Carousel Generator - Profile and Swipe Icon Visibility', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Set up a profile with name and avatar
@@ -446,7 +414,7 @@ test.describe('Carousel Generator - Profile and Swipe Icon Visibility', () => {
     expect(resultNoProfile.slide1).toBe(false);
     expect(resultNoProfile.slide2).toBe(false);
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('swipe icon visibility logic works correctly for PDF export', async ({ page }) => {
@@ -457,7 +425,7 @@ test.describe('Carousel Generator - Profile and Swipe Icon Visibility', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Add two more slides (total 3 slides: 0, 1, 2)
@@ -526,7 +494,7 @@ test.describe('Carousel Generator - Profile and Swipe Icon Visibility', () => {
     });
     expect(resultSingleSlide.slide0).toBe(false); // Single slide should not show swipe icon
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('PDF generation respects visibility settings', async ({ page }) => {
@@ -537,7 +505,7 @@ test.describe('Carousel Generator - Profile and Swipe Icon Visibility', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Set up profile
@@ -576,7 +544,7 @@ test.describe('Carousel Generator - Profile and Swipe Icon Visibility', () => {
     });
     
     expect(pdfGenerated).toBe(true);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('PDF file size baseline monitoring', async ({ page }) => {
@@ -587,7 +555,7 @@ test.describe('Carousel Generator - Profile and Swipe Icon Visibility', () => {
       }
     });
     
-    await setupTestPage(page);
+    const errorListeners = await setupCarrouselPage(page);
     await page.waitForTimeout(1000);
     
     // Create a standardized test carousel with known content
@@ -646,6 +614,6 @@ test.describe('Carousel Generator - Profile and Swipe Icon Visibility', () => {
     console.log(`PDF size: ${actualSizeKB}KB (baseline: <${maxSizeKB}KB)`);
     
     expect(pdfSize).toBeLessThan(maxSizeKB * 1024);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });

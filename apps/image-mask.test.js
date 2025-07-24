@@ -1,22 +1,18 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
 test.describe('Image Mask Utility', () => {
+  let errorListeners;
+
   test.beforeEach(async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'image-mask.html')}`);
+    errorListeners = await setupTestPage(page, 'image-mask.html');
   });
 
   test('page loads without errors', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'image-mask.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Check title
     await expect(page).toHaveTitle('Image Mask - Privacy Tool');
@@ -29,7 +25,7 @@ test.describe('Image Mask Utility', () => {
     await expect(page.locator('.actions')).toBeVisible();
     
     // Check no console errors
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('effect buttons are present and functional', async ({ page }) => {
@@ -99,15 +95,9 @@ test.describe('Image Mask Utility', () => {
     await page.click('.upload-placeholder');
     
     // Check that clicking doesn't cause errors
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
     
     await page.waitForTimeout(100);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('home button navigation', async ({ page }) => {
@@ -169,7 +159,7 @@ test.describe('Image Mask Utility', () => {
     });
     
     // Wait for state change
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.SHORT);
     
     // After loading, canvas should be visible and placeholder hidden
     await expect(page.locator('.main-canvas')).toBeVisible();
@@ -202,28 +192,16 @@ test.describe('Image Mask Utility', () => {
     await expect(fullscreenBtn).toBeVisible();
     
     // Test clicking doesn't cause errors (actual fullscreen test would require special permissions)
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
     
     await fullscreenBtn.click();
     await page.waitForTimeout(100);
     
     // Should not have errors (though fullscreen might not actually engage in test)
-    expect(errors.filter(e => !e.includes('requestFullscreen'))).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors, ['requestFullscreen']);
   });
 
   test('keyboard paste simulation', async ({ page }) => {
     // Test that paste event listener is set up
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
     
     // Simulate paste event (without actual clipboard data)
     await page.evaluate(() => {
@@ -234,7 +212,7 @@ test.describe('Image Mask Utility', () => {
     });
     
     await page.waitForTimeout(100);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('reset functionality clears image state', async ({ page }) => {

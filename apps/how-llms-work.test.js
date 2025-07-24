@@ -1,4 +1,9 @@
 const { test, expect } = require('@playwright/test');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
 const SELECTORS = {
   contextTitle: '.context-title',
@@ -20,34 +25,23 @@ const SELECTORS = {
 };
 
 test.describe('How LLMs Work Visualization', () => {
+  let errorListeners;
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('file://' + __dirname + '/how-llms-work.html');
-    await page.waitForLoadState('networkidle');
-    await page.waitForFunction(() => window.Alpine !== undefined, { timeout: 10000 });
-    await page.waitForTimeout(500);
+    errorListeners = await setupTestPage(page, 'how-llms-work.html');
   });
 
   test('page loads without errors', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
+    // Check title
+    await expect(page).toHaveTitle(/How LLMs Work/);
     
-    await page.goto('file://' + __dirname + '/how-llms-work.html');
-    await page.waitForLoadState('networkidle');
-    await page.waitForFunction(() => window.Alpine !== undefined, { timeout: 10000 });
-    await page.waitForTimeout(500);
+    // Check basic page structure
+    await expect(page.locator('[x-data]')).toBeAttached();
     
-    // Check for no console errors
-    expect(errors).toHaveLength(0);
+    // Check for no loading errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
-  test('has correct title', async ({ page }) => {
-    await expect(page).toHaveTitle(/How LLMs Work/);
-  });
 
   test('displays main sections', async ({ page }) => {
     await expect(page.locator(SELECTORS.contextTitle)).toContainText('Context Window');

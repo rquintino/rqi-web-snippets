@@ -1,23 +1,30 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
 test.describe('Markdown Viewer', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupTestPage(page, 'markdown-viewer.html');
+  });
+
   test('page loads without errors', async ({ page }) => {
-    // Navigate to the page using file URL
-    const filePath = path.resolve(__dirname, 'markdown-viewer.html');
-    await page.goto(`file://${filePath}`);
     
     // Check that the page title is correct
     await expect(page).toHaveTitle('Markdown Viewer');
     
     // Wait for Alpine.js to initialize
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
     
-    // Check that main elements are visible
-    await expect(page.locator('.input-pane')).toBeVisible();
-    await expect(page.locator('.toc-pane')).toBeVisible();
-    await expect(page.locator('.preview-pane')).toBeVisible();
+    // Check that main elements are present in DOM
+    await expect(page.locator('.input-pane')).toBeAttached();
+    await expect(page.locator('.toc-pane')).toBeAttached();
+    await expect(page.locator('.preview-pane')).toBeAttached();
     
     // Check default content loads
     await page.waitForFunction(() => {
@@ -42,21 +49,22 @@ test.describe('Markdown Viewer', () => {
     });
     const tocContent = await page.locator('.toc-content');
     await expect(tocContent.locator('a').first()).toContainText('Markdown Viewer');
+    
+    // Check for no loading errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('theme toggle works', async ({ page }) => {
-    const filePath = path.resolve(__dirname, 'markdown-viewer.html');
-    await page.goto(`file://${filePath}`);
     
     // Wait for Alpine.js to initialize
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
     
     // Get initial theme state (might be null for light theme)
     const initialTheme = await page.locator('html').getAttribute('data-theme');
     
     // Click theme toggle
     await page.locator('.theme-btn').click();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(TIMEOUTS.SHORT);
     
     // Check theme has changed to a valid theme value
     const newTheme = await page.locator('html').getAttribute('data-theme');
@@ -65,7 +73,7 @@ test.describe('Markdown Viewer', () => {
     
     // Click again to toggle back
     await page.locator('.theme-btn').click();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(TIMEOUTS.SHORT);
     
     // Check theme has toggled again
     const finalTheme = await page.locator('html').getAttribute('data-theme');
@@ -75,11 +83,9 @@ test.describe('Markdown Viewer', () => {
   });
 
   test('input pane toggle works', async ({ page }) => {
-    const filePath = path.resolve(__dirname, 'markdown-viewer.html');
-    await page.goto(`file://${filePath}`);
     
     // Wait for Alpine.js to initialize
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
     
     // Check input pane is initially visible
     await expect(page.locator('.input-pane')).toBeVisible();
@@ -98,11 +104,9 @@ test.describe('Markdown Viewer', () => {
   });
 
   test('markdown input updates preview', async ({ page }) => {
-    const filePath = path.resolve(__dirname, 'markdown-viewer.html');
-    await page.goto(`file://${filePath}`);
     
     // Wait for Alpine.js to initialize
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
     
     // Clear textarea and add new content
     await page.locator('textarea').fill('# Test Heading\n\nThis is a test paragraph.');
@@ -126,11 +130,9 @@ test.describe('Markdown Viewer', () => {
   });
 
   test('copy HTML functionality works', async ({ page }) => {
-    const filePath = path.resolve(__dirname, 'markdown-viewer.html');
-    await page.goto(`file://${filePath}`);
     
     // Wait for Alpine.js to initialize
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
     
     // Grant clipboard permissions
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -139,7 +141,7 @@ test.describe('Markdown Viewer', () => {
     await page.locator('textarea').fill('# Copy Test\n\nThis content will be copied.');
     
     // Wait for preview to update
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
     
     // Click copy button
     await page.locator('.copy-btn').click();

@@ -1,24 +1,18 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
 test.describe('Foundation Model Training Visualization', () => {
+  let errorListeners;
+
   test.beforeEach(async ({ page }) => {
-    const filePath = path.join(__dirname, 'foundation-model-training.html');
-    await page.goto(`file://${filePath}`);
+    errorListeners = await setupTestPage(page, 'foundation-model-training.html');
   });
 
   test('page loads without errors', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    const filePath = path.join(__dirname, 'foundation-model-training.html');
-    await page.goto(`file://${filePath}`);
-    await page.waitForLoadState('networkidle');
     
     // Check that the page title is correct
     await expect(page).toHaveTitle('Foundation Model Training');
@@ -40,8 +34,8 @@ test.describe('Foundation Model Training Visualization', () => {
     // Check for version
     await expect(page.locator('.version')).toBeVisible();
     
-    // Check for no console errors
-    expect(errors).toHaveLength(0);
+    // Check for no loading errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
   
   test('training progress updates correctly', async ({ page }) => {

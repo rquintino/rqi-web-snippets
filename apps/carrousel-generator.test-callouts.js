@@ -1,15 +1,26 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
+
+// Helper function specific to carrousel generator
+async function setupCarrouselPage(page) {
+  const errorListeners = await setupTestPage(page, 'carrousel-generator.html', false);
+  return errorListeners;
+}
 
 test.describe('Carousel Generator - Text Callouts', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+  });
   test('can add and interact with text callouts', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
     const debugLogs = [];
     page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
       // Capture our debug messages
       const text = msg.text();
       if (text.includes('===') || text.includes('DEBUG') || text.includes('CALLOUT')) {
@@ -17,15 +28,6 @@ test.describe('Carousel Generator - Text Callouts', () => {
         console.log('BROWSER DEBUG:', text);
       }
     });
-
-    // Set up page error listener for JavaScript errors
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Wait for Alpine.js to initialize
     await page.waitForTimeout(1000);
@@ -153,23 +155,11 @@ test.describe('Carousel Generator - Text Callouts', () => {
     console.log('\n=== ALL TESTS COMPLETED ===');
     console.log('All debug logs:', debugLogs);
     
-    // Check no JavaScript page errors
-    expect(pageErrors).toEqual([]);
-    
-    // Check no console errors
-    expect(errors).toEqual([]);
+    // Check no errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('multiple callouts can be added and managed', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
     
     // Add first callout
@@ -202,7 +192,7 @@ test.describe('Carousel Generator - Text Callouts', () => {
     calloutCount = await page.locator('.text-callout').count();
     expect(calloutCount).toBe(3);
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('only one callout is editing at a time and clicking outside deselects', async ({ page }) => {
@@ -266,7 +256,7 @@ test.describe('Carousel Generator - Text Callouts', () => {
     calloutCount = await page.locator('.text-callout').count();
     expect(calloutCount).toBe(0);
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('font size adjustment affects all callouts immediately', async ({ page }) => {
@@ -359,7 +349,7 @@ test.describe('Carousel Generator - Text Callouts', () => {
     expect(maxStyle).toContain('font-size: 32px');
 
     expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('font size changes are visually applied to callout display elements', async ({ page }) => {
@@ -414,6 +404,6 @@ test.describe('Carousel Generator - Text Callouts', () => {
     expect(updatedComputedFontSize).toBe('24px');
 
     expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });

@@ -1,24 +1,18 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
 test.describe('Typing Speed Test', () => {
+  let errorListeners;
+
   test.beforeEach(async ({ page }) => {
-    const filePath = path.join(__dirname, 'typing-speed-test.html');
-    await page.goto(`file://${filePath}`);
+    errorListeners = await setupTestPage(page, 'typing-speed-test.html');
   });
 
   test('should load the page correctly without errors', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    const filePath = path.join(__dirname, 'typing-speed-test.html');
-    await page.goto(`file://${filePath}`);
-    await page.waitForLoadState('networkidle');
     
     // Check the title
     await expect(page).toHaveTitle('Typing Speed Test - Active WPM');
@@ -28,11 +22,12 @@ test.describe('Typing Speed Test', () => {
     await expect(page.locator('.input-field')).toBeVisible();
     await expect(page.locator('.restart-btn')).toBeVisible();
     
-    // Check for no console errors
-    expect(errors).toEqual([]);
+    // Check for no errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('should change dictionary correctly', async ({ page }) => {
+    
     // Get the select element and check initial value
     const dictSelect = page.locator('#dict-select');
     await expect(dictSelect).toBeVisible();
@@ -50,7 +45,7 @@ test.describe('Typing Speed Test', () => {
     await expect(dictSelect).toHaveValue('portuguese-200');
   });
   test('should toggle dark/light mode', async ({ page }) => {
-    // Instead of checking the body class, check if a CSS variable changes
+    
     // Get the background color before toggle
     const initialBgColor = await page.evaluate(() => {
       return window.getComputedStyle(document.body).backgroundColor;
@@ -61,7 +56,7 @@ test.describe('Typing Speed Test', () => {
     await themeToggleBtn.click();
     
     // Wait a bit for the transition to complete
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.SHORT);
     
     // Get the background color after toggle
     const newBgColor = await page.evaluate(() => {
@@ -75,7 +70,7 @@ test.describe('Typing Speed Test', () => {
     await themeToggleBtn.click();
     
     // Wait a bit for the transition to complete
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(TIMEOUTS.SHORT);
     
     // Get the final background color
     const finalBgColor = await page.evaluate(() => {
@@ -87,12 +82,14 @@ test.describe('Typing Speed Test', () => {
   });
 
   test('should initialize stats correctly', async ({ page }) => {
+    
     // Check that initial stats are correct
     await expect(page.locator('.stat-value').first()).toHaveText('0');
     await expect(page.locator('.stat-value').nth(1)).toHaveText('0');
     await expect(page.locator('.stat-value').nth(2)).toHaveText('100%');
   });
   test('should reset best score when reset button is clicked', async ({ page }) => {
+    
     // First, we need to ensure there's a best score
     // We'll set one through localStorage
     await page.evaluate(() => {
@@ -114,11 +111,13 @@ test.describe('Typing Speed Test', () => {
   });
 
   test('should show the chart', async ({ page }) => {
+    
     // Check that the chart is visible
     await expect(page.locator('#wpmChart')).toBeVisible();
   });
 
   test('should open chart modal when expand button is clicked', async ({ page }) => {
+    
     // Find and click the expand chart button
     const expandBtn = page.locator('button[title="Expand chart"]');
     await expandBtn.click();
@@ -136,6 +135,7 @@ test.describe('Typing Speed Test', () => {
   });
 
   test('should navigate to home page when home button is clicked', async ({ page }) => {
+    
     // Find and click the home button
     const homeBtn = page.locator('button[title="Home"]');
     await homeBtn.click();
@@ -144,6 +144,7 @@ test.describe('Typing Speed Test', () => {
     await expect(page).toHaveURL(/.*index\.html$/);
   });
   test('should start typing test when Start Typing button is clicked', async ({ page }) => {
+    
     // Find and click the start button
     const startBtn = page.locator('.restart-btn');
     
@@ -160,6 +161,7 @@ test.describe('Typing Speed Test', () => {
     await expect(startBtn).toContainText('Restart');
   });
   test('should display the current version', async ({ page }) => {
+    
     // Check that the version text is visible
     await expect(page.locator('.version')).toBeVisible();
     
@@ -169,6 +171,7 @@ test.describe('Typing Speed Test', () => {
     expect(versionText).toMatch(versionRegex);
   });
   test('should handle basic input and display character status correctly', async ({ page }) => {
+    
     // Start the typing test
     await page.locator('.restart-btn').click();
     
@@ -202,6 +205,7 @@ test.describe('Typing Speed Test', () => {
   });
   
   test('should update the display when restarting test', async ({ page }) => {
+    
     // Start the typing test
     await page.locator('.restart-btn').click();
     
@@ -235,6 +239,7 @@ test.describe('Typing Speed Test', () => {
   });
   
   test('should show tooltip when hovering over a word', async ({ page }) => {
+    
     // Start the typing test
     await page.locator('.restart-btn').click();
     

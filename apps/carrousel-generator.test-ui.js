@@ -1,18 +1,20 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+const { setupTestPage, expectNoErrors, TIMEOUTS } = require('../test-helpers');
+
+async function setupCarrouselPage(page) {
+  return await setupTestPage(page, 'carrousel-generator.html', false);
+}
 
 test.describe('Carousel Generator - UI Controls', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
+  });
+
   test('dark mode toggle functionality', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
     
     // Initially should not have dark class
     const initialDark = await page.locator('body').getAttribute('class');
@@ -34,7 +36,7 @@ test.describe('Carousel Generator - UI Controls', () => {
     const afterToggleBack = await page.locator('body').getAttribute('class');
     expect(afterToggleBack || '').not.toContain('dark');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('fullscreen toggle functionality', async ({ page }) => {
@@ -61,7 +63,7 @@ test.describe('Carousel Generator - UI Controls', () => {
     const afterToggle = await page.locator('body').getAttribute('class');
     expect(afterToggle).toContain('fullscreen');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('aspect ratio selector works correctly', async ({ page }) => {
@@ -97,7 +99,7 @@ test.describe('Carousel Generator - UI Controls', () => {
     expect(afterChange).toContain('portrait');
     expect(afterChange).not.toContain('square');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('font size slider respects minimum and maximum boundaries', async ({ page }) => {
@@ -177,26 +179,10 @@ test.describe('Carousel Generator - UI Controls', () => {
     expect(maxValue).toBe('32');
     expect(stepValue).toBe('1');
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('font size slider affects profile text size like callouts and icons', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Set up a profile with a name to test text scaling
     await page.click('.viewport-add-profile');
@@ -262,7 +248,6 @@ test.describe('Carousel Generator - UI Controls', () => {
     // At 32px callout size (2x scale), profile text should be 0.875rem * 2 = 1.75rem = 28px
     expect(parseFloat(maxFontSize)).toBeCloseTo(28, 1);
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });

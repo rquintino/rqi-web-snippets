@@ -1,18 +1,19 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { setupTestPage, expectNoErrors, TIMEOUTS } = require('../test-helpers');
+
+async function setupCarrouselPage(page) {
+  return await setupTestPage(page, 'carrousel-generator.html', false);
+}
 
 test.describe('Carousel Generator - PDF Export', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
+  });
+
   test('preview PDF button functionality', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
     
     const previewButton = page.locator('button[title="Preview PDF"]');
     await expect(previewButton).toBeVisible();
@@ -24,21 +25,10 @@ test.describe('Carousel Generator - PDF Export', () => {
     // Note: Not actually clicking to avoid triggering PDF generation which is complex to test
     // This test verifies the button exists and is in correct state
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('export PDF button functionality', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-    
     const exportButton = page.locator('button[title="Export PDF"]');
     await expect(exportButton).toBeVisible();
     await expect(exportButton).toBeEnabled();
@@ -49,26 +39,10 @@ test.describe('Carousel Generator - PDF Export', () => {
     // Note: Not actually clicking to avoid triggering PDF generation which is complex to test
     // This test verifies the button exists and is in correct state
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('PDF generation returns to original slide after completion', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
     // Add multiple slides for testing
     await page.click('button[title="Add Slide"]');
     await page.waitForTimeout(300);
@@ -94,27 +68,10 @@ test.describe('Carousel Generator - PDF Export', () => {
     slideIndicator = await page.textContent('.slide-indicator');
     expect(slideIndicator).toBe(originalSlide);
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('profile link functionality in PDF generation', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
     // Set up profile with URL
     await page.click('.viewport-add-profile');
     await page.waitForTimeout(300);
@@ -136,27 +93,10 @@ test.describe('Carousel Generator - PDF Export', () => {
     // This test verifies the profile is set up correctly for PDF link generation
     // The actual PDF generation would include the profile URL as a clickable link
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('profile link NOT added when URL is missing', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
     // Set up profile with name but NO URL
     await page.click('.viewport-add-profile');
     await page.waitForTimeout(300);
@@ -177,7 +117,6 @@ test.describe('Carousel Generator - PDF Export', () => {
     // This test verifies that profiles without URLs are handled correctly
     // In PDF generation, no clickable link would be added for this profile
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });

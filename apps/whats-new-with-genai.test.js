@@ -1,17 +1,18 @@
 const { test, expect } = require('@playwright/test');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
 
 test.describe('What\'s New with GenAI', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupTestPage(page, 'whats-new-with-genai.html');
+  });
+
   test('loads without errors', async ({ page }) => {
-    // Set up console error listener BEFORE loading the page
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto('file:///' + __dirname + '/whats-new-with-genai.html');
-    await page.waitForLoadState('networkidle');
     
     // Verify title
     await expect(page).toHaveTitle(/What's New with GenAI/);
@@ -28,13 +29,11 @@ test.describe('What\'s New with GenAI', () => {
     await expect(page.locator('.mode-btn')).toBeVisible();
     await expect(page.locator('.fullscreen-btn')).toBeVisible();
     
-    // Check for no console errors
-    expect(errors).toHaveLength(0);
+    // Check for no loading errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('dark mode toggle works', async ({ page }) => {
-    await page.goto('file:///' + __dirname + '/whats-new-with-genai.html');
-    await page.waitForLoadState('networkidle');
     
     const container = page.locator('.app-container');
     
@@ -51,8 +50,6 @@ test.describe('What\'s New with GenAI', () => {
   });
 
   test('section hover effects work', async ({ page }) => {
-    await page.goto('file:///' + __dirname + '/whats-new-with-genai.html');
-    await page.waitForLoadState('networkidle');
     
     const traditionalSection = page.locator('.traditional-section');
     const genaiSection = page.locator('.genai-section');
@@ -67,8 +64,6 @@ test.describe('What\'s New with GenAI', () => {
   });
 
   test('traditional tasks are displayed', async ({ page }) => {
-    await page.goto('file:///' + __dirname + '/whats-new-with-genai.html');
-    await page.waitForLoadState('networkidle');
     
     // Check that task items are visible
     const taskItems = page.locator('.task-item');
@@ -81,8 +76,6 @@ test.describe('What\'s New with GenAI', () => {
   });
 
   test('genai capabilities are displayed', async ({ page }) => {
-    await page.goto('file:///' + __dirname + '/whats-new-with-genai.html');
-    await page.waitForLoadState('networkidle');
     
     // Check capabilities grid
     const capabilityItems = page.locator('.capability-item');
@@ -98,8 +91,6 @@ test.describe('What\'s New with GenAI', () => {
   });
 
   test('benefits grid is displayed', async ({ page }) => {
-    await page.goto('file:///' + __dirname + '/whats-new-with-genai.html');
-    await page.waitForLoadState('networkidle');
     
     // Check benefits grid
     const benefitCards = page.locator('.benefit-card');

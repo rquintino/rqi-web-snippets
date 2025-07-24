@@ -1,23 +1,19 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { setupTestPage, expectNoErrors, TIMEOUTS } = require('../test-helpers');
+
+async function setupCarrouselPage(page) {
+  return await setupTestPage(page, 'carrousel-generator.html', false);
+}
 
 test.describe('Carousel Generator - Integration & Missing Tests', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
+  });
+
   test('profile position persistence across page refreshes', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Open profile config
     await page.click('.viewport-add-profile');
@@ -47,26 +43,10 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
     const stillHasTopLeftClass = await profileAfterRefresh.evaluate(el => el.classList.contains('position-top-left'));
     expect(stillHasTopLeftClass).toBe(true);
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('swipe icon appears only on first slide and persists setting', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Debug: Check initial state
     const slideCount = await page.locator('.slide-indicator').textContent();
@@ -90,26 +70,10 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
     // Swipe icon should be visible again on first slide
     await expect(swipeIcon).toBeVisible();
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('swipe icon location persists across page refreshes', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     const swipeIcon = page.locator('.viewport-swipe-icon');
     await expect(swipeIcon).toBeVisible();
@@ -132,26 +96,10 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
     const classAfterRefresh = await swipeIconAfterRefresh.getAttribute('class');
     expect(classAfterRefresh).toContain('swipe-top-right');
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('swipe icon menu positioning adapts to icon location', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     const swipeIcon = page.locator('.viewport-swipe-icon');
     await expect(swipeIcon).toBeVisible();
@@ -181,26 +129,10 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
     menuClass = await menu.getAttribute('class');
     expect(menuClass).toContain('menu-top-right');
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('swipe icon title updates with current location', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     const swipeIcon = page.locator('.viewport-swipe-icon');
     await expect(swipeIcon).toBeVisible();
@@ -225,26 +157,10 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
     title = await swipeIcon.getAttribute('title');
     expect(title).toContain('middle-right');
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('profile and swipe icon are positioned more vertically centered', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Set up a profile to test positioning
     await page.click('.viewport-add-profile');
@@ -276,26 +192,10 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
       expect(swipeDistanceFromBottom).toBeLessThan(0.25);
     }
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('profile and swipe icon are properly aligned at 10% from bottom', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Set up profile in bottom-right to test alignment with swipe icon
     await page.click('.viewport-add-profile');
@@ -319,26 +219,10 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
     expect(profileClass).toContain('position-bottom-right');
     expect(swipeClass).toContain('swipe-bottom-right');
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('size slider controls profile and swipe icon sizes with 50% bigger default', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Set up profile and check initial sizes
     await page.click('.viewport-add-profile');
@@ -366,26 +250,10 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
     await expect(profile).toBeVisible();
     await expect(swipeIcon).toBeVisible();
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('all three features work together without conflicts', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Test all three features together: profile, swipe icon, and callouts
     
@@ -439,7 +307,6 @@ test.describe('Carousel Generator - Integration & Missing Tests', () => {
     const fontSize = await calloutDisplay.evaluate(el => window.getComputedStyle(el).fontSize);
     expect(fontSize).toBe('28px');
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });

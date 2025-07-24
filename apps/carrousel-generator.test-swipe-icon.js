@@ -1,23 +1,19 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
+const { setupTestPage, expectNoErrors, TIMEOUTS } = require('../test-helpers');
+
+async function setupCarrouselPage(page) {
+  return await setupTestPage(page, 'carrousel-generator.html', false);
+}
 
 test.describe('Carousel Generator - Swipe Icon', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+    await page.waitForTimeout(TIMEOUTS.MEDIUM);
+  });
+
   test('swipe icon appears only on first slide and selection works', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // On first slide, swipe icon should be visible
     const swipeIcon = page.locator('.viewport-swipe-icon');
@@ -41,26 +37,10 @@ test.describe('Carousel Generator - Swipe Icon', () => {
     // Swipe icon should be visible again
     await expect(swipeIcon).toBeVisible();
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('swipe icon location options work correctly', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     const swipeIcon = page.locator('.viewport-swipe-icon');
     await expect(swipeIcon).toBeVisible();
@@ -93,26 +73,10 @@ test.describe('Carousel Generator - Swipe Icon', () => {
     updatedClass = await swipeIcon.getAttribute('class');
     expect(updatedClass).toContain('swipe-bottom-right');
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('swipe icon location dropdown selector works correctly', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     const swipeIcon = page.locator('.viewport-swipe-icon');
     await expect(swipeIcon).toBeVisible();
@@ -141,29 +105,16 @@ test.describe('Carousel Generator - Swipe Icon', () => {
     const updatedClass = await swipeIcon.getAttribute('class');
     expect(updatedClass).toContain('swipe-top-right');
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('swipe icon click handler investigation', async ({ page }) => {
-    const errors = [];
     const consoleLogs = [];
     page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      } else if (msg.type() === 'log') {
+      if (msg.type() === 'log') {
         consoleLogs.push(msg.text());
       }
     });
-
-    const pageErrors = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
-
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Wait for first slide to be created
     const swipeIcon = page.locator('.viewport-swipe-icon');
@@ -245,7 +196,6 @@ test.describe('Carousel Generator - Swipe Icon', () => {
     // Show captured console logs
     console.log('Console logs captured:', consoleLogs);
 
-    expect(pageErrors).toEqual([]);
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });

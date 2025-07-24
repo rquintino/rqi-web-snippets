@@ -1,10 +1,24 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+const { 
+  setupTestPage, 
+  expectNoErrors,
+  TIMEOUTS
+} = require('../test-helpers');
+
+// Helper function specific to carrousel generator
+async function setupCarrouselPage(page) {
+  const errorListeners = await setupTestPage(page, 'carrousel-generator.html', false);
+  return errorListeners;
+}
 
 test.describe('Carousel Generator - Slide Management', () => {
+  let errorListeners;
+
+  test.beforeEach(async ({ page }) => {
+    errorListeners = await setupCarrouselPage(page);
+  });
   test('keyboard navigation skips slides when adding many slides', async ({ page }) => {
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
     
     // Wait for initial slide to be created
     await page.waitForSelector('.slide-indicator');
@@ -49,15 +63,6 @@ test.describe('Carousel Generator - Slide Management', () => {
   });
 
   test('slide navigation buttons work correctly', async ({ page }) => {
-    const errors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-    
-    await page.goto(`file://${path.resolve(__dirname, 'carrousel-generator.html')}`);
-    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
     
     // Initially previous button should be disabled
@@ -94,7 +99,7 @@ test.describe('Carousel Generator - Slide Management', () => {
     const afterNext = await page.textContent('.slide-indicator');
     expect(afterNext).toBe('2/2');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('add slide functionality works', async ({ page }) => {
@@ -129,7 +134,7 @@ test.describe('Carousel Generator - Slide Management', () => {
     slideIndicator = await page.textContent('.slide-indicator');
     expect(slideIndicator).toBe('3/3');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('duplicate slide functionality works', async ({ page }) => {
@@ -160,7 +165,7 @@ test.describe('Carousel Generator - Slide Management', () => {
     slideIndicator = await page.textContent('.slide-indicator');
     expect(slideIndicator).toBe('2/2');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 
   test('delete slide functionality works', async ({ page }) => {
@@ -201,6 +206,6 @@ test.describe('Carousel Generator - Slide Management', () => {
     slideIndicator = await page.textContent('.slide-indicator');
     expect(slideIndicator).toBe('1/1');
     
-    expect(errors).toEqual([]);
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
   });
 });
