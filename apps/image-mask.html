@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; font-src 'self'; object-src 'none'; media-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none';">
     <title>Image Mask - Privacy Tool</title>
     <link rel="stylesheet" href="image-mask.css">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
@@ -29,8 +30,9 @@ Features:
 <body x-data="{
     isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
     isFullscreen: false,
-    selectedEffect: 'blur',
-    effects: ['blur', 'pixelate', 'blackout', 'noise'],
+    selectedEffect: 'noise & blur',
+    effects: ['noise & blur', 'blackout'],
+    showInfoPopup: false,
     image: null,
     init() {
         this.$refs.canvas.width = 800;
@@ -72,7 +74,9 @@ Features:
         window.ImageMask.setEffect(effect);
     },
     undo() { window.ImageMask.undo(); },
-    reset() { this.image = null; window.ImageMask.reset(); },
+    redo() { window.ImageMask.redo(); },
+    reset() { window.ImageMask.reset(); },
+    clear() { this.image = null; window.ImageMask.clear(); },
     download() { window.ImageMask.download(); },
     copy() { window.ImageMask.copy(); },
     toggleTheme() {
@@ -131,8 +135,15 @@ Features:
                                 @click="selectEffect(effect)" 
                                 :class="{ active: selectedEffect === effect }"
                                 class="btn-base effect-btn"
-                                x-text="effect"
-                            ></button>
+                            >
+                                <span x-text="effect"></span>
+                                <span 
+                                    x-show="effect === 'noise & blur'"
+                                    @click.stop="showInfoPopup = true"
+                                    class="info-icon"
+                                    title="Algorithm info"
+                                >ⓘ</span>
+                            </button>
                         </template>
                     </div>
                 </div>
@@ -140,9 +151,13 @@ Features:
                 <!-- Actions Section -->
                 <div class="section">
                     <div class="section-title">Actions</div>
-                    <div class="actions">
-                        <button @click="undo()" class="btn-base action-btn secondary">↶ Undo</button>
-                        <button @click="reset()" class="btn-base action-btn secondary">⟲ Reset</button>
+                    <div class="history-actions">
+                        <button @click="undo()" class="btn-base history-btn" title="Undo (Ctrl+Z)">↶</button>
+                        <button @click="redo()" class="btn-base history-btn" title="Redo (Ctrl+Y)">↷</button>
+                        <button @click="reset()" class="btn-base history-btn" title="Reset to original">⟲</button>
+                        <button @click="clear()" class="btn-base history-btn" title="Clear image">🗑️</button>
+                    </div>
+                    <div class="export-actions">
                         <button @click="copy()" class="btn-base action-btn">📋 Copy</button>
                         <button @click="download()" class="btn-base action-btn primary">💾 Download</button>
                     </div>
@@ -162,8 +177,26 @@ Features:
         </div>
     </div>
 
+    <!-- Info Popup -->
+    <div x-show="showInfoPopup" x-cloak class="popup-overlay" @click="showInfoPopup = false">
+        <div class="popup-content" @click.stop>
+            <div class="popup-header">
+                <h3>Noise & Blur Algorithm</h3>
+                <button @click="showInfoPopup = false" class="btn-base close-btn">×</button>
+            </div>
+            <div class="popup-body">
+                <p>This effect combines two techniques to obscure sensitive information:</p>
+                <ul>
+                    <li><strong>Random Noise:</strong> Adds random colored pixels to break up patterns and text</li>
+                    <li><strong>Gaussian Blur:</strong> Smooths the area to make details unreadable while maintaining natural appearance</li>
+                </ul>
+                <p>The combination ensures that sensitive data cannot be recovered while creating a visually pleasing result that doesn't draw attention to censored areas.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Version -->
-    <div class="version">v2025-07-20.2</div>
+    <div class="version">v2025-07-24.2</div>
 </div>
 
 <script src="image-mask.js"></script>

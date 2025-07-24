@@ -16,10 +16,23 @@ window.ImageMask = (function() {
     let originalImage = null;
     let isDrawing = false;
     let startX, startY;
-    let currentEffect = 'blur';
+    let currentEffect = 'noise & blur';
     let history = [];
     let currentHistoryIndex = -1;
     let scaleRatio = 1;
+    
+    // Secure random number generator using Web Crypto API
+    function secureRandom() {
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        return array[0] / (0xFFFFFFFF + 1); // Convert to 0-1 range
+    }
+    
+    function secureRandomInt(max) {
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        return Math.floor((array[0] / (0xFFFFFFFF + 1)) * max);
+    }
     
     function init(canvasElement) {
         canvas = canvasElement;
@@ -27,6 +40,7 @@ window.ImageMask = (function() {
         
         setupEventListeners();
         saveState();
+        setupKeyboardShortcuts();
     }
     
     function setupEventListeners() {
@@ -123,99 +137,18 @@ window.ImageMask = (function() {
     
     function applyEffect(x, y, width, height) {
         const imageData = ctx.getImageData(x, y, width, height);
-        const data = imageData.data;
         
         switch(currentEffect) {
-            case 'blur':
-                applyBlur(imageData);
-                break;
-            case 'pixelate':
-                applyPixelate(imageData, 8);
-                break;
             case 'blackout':
                 applyBlackout(imageData);
                 break;
             case 'noise':
-                applyNoise(imageData);
+            case 'noise & blur':
+                applyNoiseWithLocalColors(imageData);
                 break;
         }
         
         ctx.putImageData(imageData, x, y);
-    }
-    
-    function applyBlur(imageData) {
-        const data = imageData.data;
-        const width = imageData.width;
-        const height = imageData.height;
-        const original = new Uint8ClampedArray(data);
-        const radius = 15; // Much larger blur radius for strong privacy
-        
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const idx = (y * width + x) * 4;
-                
-                let r = 0, g = 0, b = 0, count = 0;
-                
-                // Sample in larger radius for stronger blur
-                for (let dy = -radius; dy <= radius; dy++) {
-                    for (let dx = -radius; dx <= radius; dx++) {
-                        const ny = y + dy;
-                        const nx = x + dx;
-                        
-                        if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
-                            const pixelIdx = (ny * width + nx) * 4;
-                            r += original[pixelIdx];
-                            g += original[pixelIdx + 1];
-                            b += original[pixelIdx + 2];
-                            count++;
-                        }
-                    }
-                }
-                
-                if (count > 0) {
-                    data[idx] = r / count;
-                    data[idx + 1] = g / count;
-                    data[idx + 2] = b / count;
-                }
-            }
-        }
-    }
-    
-    function applyPixelate(imageData, blockSize) {
-        const data = imageData.data;
-        const width = imageData.width;
-        const height = imageData.height;
-        
-        for (let y = 0; y < height; y += blockSize) {
-            for (let x = 0; x < width; x += blockSize) {
-                let r = 0, g = 0, b = 0, count = 0;
-                
-                // Calculate average color for block
-                for (let dy = 0; dy < blockSize && y + dy < height; dy++) {
-                    for (let dx = 0; dx < blockSize && x + dx < width; dx++) {
-                        const idx = ((y + dy) * width + (x + dx)) * 4;
-                        r += data[idx];
-                        g += data[idx + 1];
-                        b += data[idx + 2];
-                        count++;
-                    }
-                }
-                
-                r = Math.floor(r / count);
-                g = Math.floor(g / count);
-                b = Math.floor(b / count);
-                
-                // Apply average color to entire block
-                for (let dy = 0; dy < blockSize && y + dy < height; dy++) {
-                    for (let dx = 0; dx < blockSize && x + dx < width; dx++) {
-                        const idx = ((y + dy) * width + (x + dx)) * 4;
-                        data[idx] = r;
-                        data[idx + 1] = g;
-                        data[idx + 2] = b;
-                    }
-                }
-            }
-        }
     }
     
     function applyBlackout(imageData) {
@@ -228,13 +161,106 @@ window.ImageMask = (function() {
         }
     }
     
-    function applyNoise(imageData) {
+    function applyNoiseWithLocalColors(imageData) {
+        /**
+         * LOCAL COLOR NOISE ALGORITHM EXPLAINED:
+         * 
+         * This algorithm creates privacy-preserving noise that maintains visual coherence
+         * by using colors from the local area rather than pure random colors.
+         * 
+         * STEP 1: COLOR SAMPLING PHASE
+         * - For each pixel, we sample colors from a surrounding area (sampleRadius = 20px)
+         * - We skip every other pixel (dy += 2, dx += 2) for performance
+         * - This creates a pool of ~400 colors representative of the local area
+         * - Colors are clamped to image boundaries to avoid edge artifacts
+         * 
+         * STEP 2: NOISE GENERATION PHASE  
+         * - Pick a random color from the local sample pool using crypto-secure randomness
+         * - Add small random variation (±15 per channel) to prevent banding
+         * - This preserves general color tone while destroying readable content
+         * 
+         * STEP 3: BLUR SMOOTHING PHASE
+         * - Apply box blur with radius 15 to smooth harsh pixel transitions
+         * - Averages each pixel with surrounding 31x31 area
+         * - Creates natural-looking texture that's impossible to reverse
+         * 
+         * PRIVACY BENEFITS:
+         * - Uses actual image colors so noise blends naturally
+         * - Cryptographically secure randomness prevents pattern prediction
+         * - Blur makes individual pixels unrecoverable
+         * - Maintains visual appeal while ensuring text/faces are unreadable
+         */
+        
         const data = imageData.data;
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = Math.random() * 255;     // R
-            data[i + 1] = Math.random() * 255; // G
-            data[i + 2] = Math.random() * 255; // B
-            // Keep alpha unchanged
+        const width = imageData.width;
+        const height = imageData.height;
+        const original = new Uint8ClampedArray(data);
+        const sampleRadius = 20; // 41x41 sampling area
+        
+        // PHASE 1: Generate noise using local color palette
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                
+                // Sample colors from local neighborhood
+                const colors = [];
+                for (let dy = -sampleRadius; dy <= sampleRadius; dy += 2) {
+                    for (let dx = -sampleRadius; dx <= sampleRadius; dx += 2) {
+                        const ny = Math.max(0, Math.min(height - 1, y + dy));
+                        const nx = Math.max(0, Math.min(width - 1, x + dx));
+                        const sampleIdx = (ny * width + nx) * 4;
+                        colors.push({
+                            r: original[sampleIdx],
+                            g: original[sampleIdx + 1],
+                            b: original[sampleIdx + 2]
+                        });
+                    }
+                }
+                
+                // Select random color from local palette
+                const randomColor = colors[secureRandomInt(colors.length)];
+                
+                // Add subtle variation to prevent color banding
+                const variation = 30; // ±15 per channel
+                data[idx] = Math.max(0, Math.min(255, randomColor.r + (secureRandom() - 0.5) * variation));
+                data[idx + 1] = Math.max(0, Math.min(255, randomColor.g + (secureRandom() - 0.5) * variation));
+                data[idx + 2] = Math.max(0, Math.min(255, randomColor.b + (secureRandom() - 0.5) * variation));
+            }
+        }
+        
+        // PHASE 2: Apply box blur for smooth, natural appearance
+        const blurRadius = 15; // 31x31 blur kernel
+        const blurred = new Uint8ClampedArray(data);
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                
+                let r = 0, g = 0, b = 0, count = 0;
+                
+                // Average with surrounding pixels
+                for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+                    for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+                        const ny = y + dy;
+                        const nx = x + dx;
+                        
+                        if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+                            const pixelIdx = (ny * width + nx) * 4;
+                            r += blurred[pixelIdx];
+                            g += blurred[pixelIdx + 1];
+                            b += blurred[pixelIdx + 2];
+                            count++;
+                        }
+                    }
+                }
+                
+                // Apply averaged result
+                if (count > 0) {
+                    data[idx] = r / count;
+                    data[idx + 1] = g / count;
+                    data[idx + 2] = b / count;
+                }
+            }
         }
     }
     
@@ -298,6 +324,13 @@ window.ImageMask = (function() {
         }
     }
     
+    function redo() {
+        if (currentHistoryIndex < history.length - 1) {
+            currentHistoryIndex++;
+            loadFromHistory(currentHistoryIndex);
+        }
+    }
+    
     function reset() {
         if (image && history.length > 0) {
             currentHistoryIndex = 0;
@@ -305,9 +338,20 @@ window.ImageMask = (function() {
         }
     }
     
+    function clear() {
+        image = null;
+        originalImage = null;
+        history = [];
+        currentHistoryIndex = -1;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.width = '';
+        canvas.style.height = '';
+    }
+    
     function setEffect(effect) {
         currentEffect = effect;
     }
+    
     
     function download() {
         if (!image) return;
@@ -337,12 +381,26 @@ window.ImageMask = (function() {
         }
     }
     
+    function setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+            } else if (e.ctrlKey && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                redo();
+            }
+        });
+    }
+    
     return {
         init,
         loadImage,
         setEffect,
         undo,
+        redo,
         reset,
+        clear,
         download,
         copy
     };
