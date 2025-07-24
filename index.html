@@ -241,116 +241,8 @@
     </div>
 
     <div class="container">
-        <div class="app-grid">
-            <a href="apps/typing-speed-test.html" class="app-card">
-                <img src="apps/typing-speed-test.jpeg" alt="Typing Speed Test Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">⌨️</div>
-                    <div class="app-title">Typing Speed Test</div>
-                    <div class="app-description">Test and improve your typing speed with this interactive tool</div>
-                </div>
-            </a>
-            
-            <a href="apps/foundation-model-training.html" class="app-card">
-                <img src="apps/foundation-model-training.jpeg" alt="Foundation Model Training Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">🤖</div>
-                    <div class="app-title">Foundation Model Training</div>
-                    <div class="app-description">Interactive visualization of AI foundation model training process</div>
-                </div>
-            </a>
-            
-            <a href="apps/how-does-genai-learn.html" class="app-card">
-                <img src="apps/how-does-genai-learn.jpeg" alt="How Does GenAI Learn Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">🎯</div>
-                    <div class="app-title">How Does GenAI Learn?</div>
-                    <div class="app-description">Learn how language models train using masked word prediction</div>
-                </div>
-            </a>
-            
-            <a href="apps/markdown-viewer.html" class="app-card">
-                <img src="apps/markdown-viewer.jpeg" alt="Markdown Viewer Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">📝</div>
-                    <div class="app-title">Markdown Viewer</div>
-                    <div class="app-description">Three-pane markdown viewer with TOC and live preview</div>
-                </div>
-            </a>
-            
-            <a href="apps/typing-stats.html" class="app-card">
-                <img src="apps/typing-stats.jpeg" alt="Typing Stats Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">📊</div>
-                    <div class="app-title">Typing Stats</div>
-                    <div class="app-description">Real-time typing analytics with deep behavioral insights</div>
-                </div>
-            </a>
-            
-            <a href="apps/typing-stats-insights.html" class="app-card">
-                <img src="apps/typing-stats-insights.jpeg" alt="Typing Stats Insights Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">🔍</div>
-                    <div class="app-title">Typing Stats Insights</div>
-                    <div class="app-description">Advanced behavioral analysis dashboard for typing data with coaching recommendations</div>
-                </div>
-            </a>
-            
-            <a href="apps/how-llms-work.html" class="app-card">
-                <img src="apps/how-llms-work.jpeg" alt="How LLMs Work Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">🧠</div>
-                    <div class="app-title">How LLMs Work</div>
-                    <div class="app-description">Interactive visualization of how Large Language Models process inputs to generate outputs</div>
-                </div>
-            </a>
-            
-            <a href="apps/whats-new-with-genai.html" class="app-card">
-                <img src="apps/whats-new-with-genai.jpeg" alt="What's New with GenAI Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">✨</div>
-                    <div class="app-title">What's New with GenAI</div>
-                    <div class="app-description">Explore the differences between Traditional AI and Generative AI with interactive visuals.</div>
-                </div>
-            </a>
-            
-            <a href="apps/image-mask.html" class="app-card">
-                <img src="apps/image-mask.jpeg" alt="Image Mask Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">🔒</div>
-                    <div class="app-title">Image Mask</div>
-                    <div class="app-description">Privacy-focused image masking tool with blur, pixelate, blackout and noise effects</div>
-                </div>
-            </a>
-            
-            <a href="apps/dev-cost-analyzer.html" class="app-card">
-                <img src="apps/dev-cost-analyzer.jpeg" alt="Development Cost Analyzer Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">💰</div>
-                    <div class="app-title">Development Cost Analyzer</div>
-                    <div class="app-description">Comprehensive analysis dashboard for development costs and complexity across all web applications</div>
-                </div>
-            </a>
-            
-            <a href="apps/carrousel-generator.html" class="app-card">
-                <img src="apps/carrousel-generator.jpeg" alt="LinkedIn Carousel Generator Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">📑</div>
-                    <div class="app-title">LinkedIn Carousel Generator</div>
-                    <div class="app-description">Create professional LinkedIn carousel slides with images, text callouts, and export to PDF</div>
-                </div>
-            </a>
-            
-            <a href="apps/pomodoro-timer.html" class="app-card">
-                <img src="apps/pomodoro-timer.jpeg" alt="Pomodoro Timer Screenshot" class="app-screenshot">
-                <div class="app-content">
-                    <div class="app-icon">⏱️</div>
-                    <div class="app-title">Pomodoro Timer</div>
-                    <div class="app-description">Focus timer using the Pomodoro technique with work sessions, breaks, and progress tracking</div>
-                </div>
-            </a>
-            
-            <!-- Add more app cards here as they are created -->
+        <div class="app-grid" id="app-grid">
+            <!-- App cards will be dynamically generated from registry -->
         </div>
     </div>
 
@@ -360,10 +252,37 @@
         </div>
     </footer>    <div class="version">v2025-07-04.1</div>
 
+    <script src="apps/shared/app-navigation.js"></script>
     <script>
         // Version information
         const VERSION = "2025-07-04.1";
         document.querySelector('.version').textContent = `v${VERSION}`;
+
+        // Generate app cards from registry
+        document.addEventListener('DOMContentLoaded', function() {
+            const appGrid = document.getElementById('app-grid');
+            
+            if (window.appsRegistry && Array.isArray(window.appsRegistry)) {
+                window.appsRegistry.forEach(app => {
+                    const appCard = document.createElement('a');
+                    appCard.href = `apps/${app.filename}`;
+                    appCard.className = 'app-card';
+                    
+                    appCard.innerHTML = `
+                        <img src="apps/${app.screenshot}" alt="${app.title} Screenshot" class="app-screenshot">
+                        <div class="app-content">
+                            <div class="app-icon">${app.icon}</div>
+                            <div class="app-title">${app.title}</div>
+                            <div class="app-description">${app.description}</div>
+                        </div>
+                    `;
+                    
+                    appGrid.appendChild(appCard);
+                });
+            } else {
+                console.error('Apps registry not loaded or invalid');
+            }
+        });
 
     // DOM elements
     const themeToggle = document.getElementById('theme-toggle');
