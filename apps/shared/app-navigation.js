@@ -127,7 +127,7 @@ function initializeNavigation() {
     
     const prevBtn = document.createElement('button');
     prevBtn.innerHTML = '◀';
-    prevBtn.title = `Previous: ${prevApp.title}`;
+    prevBtn.title = `Previous: ${prevApp.title} (Ctrl + ←)`;
     prevBtn.style.cssText = `
         background: rgba(0, 0, 0, 0.7);
         border: none;
@@ -168,7 +168,7 @@ function initializeNavigation() {
     
     const nextBtn = document.createElement('button');
     nextBtn.innerHTML = '▶';
-    nextBtn.title = `Next: ${nextApp.title}`;
+    nextBtn.title = `Next: ${nextApp.title} (Ctrl + →)`;
     nextBtn.style.cssText = `
         background: rgba(0, 0, 0, 0.7);
         border: none;
@@ -240,4 +240,18 @@ function initializeNavigation() {
     navContainer.appendChild(prevBtn);
     navContainer.appendChild(nextBtn);
     document.body.appendChild(navContainer);
+    
+    // Add keyboard navigation support
+    document.addEventListener('keydown', (e) => {
+        // Check for Ctrl + Arrow keys
+        if (e.ctrlKey) {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                window.location.href = prevApp.filename;
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                window.location.href = nextApp.filename;
+            }
+        }
+    });
 }
