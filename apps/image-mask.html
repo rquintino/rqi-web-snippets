@@ -152,13 +152,13 @@ Features:
                 <div class="section">
                     <div class="section-title">Actions</div>
                     <div class="history-actions">
-                        <button @click="undo()" class="btn-base history-btn" title="Undo (Ctrl+Z)">↶</button>
-                        <button @click="redo()" class="btn-base history-btn" title="Redo (Ctrl+Y)">↷</button>
+                        <button @click="undo()" class="btn-base history-btn" data-action="undo" title="Undo (Ctrl+Z)">↶</button>
+                        <button @click="redo()" class="btn-base history-btn" data-action="redo" title="Redo (Ctrl+Y)">↷</button>
                         <button @click="reset()" class="btn-base history-btn" title="Reset to original">⟲</button>
                         <button @click="clear()" class="btn-base history-btn" title="Clear image">🗑️</button>
                     </div>
                     <div class="export-actions">
-                        <button @click="copy()" class="btn-base action-btn">📋 Copy</button>
+                        <button @click="copy()" class="btn-base action-btn" data-action="copy" title="Copy (Ctrl+C)">📋 Copy</button>
                         <button @click="download()" class="btn-base action-btn primary">💾 Download</button>
                     </div>
                 </div>
@@ -196,7 +196,7 @@ Features:
     </div>
 
     <!-- Version -->
-    <div class="version">v2025-07-24.2</div>
+    <div class="version">v2025-07-25.1</div>
 </div>
 
 <script src="image-mask.js"></script>

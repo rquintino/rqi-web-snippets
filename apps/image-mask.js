@@ -383,14 +383,40 @@ window.ImageMask = (function() {
     
     function setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                undo();
-            } else if (e.ctrlKey && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-                e.preventDefault();
-                redo();
+            if (e.ctrlKey && !e.shiftKey && !e.altKey) {
+                switch(e.key.toLowerCase()) {
+                    case 'c':
+                        e.preventDefault();
+                        copy();
+                        flashButton('copy');
+                        break;
+                    case 'z':
+                        e.preventDefault();
+                        undo();
+                        flashButton('undo');
+                        break;
+                    case 'y':
+                        e.preventDefault();
+                        redo();
+                        flashButton('redo');
+                        break;
+                }
             }
         });
+    }
+    
+    function flashButton(action) {
+        let selector;
+        switch(action) {
+            case 'copy': selector = '[data-action="copy"]'; break;
+            case 'undo': selector = '[data-action="undo"]'; break;
+            case 'redo': selector = '[data-action="redo"]'; break;
+        }
+        const btn = document.querySelector(selector);
+        if (btn) {
+            btn.classList.add('key-pressed');
+            setTimeout(() => btn.classList.remove('key-pressed'), 200);
+        }
     }
     
     return {
