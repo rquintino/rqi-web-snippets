@@ -181,6 +181,66 @@ function typingApp() {
         oscillator.stop(audioContext.currentTime + 0.2);
     }
 
+    // Helper function to get the appropriate best score for chart reference line
+    function getChartReferenceBestScore(app) {
+        if (!app || typeof app.bestScore !== 'number' || isNaN(app.bestScore)) {
+            return null;
+        }
+        
+        // During active test, use previous best if a new best is being achieved
+        if (app.started && !app.showResults && app.showPreviousBest && app.previousBestScore) {
+            return app.previousBestScore;
+        } else {
+            return app.bestScore;
+        }
+    }
+
+    // Enhanced tooltip callback function for chart data labels
+    function createEnhancedTooltipCallback() {
+        return function(context) {
+            const datasetLabel = context.dataset.label || '';
+            const dataIndex = context.dataIndex;
+            const value = context.formattedValue;
+            
+            // For Word WPM dataset, show enhanced tooltip with word text and error indicators
+            const app = window.typingAppInstance;
+            if (datasetLabel === 'Word WPM' && app && app.words && app.wordCharStates) {
+                const wordIndex = dataIndex;
+                const word = app.words[wordIndex];
+                const charStates = app.wordCharStates[wordIndex] || {};
+                
+                if (word && typeof word === 'string') {
+                    // Create word text with visual indicators for correct/incorrect characters
+                    let enhancedWord = '';
+                    for (let charIndex = 0; charIndex < word.length; charIndex++) {
+                        const character = word[charIndex];
+                        const isCorrect = charStates[charIndex] === true;
+                        const wasTyped = charStates[charIndex] !== undefined;
+                        
+                        if (!wasTyped) {
+                            // Character not typed (edge case for incomplete words)
+                            enhancedWord += character;
+                        } else if (isCorrect) {
+                            enhancedWord += '✓' + character;
+                        } else {
+                            enhancedWord += '✗' + character;
+                        }
+                    }
+                    
+                    return `Word #${wordIndex + 1} | ${enhancedWord} | ${value} wpm`;
+                }
+            }
+            
+            // Default tooltip for other datasets (Avg WPM, Best WPM, etc.)
+            if (datasetLabel === 'Avg WPM') {
+                return `Word #${dataIndex + 1} | ${value} wpm (avg)`;
+            }
+            
+            // Fallback for any other datasets
+            return `${datasetLabel}: ${value}`;
+        };
+    }
+
     function updateWpmChart(isDarkMode) {
         const ctx = document.getElementById('wpmChart').getContext('2d');
         const labels = wpmChartData.map((_, i) => i + 1);
@@ -201,12 +261,14 @@ function typingApp() {
             wordWpms = app.wordStats.map(stat => stat.wpm);
             wordPointColors = app.wordStats.map((stat, i) => app.wordErrors && app.wordErrors[i] ? '#e53935' : '#1976d2');
         }
-        // Reference line for best WPM
+        // Reference line for best WPM - use previous best during active test if new best achieved
         let bestWpmLine = null;
-        if (app && typeof app.bestScore === 'number' && !isNaN(app.bestScore)) {
+        const referenceBestScore = getChartReferenceBestScore(app);
+        
+        if (referenceBestScore !== null) {
             bestWpmLine = {
                 label: 'Best WPM',
-                data: Array(labels.length).fill(app.bestScore),
+                data: Array(labels.length).fill(referenceBestScore),
                 borderColor: '#43a047',
                 borderWidth: 2,
                 borderDash: [8, 6],
@@ -260,7 +322,20 @@ function typingApp() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { labels: { color: fg } },
-                    title: { display: true, text: 'Average WPM Over Time', color: fg }
+                    title: { display: true, text: 'Average WPM Over Time', color: fg },
+                    tooltip: {
+                        mode: 'point',
+                        intersect: false,
+                        backgroundColor: isDarkMode ? '#323437' : '#f5f5f5',
+                        titleColor: fg,
+                        bodyColor: fg,
+                        borderColor: fg,
+                        borderWidth: 1,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: createEnhancedTooltipCallback()
+                        }
+                    }
                 },
                 scales: {
                     x: {
@@ -296,10 +371,12 @@ function typingApp() {
             wordPointColors = app.wordStats.map((stat, i) => app.wordErrors && app.wordErrors[i] ? '#e53935' : '#1976d2');
         }
         let bestWpmLine = null;
-        if (app && typeof app.bestScore === 'number' && !isNaN(app.bestScore)) {
+        const referenceBestScore = getChartReferenceBestScore(app);
+        
+        if (referenceBestScore !== null) {
             bestWpmLine = {
                 label: 'Best WPM',
-                data: Array(labels.length).fill(app.bestScore),
+                data: Array(labels.length).fill(referenceBestScore),
                 borderColor: '#43a047',
                 borderWidth: 2,
                 borderDash: [8, 6],
@@ -350,7 +427,20 @@ function typingApp() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { labels: { color: fg } },
-                    title: { display: true, text: 'Average WPM Over Time', color: fg }
+                    title: { display: true, text: 'Average WPM Over Time', color: fg },
+                    tooltip: {
+                        mode: 'point',
+                        intersect: false,
+                        backgroundColor: isDarkMode ? '#323437' : '#f5f5f5',
+                        titleColor: fg,
+                        bodyColor: fg,
+                        borderColor: fg,
+                        borderWidth: 1,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: createEnhancedTooltipCallback()
+                        }
+                    }
                 },
                 scales: {
                     x: {
@@ -529,6 +619,8 @@ function typingApp() {
         },
         
         bestScore: null,
+        previousBestScore: null,
+        showPreviousBest: false,
         
         // Dictionary selection
         selectedDictionary: 'english-100',
@@ -1038,6 +1130,10 @@ function typingApp() {
         
         async checkAndSaveBestScore() {
             if (typeof this.finalWpm === 'number' && (!this.bestScore || this.finalWpm > this.bestScore)) {
+                // Store the previous best score before updating
+                this.previousBestScore = this.bestScore;
+                this.showPreviousBest = this.bestScore !== null; // Only show if there was a previous best
+                
                 await this.saveBestScore(this.finalWpm);
                 return true;
             }
@@ -1068,6 +1164,7 @@ function typingApp() {
             this.wordTimes = {};
             this.wordCharStates = {};
             this.errorPenalties = 0;
+            this.showPreviousBest = false;
             
             // Restore blind mode from blindModeSelected or IndexedDB if needed
             try {

@@ -112,6 +112,7 @@
             <div class="stat">
                 <div class="stat-value" x-text="bestScore !== null ? Math.round(bestScore) : '-' "></div>
                 <div class="stat-label">Best WPM</div>
+                <div x-show="showPreviousBest" data-testid="previous-best" class="previous-best-display" x-text="'Previous: ' + (previousBestScore !== null ? Math.round(previousBestScore) : '-') + ' WPM'"></div>
             </div>
             <div class="stat">
                 <button class="icon-btn" @click="resetBestScore()" title="Reset Best Score" style="font-size:1.2rem;">🔄</button>
@@ -214,6 +215,7 @@
                 <div class="stat">
                     <div class="stat-value" x-text="bestScore !== null ? Math.round(bestScore) : '-' "></div>
                     <div class="stat-label">Best WPM</div>
+                    <div x-show="showPreviousBest" data-testid="previous-best" class="previous-best-display" x-text="'Previous: ' + (previousBestScore !== null ? Math.round(previousBestScore) : '-') + ' WPM'"></div>
                 </div>
                 <div class="stat">
                     <button class="icon-btn" @click="resetBestScore()" title="Reset Best Score" style="font-size:1.2rem;">🔄</button>
@@ -239,7 +241,7 @@
         </div>
     </div>
     
-    <div class="version">v2025-07-26.2</div>
+    <div class="version">v2025-07-26.4</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     
