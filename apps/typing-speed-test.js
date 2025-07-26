@@ -629,7 +629,7 @@ function typingApp() {
         showChartModal: false,
         
         // Word sorting
-        wordSortOrder: 'none',
+        wordSortOrder: 'wpm-asc',
         
         // Computed properties
         get sortedWordStats() {
