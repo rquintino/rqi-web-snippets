@@ -137,12 +137,15 @@
                 <span class="penalty-count" x-text="errorPenalties"></span>
             </div>
         </div>
+        <div x-show="showBlindReveal" class="blind-reveal-header">
+            <h3>Your Typing Results</h3>
+        </div>
         <div class="text-display" x-show="!showResults" @click="$refs.input.focus()">
             <template x-for="(word, wordIndex) in words" :key="wordIndex">
                 <span 
                     class="word" 
                     :class="{
-                        'current': wordIndex === currentWordIndex,
+                        'current': wordIndex === currentWordIndex && !showBlindReveal,
                         'typed': wordIndex < currentWordIndex,
                         'error': wordErrors[wordIndex]
                     }"
@@ -154,17 +157,27 @@
                     <template x-for="(char, charIndex) in word.split('')" :key="charIndex">
                         <span 
                             class="char"
-                            :class="getCharClass(wordIndex, charIndex)"
+                            :class="showBlindReveal ? getCharClassForReveal(wordIndex, charIndex) : getCharClass(wordIndex, charIndex)"
                             x-text="char"
                         ></span>
                     </template>
-                    <template x-if="wordIndex === currentWordIndex && currentCharIndex > word.length">
+                    <template x-if="wordIndex === currentWordIndex && currentCharIndex > word.length && !showBlindReveal">
                         <template x-for="(char, index) in typedWord.slice(word.length).split('')" :key="'extra-' + index">
+                            <span class="char extra incorrect" x-text="char"></span>
+                        </template>
+                    </template>
+                    <template x-if="showBlindReveal && wordIndex < currentWordIndex && typedWords[wordIndex] && typedWords[wordIndex].length > word.length">
+                        <template x-for="(char, index) in (typedWords[wordIndex] || '').slice(word.length).split('')" :key="'extra-' + index">
                             <span class="char extra incorrect" x-text="char"></span>
                         </template>
                     </template>
                 </span>
             </template>
+        </div>
+        <div x-show="showBlindReveal" class="blind-reveal-continue">
+            <button class="continue-btn" @click="continueFromBlindReveal()">
+                Continue to Results
+            </button>
         </div>
         <input 
             type="text" 
@@ -178,7 +191,7 @@
             autocapitalize="off"
             spellcheck="false"
         >
-        <button class="restart-btn" @click="restart()">
+        <button class="restart-btn" @click="restart()" x-show="!showBlindReveal">
             <span x-show="!started">Start Typing</span>
             <span x-show="started && !showResults">Restart</span>
             <span x-show="showResults">Try Again</span>
@@ -226,7 +239,7 @@
         </div>
     </div>
     
-    <div class="version">v2025-07-14.2</div>
+    <div class="version">v2025-07-26.2</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     

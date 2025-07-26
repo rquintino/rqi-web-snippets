@@ -25,7 +25,8 @@
  * === Test Management ===
  * - generateWords()          : Generates 50 random words for the test
  * - start()                  : Starts the typing test
- * - finish()                 : Ends the test and shows results
+ * - finish()                 : Ends the test and shows results (or blind reveal if needed)
+ * - continueFromBlindReveal(): Proceeds from blind reveal phase to normal results
  * - restart()                : Resets all stats and starts a new test
  * 
  * === Input Handling ===
@@ -38,6 +39,8 @@
  * - getWordWpmClass(index)   : Returns CSS class based on word's relative WPM
  * - getWordColor(wpm)        : Returns color based on WPM performance
  * - getWordBackgroundColor(index) : Returns background color based on relative WPM
+ * - getCharClassForReveal(wordIndex, charIndex) : Returns character class for blind reveal phase
+ * - checkAndSaveBestScore()  : Checks and saves new best score if applicable
  * 
  * === UI Management ===
  * - getCursorElement()       : Creates/positions the typing cursor
@@ -501,6 +504,9 @@ function typingApp() {
         showWpmPenalty: false,
         blindMode: false,
         blindModeSelected: false,
+        showBlindReveal: false,
+        blindModeOriginal: false,
+        typedWords: {},
         
         // Timing variables
         wordStartTime: null,
@@ -707,6 +713,9 @@ function typingApp() {
             const isCorrect = this.typedWord.trim() === currentWord;
             const now = Date.now();
             
+            // Store typed word for blind reveal functionality
+            this.typedWords[this.currentWordIndex] = this.typedWord.trim();
+            
             if (!isCorrect) {
                 this.wordErrors[this.currentWordIndex] = true;
             }
@@ -883,6 +892,23 @@ function typingApp() {
             return classes.join(' ');
         },
         
+        getCharClassForReveal(wordIndex, charIndex) {
+            // Safety checks to prevent errors during template evaluation
+            if (!this.words || !this.typedWords || wordIndex >= this.words.length || wordIndex >= this.currentWordIndex) {
+                return '';
+            }
+            
+            const typedWord = this.typedWords[wordIndex] || '';
+            const actualWord = this.words[wordIndex] || '';
+            
+            // Only process characters that were actually typed and expected
+            if (charIndex < typedWord.length && charIndex < actualWord.length) {
+                return typedWord[charIndex] === actualWord[charIndex] ? 'correct' : 'incorrect';
+            }
+            
+            return '';
+        },
+        
         getWordColor(wpm) {
             // This is used for the results display
             if (wpm >= 80) return '#4ca754';
@@ -956,6 +982,7 @@ function typingApp() {
             
             // If blind mode was active, save the setting for display and future restoration
             const wasBlindMode = this.blindMode;
+            this.blindModeOriginal = wasBlindMode;
             
             // Store blind mode setting in IndexedDB
             try {
@@ -968,20 +995,53 @@ function typingApp() {
             // This will make the button appear active even when blind mode is disabled for results
             this.blindModeSelected = wasBlindMode;
             
-            // If blind mode was active, temporarily disable it to show results
             if (wasBlindMode) {
-                this.blindMode = false;
+                // Enter reveal phase instead of going directly to results
+                this.blindMode = false;  // Temporarily disable to show text
+                this.showBlindReveal = true;
+                // Don't proceed to results yet
+                return;
             }
             
+            // Normal flow for non-blind mode tests
             this.showResults = true;
             this.finalWpm = this.averageWpm;
             this.finalAccuracy = this.accuracy;
-            let isNewBest = false;
+            
+            // Check and save new best score if applicable
+            const isNewBest = await this.checkAndSaveBestScore();
+            if (isNewBest) {
+                setTimeout(celebrateBestScore, 350);
+            }
+        },
+        
+        async continueFromBlindReveal() {
+            // Transition from blind reveal phase to normal results
+            this.showBlindReveal = false;
+            this.showResults = true;
+            
+            // Set final scores for results display
+            this.finalWpm = this.averageWpm;
+            this.finalAccuracy = this.accuracy;
+            
+            // Check and save new best score if applicable
+            const isNewBest = await this.checkAndSaveBestScore();
+            
+            // Restore original blind mode state for next test
+            this.blindModeSelected = this.blindModeOriginal;
+            
+            // Celebrate new best score if achieved
+            if (isNewBest) {
+                setTimeout(celebrateBestScore, 350);
+            }
+        },
+        
+        async checkAndSaveBestScore() {
             if (typeof this.finalWpm === 'number' && (!this.bestScore || this.finalWpm > this.bestScore)) {
                 await this.saveBestScore(this.finalWpm);
-                isNewBest = true;
+                return true;
             }
-            if (isNewBest) setTimeout(celebrateBestScore, 350);
+            return false;
         },
         
         async restart() {
@@ -997,6 +1057,8 @@ function typingApp() {
             this.typedWord = '';
             this.started = false;
             this.showResults = false;
+            this.showBlindReveal = false;
+            this.typedWords = {};
             this.wordErrors = {};
             this.currentWordWpm = 0;
             this.averageWpm = 0;
