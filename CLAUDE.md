@@ -43,7 +43,19 @@ This repository contains a collection of standalone web utilities and applicatio
 - Keep applications lightweight and focused
 - Not intended for critical or data-intensive operations
 
-### CSS file token reduction rules for LLMs
+### 5. JavaScript Cache-Busting (CRITICAL)
+- **ALWAYS** add version parameters to local JavaScript file includes to prevent browser caching issues
+- **Pattern**: `<script src="app-name.js?v=YYYY-MM-DD.N"></script>`
+- **When to increment version**: EVERY TIME you modify any JavaScript file, increment the version number
+- **Version format**: Use current date (YYYY-MM-DD) plus increment number (.1, .2, .3, etc.)
+- **Examples**:
+  - `<script src="typing-speed-test.js?v=2025-07-27.1"></script>`
+  - `<script src="pomodoro-timer.js?v=2025-07-27.2"></script>`
+- **Applies to**: All local .js files (app-specific JS, shared JS files, index.html, not external CDN libraries)
+- **Why critical**: Without version parameters, browsers cache JS files and users don't see updates
+- **For AI assistants**: When you modify ANY JavaScript file, you MUST update the version parameter in the corresponding HTML file
+
+### 6. CSS file token reduction rules for LLMs
 - Use the shortest legal form of every property/value pair
 - Remove tabs, extra spaces inside each individual CSS block, trim everything possible inside. ex. .char {position: relative}
 - Keep multiple lines, one per block/CSS declaration
@@ -111,7 +123,7 @@ const checkLibrary = () => {
 setTimeout(checkLibrary, 100);
 ```
 
-### 5. Security & Privacy
+### 7. Security & Privacy
 - All external resources must be loaded via HTTPS
 - Minimize external dependencies
 - No sensitive data handling, no storage of any possibly sensitive information
@@ -157,7 +169,7 @@ setTimeout(checkLibrary, 100);
 - **Examples**: See typing-speed-test.jsdata and dev-cost-analyzer.jsdata for reference patterns
 - This pattern ensures no CORS issues when opening HTML files directly in browser
 
-### 6. UI
+### 8. UI
 - Unless requested otherwise, all apps should use modern and minimal UI, have a full screen toggle and dark/light toggle, these icons -not text buttons- should be shown on top right of the page
 - On every change to each app, change the version that should be stored with the file itself, that version should be shown on the app bottom right for easier user checking that they are seeing the latest version, on every update to the file increment the version. The version should be something like vyyyy-MM-dd.N
 
@@ -177,6 +189,131 @@ setTimeout(checkLibrary, 100);
 ## Testing Commands
 - Run tests: `npm test`
 - Run linting: `npm run lint` (if available)
+
+## TDD Implementation Instructions for Feature Development
+
+### 1. Initial Setup and Test Environment
+- Always run tests from the **root directory** using `npx playwright test`, not from the `apps/` directory
+- The test pattern should be `apps/filename.test*.js` when running from root
+- Use `npx playwright test --list` to verify test discovery before running
+
+### 2. Test File Naming and Structure
+- Follow the pattern: `app-name.test-feature-name.js` for feature-specific tests
+- Always include the critical console error detection pattern:
+```javascript
+test.beforeEach(async ({ page }) => {
+  // Set up console error listener BEFORE loading the page
+  errors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') {
+      errors.push(msg.text());
+    }
+  });
+
+  // Set up page error listener for JavaScript errors
+  pageErrors = [];
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
+  });
+
+  await page.goto(`file://${path.resolve(__dirname, 'app-name.html')}`);
+  await page.waitForLoadState('networkidle');
+});
+```
+
+### 3. Handling Multiple Elements in Tests
+- When multiple elements with same selector exist, use `.first()` or specific parent selectors:
+  - Instead of: `page.locator('.penalty-indicator')`
+  - Use: `page.locator('.penalty-indicator').first()` or `page.locator('.dict-select-bar .penalty-indicator')`
+
+### 4. Chart Testing with Alpine.js
+- Always wait for chart updates: `await page.waitForTimeout(200);`
+- Access chart data through window objects:
+```javascript
+const hasMultipleDatasets = await page.evaluate(() => {
+  const chart = window.wpmChart;
+  const app = window.typingAppInstance;
+  
+  if (!chart || !chart.data || !chart.data.datasets || !app) return false;
+  
+  // Include debug logging for development
+  console.log('App errorPenalties:', app.errorPenalties);
+  console.log('Chart datasets:', chart.data.datasets.map(d => d.label));
+  
+  return /* your assertions */;
+});
+```
+
+### 5. Chart.js Implementation Patterns
+- When adding conditional datasets to charts, use the spread operator pattern:
+```javascript
+datasets: [
+  // Existing datasets
+  { label: 'Average WPM', /* config */ },
+  // Conditional datasets
+  ...(finalWpmLine ? [finalWpmLine] : [])
+]
+```
+- Always mirror chart implementations in both main chart and modal chart functions
+- Use consistent styling for penalty lines: `borderColor: '#ef4444'`, `borderDash: [5, 5]`
+
+### 6. Alpine.js Reactive Data Access
+- Access reactive properties through the app instance: `app.errorPenalties`
+- Ensure data updates trigger chart re-renders by calling update functions after data changes
+- Use computed properties in Alpine.js for complex calculations in templates
+
+### 7. Test Debugging Commands
+- **NEVER use `npx playwright show-report`** - this blocks execution and requires human intervention
+- Use console output from test runs to debug failures
+- Use `--grep "specific test name"` to run individual tests during debugging
+- Add temporary console.log statements in page.evaluate() for debugging chart/JS state
+- Read error messages and stack traces from terminal output
+
+### 8. Implementation Order (TDD)
+1. Write failing tests first (TDD)
+2. Run tests to confirm they fail with expected error messages
+3. Implement minimal code to make tests pass
+4. Use terminal output and error messages to debug failures
+5. Fix issues iteratively based on test output
+6. Run all related tests to ensure no regressions
+
+### 9. Error Penalty Logic
+- Error penalties accumulate per incorrect character, not per word
+- When displaying error counts, consider the magnitude (can be high for multiple errors)
+- Test both zero-error and error scenarios separately
+
+### 10. CSS and Styling
+- Add styling classes before implementing functionality
+- Use existing CSS patterns from the codebase
+- Test responsive design and theme compatibility
+
+### 11. Required Commands for Debugging
+```bash
+# Test discovery
+npx playwright test --list
+
+# Run specific test file
+npx playwright test apps/app-name.test-feature.js
+
+# Run specific test by name
+npx playwright test --grep "test description"
+
+# NEVER use show-report - blocks execution for human intervention
+# npx playwright show-report  # DON'T USE THIS
+
+# Check syntax before running
+node -c apps/test-file.js
+```
+
+### 12. Debugging Guidelines (CRITICAL)
+- **NEVER use `npx playwright show-report`** - this blocks execution and requires human intervention
+- Rely on terminal output for debugging:
+  - Error messages and stack traces
+  - Console logs from page.evaluate()
+  - Test assertion failures
+  - Page snapshots paths (if needed, user can inspect manually)
+- Use console.log statements in test code for debugging
+- Read error context from terminal output carefully
 
 # Second most important rule
 - You end every reply to me with 🖖 no exception

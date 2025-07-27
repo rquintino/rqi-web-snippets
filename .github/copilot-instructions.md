@@ -35,7 +35,19 @@ This repository contains a collection of standalone web utilities and applicatio
 - Keep applications lightweight and focused
 - Not intended for critical or data-intensive operations
 
-### CSS file token reduction rules for LLMs
+### 5. JavaScript Cache-Busting (CRITICAL)
+- **ALWAYS** add version parameters to local JavaScript file includes to prevent browser caching issues
+- **Pattern**: `<script src="app-name.js?v=YYYY-MM-DD.N"></script>`
+- **When to increment version**: EVERY TIME you modify any JavaScript file, increment the version number
+- **Version format**: Use current date (YYYY-MM-DD) plus increment number (.1, .2, .3, etc.)
+- **Examples**:
+  - `<script src="typing-speed-test.js?v=2025-07-27.1"></script>`
+  - `<script src="pomodoro-timer.js?v=2025-07-27.2"></script>`
+- **Applies to**: All local .js files (app-specific JS, shared JS files like footer.js and app-navigation.js, index.html, not external CDN libraries)
+- **Why critical**: Without version parameters, browsers cache JS files and users don't see updates
+- **For AI assistants**: When you modify ANY JavaScript file, you MUST update the version parameter in the corresponding HTML file
+
+### 6. CSS file token reduction rules for LLMs
 - Use the shortest legal form of every property/value pair
 - Remove tabs, extra spaces inside each individual CSS block, trim everything possible inside. ex. .char {position: relative}
 - Keep multiple lines, one per block/CSS declaration
@@ -45,20 +57,20 @@ This repository contains a collection of standalone web utilities and applicatio
 - Put long or repeated literals once in :root, then reference
 - Group selectors that share declarations: .b,.c{color:#fff}
 
-### Automated Testing
+### 7. Automated Testing
 
 - For automated testing we're using playwright/test with node.js
 - For each app the tests will be in <apptitle>.test.js file
 - Always ensure the minimal test which is the app loads without network or console errors
 - When adding a feature also add needed tests, be exhaustive, always
 
-### 5. Security & Privacy
+### 8. Security & Privacy
 - All external resources must be loaded via HTTPS
 - Minimize external dependencies
 - No sensitive data handling, no storage of any possibly sensitive information
 - Always be mindful of security and privacy
 
-### Shared Footer Component
+### 9. Shared Footer Component
 - For "Created by" footer with LinkedIn link, include shared/footer.js in all utility pages to avoid duplication
 - All utility pages should include `<script src="shared/footer.js"></script>` before closing body tag (path relative to apps/ folder)
 - The shared/footer.js automatically adds a "Created by" footer with LinkedIn link in bottom-right
@@ -66,7 +78,7 @@ This repository contains a collection of standalone web utilities and applicatio
 - Positioned above version number to avoid overlap
 - No need to manually add footer HTML - the script handles everything
 
-### Data and Storage
+### 10. Data and Storage
 - If the app needs to persist state, use local storage to ensure no user data is lost, if large content use IndexedDB
 
 #### Data File Loading (.jsdata files)
@@ -98,11 +110,11 @@ This repository contains a collection of standalone web utilities and applicatio
 - **Examples**: See typing-speed-test.jsdata and dev-cost-analyzer.jsdata for reference patterns
 - This pattern ensures no CORS issues when opening HTML files directly in browser
 
-### 6. UI
+### 11. UI
 - Unless requested otherwise, all apps should use modern and minimal UI, have a full screen toggle and dark/light toggle, these icons -not text buttons- should be shown on top right of the page
 - On every change to each app, change the version that should be stored with the file itself, that version should be shown on the app bottom right for easier user checking that they are seeing the latest version, on every update to the file increment the version. The version should be something like vyyyy-MM-dd.N
 
-### Development Flow
+### 12. Development Flow
 - Simply open any utility's HTML file in the apps/ folder in a web browser to use it. No installation or setup required.
 - Right after creating the first version of each app (HTML file) open that automatically in the user's browser
 - Keep a single apps/index.html that should have links to all existing pages. Make it modern, fun
