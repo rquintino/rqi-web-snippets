@@ -242,6 +242,83 @@ function typingApp() {
         };
     }
 
+    // === STATISTICAL CALCULATION METHODS ===
+    
+    function calculateWordWpmStatistics(app) {
+        if (!app || !app.wordStats || app.wordStats.length < 2) {
+            return {
+                mean: 0,
+                standardDeviation: 0,
+                upperBound: 0,
+                lowerBound: 0,
+                outliers: {
+                    upper: [],
+                    lower: []
+                }
+            };
+        }
+        
+        const validWpms = app.wordStats
+            .map(stat => stat.wpm)
+            .filter(wpm => typeof wpm === 'number' && !isNaN(wpm) && isFinite(wpm));
+        
+        if (validWpms.length < 2) {
+            return {
+                mean: 0,
+                standardDeviation: 0,
+                upperBound: 0,
+                lowerBound: 0,
+                outliers: {
+                    upper: [],
+                    lower: []
+                }
+            };
+        }
+        
+        // Calculate mean
+        const mean = validWpms.reduce((sum, wpm) => sum + wpm, 0) / validWpms.length;
+        
+        // Calculate standard deviation
+        const variance = validWpms.reduce((sum, wpm) => Math.pow(wpm - mean, 2), 0) / validWpms.length;
+        const standardDeviation = Math.sqrt(variance);
+        
+        // Calculate 3σ bounds
+        const upperBound = mean + (3 * standardDeviation);
+        const lowerBound = mean - (3 * standardDeviation);
+        
+        // Identify outliers
+        const outliers = {
+            upper: [],
+            lower: []
+        };
+        
+        app.wordStats.forEach((stat, index) => {
+            if (typeof stat.wpm === 'number' && !isNaN(stat.wpm) && isFinite(stat.wpm)) {
+                if (stat.wpm > upperBound) {
+                    outliers.upper.push({
+                        word: stat.word,
+                        wpm: stat.wpm,
+                        index: index
+                    });
+                } else if (stat.wpm < lowerBound) {
+                    outliers.lower.push({
+                        word: stat.word,
+                        wpm: stat.wpm,
+                        index: index
+                    });
+                }
+            }
+        });
+        
+        return {
+            mean,
+            standardDeviation,
+            upperBound,
+            lowerBound,
+            outliers
+        };
+    }
+
     function updateWpmChart(isDarkMode) {
         const ctx = document.getElementById('wpmChart').getContext('2d');
         const labels = wpmChartData.map((_, i) => i + 1);
@@ -304,6 +381,45 @@ function typingApp() {
             };
         }
         
+        // Calculate 3σ statistical bounds for outlier detection
+        const stats = calculateWordWpmStatistics(app);
+        let upperBoundLine = null;
+        let lowerBoundLine = null;
+        
+        if (stats.standardDeviation > 0 && labels.length > 2) {
+            // 3σ Upper Bound Line
+            upperBoundLine = {
+                label: '3σ Upper Bound',
+                data: Array(labels.length).fill(stats.upperBound),
+                borderColor: '#ff9800', // Orange color for bounds
+                borderWidth: 2,
+                borderDash: [6, 4], // Dashed line pattern
+                pointRadius: 0,
+                fill: false,
+                order: 3,
+                type: 'line',
+                backgroundColor: 'rgba(255,152,0,0.1)',
+                spanGaps: true,
+                stepped: true
+            };
+            
+            // 3σ Lower Bound Line
+            lowerBoundLine = {
+                label: '3σ Lower Bound',
+                data: Array(labels.length).fill(Math.max(0, stats.lowerBound)), // Ensure non-negative
+                borderColor: '#ff9800', // Orange color for bounds
+                borderWidth: 2,
+                borderDash: [6, 4], // Dashed line pattern
+                pointRadius: 0,
+                fill: false,
+                order: 3,
+                type: 'line',
+                backgroundColor: 'rgba(255,152,0,0.1)',
+                spanGaps: true,
+                stepped: true
+            };
+        }
+        
         if (wpmChart) {
             wpmChart.destroy();
         }
@@ -339,7 +455,10 @@ function typingApp() {
                     // Reference line for best WPM
                     ...(bestWpmLine ? [bestWpmLine] : []),
                     // Conditional final WPM line with penalties
-                    ...(finalWpmLine ? [finalWpmLine] : [])
+                    ...(finalWpmLine ? [finalWpmLine] : []),
+                    // 3σ statistical bound lines
+                    ...(upperBoundLine ? [upperBoundLine] : []),
+                    ...(lowerBoundLine ? [lowerBoundLine] : [])
                 ]
             },
             options: {
@@ -375,6 +494,9 @@ function typingApp() {
                 }
             }
         });
+        
+        // Make chart globally accessible for testing
+        window.wpmChart = wpmChart;
     }
 
     function updateWpmChartModal(isDarkMode) {
@@ -435,6 +557,45 @@ function typingApp() {
             };
         }
         
+        // Calculate 3σ statistical bounds for modal chart (mirrors main chart)
+        const modalStats = calculateWordWpmStatistics(app);
+        let modalUpperBoundLine = null;
+        let modalLowerBoundLine = null;
+        
+        if (modalStats.standardDeviation > 0 && labels.length > 2) {
+            // 3σ Upper Bound Line for modal
+            modalUpperBoundLine = {
+                label: '3σ Upper Bound',
+                data: Array(labels.length).fill(modalStats.upperBound),
+                borderColor: '#ff9800', // Orange color for bounds
+                borderWidth: 2,
+                borderDash: [6, 4], // Dashed line pattern
+                pointRadius: 0,
+                fill: false,
+                order: 3,
+                type: 'line',
+                backgroundColor: 'rgba(255,152,0,0.1)',
+                spanGaps: true,
+                stepped: true
+            };
+            
+            // 3σ Lower Bound Line for modal
+            modalLowerBoundLine = {
+                label: '3σ Lower Bound',
+                data: Array(labels.length).fill(Math.max(0, modalStats.lowerBound)), // Ensure non-negative
+                borderColor: '#ff9800', // Orange color for bounds
+                borderWidth: 2,
+                borderDash: [6, 4], // Dashed line pattern
+                pointRadius: 0,
+                fill: false,
+                order: 3,
+                type: 'line',
+                backgroundColor: 'rgba(255,152,0,0.1)',
+                spanGaps: true,
+                stepped: true
+            };
+        }
+        
         if (wpmChartModal) {
             wpmChartModal.destroy();
         }
@@ -468,7 +629,10 @@ function typingApp() {
                     },
                     ...(bestWpmLine ? [bestWpmLine] : []),
                     // Conditional final WPM line with penalties
-                    ...(finalWpmLine ? [finalWpmLine] : [])
+                    ...(finalWpmLine ? [finalWpmLine] : []),
+                    // 3σ statistical bound lines for modal chart
+                    ...(modalUpperBoundLine ? [modalUpperBoundLine] : []),
+                    ...(modalLowerBoundLine ? [modalLowerBoundLine] : [])
                 ]
             },
             options: {
@@ -504,6 +668,9 @@ function typingApp() {
                 }
             }
         });
+        
+        // Make modal chart globally accessible for testing
+        window.wpmChartModal = wpmChartModal;
     }
 
     function showChartModalHandler() {
@@ -693,6 +860,23 @@ function typingApp() {
                     return b.wpm - a.wpm;
                 }
             });
+        },
+        
+        // Computed property for outlier statistics
+        get outlierStats() {
+            const stats = calculateWordWpmStatistics(this);
+            
+            return {
+                hasOutliers: stats.outliers.upper.length > 0 || stats.outliers.lower.length > 0,
+                fastest: stats.outliers.upper,
+                slowest: stats.outliers.lower,
+                statistics: {
+                    mean: stats.mean,
+                    standardDeviation: stats.standardDeviation,
+                    upperBound: stats.upperBound,
+                    lowerBound: stats.lowerBound
+                }
+            };
         },
         
         async init() {

@@ -248,10 +248,42 @@
                     </div>
                 </template>
             </div>
+            
+            <!-- Outlier Highlights Table -->
+            <div x-show="outlierStats.hasOutliers" x-cloak style="margin-top:2rem;">
+                <h4 style="margin:0 0 1rem 0;color:var(--accent);">Performance Outliers (3σ)</h4>
+                <div class="outlier-highlights-table" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+                    <!-- Fastest Words Column -->
+                    <div x-show="outlierStats.fastest.length > 0">
+                        <h5 style="margin:0 0 0.75rem 0;color:#4ca754;">Fastest Words (Above 3σ)</h5>
+                        <div class="outlier-words-list">
+                            <template x-for="(outlier, index) in outlierStats.fastest" :key="'fast-' + index">
+                                <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #4ca754;">
+                                    <span x-text="outlier.word" style="font-weight:600;"></span>
+                                    <span x-text="Math.round(outlier.wpm) + ' wpm'" style="color:#4ca754;font-weight:700;"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- Slowest Words Column -->
+                    <div x-show="outlierStats.slowest.length > 0">
+                        <h5 style="margin:0 0 0.75rem 0;color:#ff5722;">Slowest Words (Below 3σ)</h5>
+                        <div class="outlier-words-list">
+                            <template x-for="(outlier, index) in outlierStats.slowest" :key="'slow-' + index">
+                                <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #ff5722;">
+                                    <span x-text="outlier.word" style="font-weight:600;"></span>
+                                    <span x-text="Math.round(outlier.wpm) + ' wpm'" style="color:#ff5722;font-weight:700;"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
-    <div class="version">v2025-07-26.7</div>
+    <div class="version">v2025-07-27.1</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     
