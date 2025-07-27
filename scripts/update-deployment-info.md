@@ -11,8 +11,8 @@ This system automatically displays deployment information on the main index page
 
 ## Files
 
-### Generated Files (auto-created during deployment)
-- `apps/shared/deployment-info.js` - JavaScript module for web inclusion
+### Generated Files
+- `apps/shared/deployment-info.js` - JavaScript module for web inclusion (placeholder in repo, overwritten on deploy)
 
 ### Source Files
 - `scripts/update-deployment-info.js` - Script that generates deployment info
@@ -69,13 +69,14 @@ The deployment info is loaded via script tag and displayed when available:
 <script src="apps/shared/deployment-info.js"></script>
 ```
 
-### Gitignore
-The generated file is excluded from version control since it's regenerated on each deployment:
+### Version Control
+The deployment info file is tracked in the repository as a placeholder that gets overwritten during deployment:
 
 ```
-# Generated deployment info (regenerated on deploy)
-apps/shared/deployment-info.js
+# Note: apps/shared/deployment-info.js is tracked as placeholder, overwritten on deploy
 ```
+
+This ensures tests can run successfully while still having fresh deployment info on each deploy.
 
 ## Styling
 
