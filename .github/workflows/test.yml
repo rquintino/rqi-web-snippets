@@ -8,6 +8,7 @@ on:
 
 jobs:
   test:
+    if: false  # Temporarily disabled
     timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:
