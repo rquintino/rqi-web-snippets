@@ -82,8 +82,8 @@ test.describe('Typing Speed Test - Final WPM Visualization Enhancement', () => {
       // 1. Average WPM (existing)
       // 2. Final WPM with penalties (new)
       const datasets = chart.data.datasets;
-      const avgWpmDataset = datasets.find(d => d.label === 'Average WPM');
-      const finalWpmDataset = datasets.find(d => d.label === 'Final WPM (with penalties)');
+      const avgWpmDataset = datasets.find(d => d.label && d.label.includes('Average WPM'));
+      const finalWpmDataset = datasets.find(d => d.label && d.label.includes('WPM Penalties'));
       
       return avgWpmDataset && finalWpmDataset && app.errorPenalties > 0;
     });
@@ -169,8 +169,8 @@ test.describe('Typing Speed Test - Final WPM Visualization Enhancement', () => {
       
       const datasets = chart.data.datasets;
       const labels = datasets.map(d => d.label);
-      const avgWpmDataset = datasets.find(d => d.label === 'Average WPM');
-      const finalWpmDataset = datasets.find(d => d.label === 'Final WPM (with penalties)');
+      const avgWpmDataset = datasets.find(d => d.label && d.label.includes('Average WPM'));
+      const finalWpmDataset = datasets.find(d => d.label && d.label.includes('WPM Penalties'));
       
       return {
         errorPenalties: app.errorPenalties,
@@ -270,8 +270,8 @@ test.describe('Typing Speed Test - Final WPM Visualization Enhancement', () => {
       if (!chart || !chart.data || !chart.data.datasets) return false;
       
       const datasets = chart.data.datasets;
-      const avgWpmDataset = datasets.find(d => d.label === 'Average WPM');
-      const finalWpmDataset = datasets.find(d => d.label === 'Final WPM (with penalties)');
+      const avgWpmDataset = datasets.find(d => d.label && d.label.includes('Average WPM'));
+      const finalWpmDataset = datasets.find(d => d.label && d.label.includes('WPM Penalties'));
       
       return !!(avgWpmDataset && finalWpmDataset);
     });
@@ -321,7 +321,7 @@ test.describe('Typing Speed Test - Final WPM Visualization Enhancement', () => {
       const chart = Chart.getChart(canvas);
       if (!chart || !chart.data || !chart.data.datasets) return null;
       
-      const finalWpmDataset = chart.data.datasets.find(d => d.label === 'Final WPM (with penalties)');
+      const finalWpmDataset = chart.data.datasets.find(d => d.label && d.label.includes('WPM Penalties'));
       if (!finalWpmDataset) return null;
       
       return {

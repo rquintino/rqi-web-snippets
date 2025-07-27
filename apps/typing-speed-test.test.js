@@ -85,7 +85,7 @@ test.describe('Typing Speed Test', () => {
     
     // Check that initial stats are correct
     await expect(page.locator('.stat-value').first()).toHaveText('0');
-    await expect(page.locator('.stat-value').nth(1)).toHaveText('0');
+    await expect(page.locator('.stat-value').nth(1)).toHaveText('0.0');
     await expect(page.locator('.stat-value').nth(2)).toHaveText('100%');
   });
   test('should reset best score when reset button is clicked', async ({ page }) => {
@@ -234,7 +234,7 @@ test.describe('Typing Speed Test', () => {
     
     // Verify stats were reset
     await expect(page.locator('.stat-value').first()).toHaveText('0');
-    await expect(page.locator('.stat-value').nth(1)).toHaveText('0');
+    await expect(page.locator('.stat-value').nth(1)).toHaveText('0.0');
     await expect(page.locator('.stat-value').nth(2)).toHaveText('100%');
   });
   

@@ -102,7 +102,7 @@
                 <div class="stat-label">Current Word</div>
             </div>
             <div class="stat">
-                <div class="stat-value" :class="{ 'wpm-penalty': showWpmPenalty }" x-text="Math.round(averageWpm)"></div>
+                <div class="stat-value" :class="{ 'wpm-penalty': showWpmPenalty }" x-text="averageWpm.toFixed(1)"></div>
                 <div class="stat-label">Average WPM</div>
             </div>
             <div class="stat">
@@ -198,18 +198,18 @@
             <span x-show="showResults">Try Again</span>
         </button>
         <div class="chart-container" style="position:relative;">
-            <canvas id="wpmChart" width="320" height="240" style="max-width:100%;background:var(--bg-secondary);border-radius:1rem;"></canvas>
+            <canvas id="wpmChart" width="640" height="480" style="max-width:100%;background:var(--bg-secondary);border-radius:1rem;"></canvas>
             <button class="icon-btn" @click="showChartModalHandler()" title="Expand chart" style="position:absolute;top:0.5rem;right:0.5rem;font-size:1.2rem;z-index:2;">🔍</button>
         </div>
         <div class="results" x-show="showResults" x-cloak>
             <h3>Test Complete!</h3>
             <div class="stats">
                 <div class="stat">
-                    <div class="stat-value" x-text="Math.round(finalWpm)"></div>
+                    <div class="stat-value" x-text="finalWpm.toFixed(1)"></div>
                     <div class="stat-label">Final WPM</div>
                 </div>
                 <div class="stat" x-show="errorPenalties > 0">
-                    <div class="stat-value" x-text="getUnpenalizedAverageWpm()"></div>
+                    <div class="stat-value" x-text="getUnpenalizedAverageWpm().toFixed(1)"></div>
                     <div class="stat-label">Average WPM</div>
                 </div>
                 <div class="stat">
@@ -251,11 +251,11 @@
             
             <!-- Outlier Highlights Table -->
             <div x-show="outlierStats.hasOutliers" x-cloak style="margin-top:2rem;">
-                <h4 style="margin:0 0 1rem 0;color:var(--accent);">Performance Outliers (3σ)</h4>
+                <h4 style="margin:0 0 1rem 0;color:var(--accent);" x-text="`Performance Outliers (3σ, ${outlierStats.statistics.mean.toFixed(1)}±${outlierStats.statistics.standardDeviation.toFixed(1)})`"></h4>
                 <div class="outlier-highlights-table" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
                     <!-- Fastest Words Column -->
                     <div x-show="outlierStats.fastest.length > 0">
-                        <h5 style="margin:0 0 0.75rem 0;color:#4ca754;">Fastest Words (Above 3σ)</h5>
+                        <h5 style="margin:0 0 0.75rem 0;color:#4ca754;" x-text="`Fastest Words (Above 3σ, ${outlierStats.statistics.upperBound.toFixed(1)})`"></h5>
                         <div class="outlier-words-list">
                             <template x-for="(outlier, index) in outlierStats.fastest" :key="'fast-' + index">
                                 <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #4ca754;">
@@ -268,7 +268,7 @@
                     
                     <!-- Slowest Words Column -->
                     <div x-show="outlierStats.slowest.length > 0">
-                        <h5 style="margin:0 0 0.75rem 0;color:#ff5722;">Slowest Words (Below 3σ)</h5>
+                        <h5 style="margin:0 0 0.75rem 0;color:#ff5722;" x-text="`Slowest Words (Below 3σ, ${outlierStats.statistics.lowerBound.toFixed(1)})`"></h5>
                         <div class="outlier-words-list">
                             <template x-for="(outlier, index) in outlierStats.slowest" :key="'slow-' + index">
                                 <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #ff5722;">
@@ -283,7 +283,7 @@
         </div>
     </div>
     
-    <div class="version">v2025-07-27.1</div>
+    <div class="version">v2025-07-27.4</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     

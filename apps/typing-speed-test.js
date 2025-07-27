@@ -182,6 +182,42 @@ function typingApp() {
         oscillator.stop(audioContext.currentTime + 0.2);
     }
 
+    // Centralized function to calculate consistent average WPM from wordStats
+    // This is the single source of truth for all average calculations
+    function calculateConsistentAverage(app, includePenalties = false, precision = 1) {
+        if (!app || !app.wordStats || app.wordStats.length === 0) return 0;
+        
+        const validStats = app.wordStats.filter(stat => stat && typeof stat.wpm === 'number' && !isNaN(stat.wpm));
+        if (validStats.length === 0) return 0;
+        
+        const rawAverage = validStats.reduce((sum, stat) => sum + stat.wpm, 0) / validStats.length;
+        
+        let result = rawAverage;
+        if (includePenalties) {
+            result = Math.max(0, rawAverage - (app.errorPenalties || 0));
+        }
+        
+        // Round to specified decimal places for consistency
+        return Math.round(result * Math.pow(10, precision)) / Math.pow(10, precision);
+    }
+
+    // Helper function to calculate cumulative average WPM for chart legend
+    // UPDATED: Now uses wordStats as single source of truth with 1 decimal place
+    function getCumulativeAverageWpm(data) {
+        // Use app instance to get consistent calculation from wordStats
+        const app = window.typingAppInstance;
+        if (app && app.wordStats && app.wordStats.length > 0) {
+            return calculateConsistentAverage(app, false, 1);
+        }
+        
+        // Fallback to old calculation only if app not available or no wordStats yet
+        if (!data || data.length === 0) return 0;
+        const validData = data.filter(wpm => !isNaN(wpm) && isFinite(wpm));
+        if (validData.length === 0) return 0;
+        const sum = validData.reduce((total, wpm) => total + wpm, 0);
+        return Math.round((sum / validData.length) * 10) / 10; // Round to 1 decimal place
+    }
+
     // Helper function to get the appropriate best score for chart reference line
     function getChartReferenceBestScore(app) {
         if (!app || typeof app.bestScore !== 'number' || isNaN(app.bestScore)) {
@@ -275,17 +311,19 @@ function typingApp() {
             };
         }
         
-        // Calculate mean
-        const mean = validWpms.reduce((sum, wpm) => sum + wpm, 0) / validWpms.length;
+        // Calculate mean using centralized function for consistency
+        const mean = calculateConsistentAverage(app, false, 1);
         
-        // Calculate standard deviation
-        const variance = validWpms.reduce((sum, wpm) => Math.pow(wpm - mean, 2), 0) / validWpms.length;
+        // Calculate standard deviation using the same filtered data as the centralized function
+        const validStats = app.wordStats.filter(stat => stat && typeof stat.wpm === 'number' && !isNaN(stat.wpm));
+        const validStatsWpms = validStats.map(stat => stat.wpm);
+        const variance = validStatsWpms.reduce((sum, wpm) => Math.pow(wpm - mean, 2), 0) / validStatsWpms.length;
         const standardDeviation = Math.sqrt(variance);
         
         // Calculate 3σ bounds
         const upperBound = mean + (3 * standardDeviation);
         const lowerBound = mean - (3 * standardDeviation);
-        
+        console.log(`WPM Stats - Mean: ${mean}, SD: ${standardDeviation}, Upper Bound: ${upperBound}, Lower Bound: ${lowerBound}`);
         // Identify outliers
         const outliers = {
             upper: [],
@@ -366,7 +404,7 @@ function typingApp() {
             // Create a straight horizontal line at the final WPM value
             const finalWpmValue = Math.max(0, app.finalWpm);
             finalWpmLine = {
-                label: 'Final WPM (with penalties)',
+                label: `WPM Penalties (${app.errorPenalties})`,
                 data: Array(labels.length).fill(finalWpmValue),
                 borderColor: '#ef4444', // Red color for penalties
                 borderWidth: 2,
@@ -389,7 +427,7 @@ function typingApp() {
         if (stats.standardDeviation > 0 && labels.length > 2) {
             // 3σ Upper Bound Line
             upperBoundLine = {
-                label: '3σ Upper Bound',
+                label: `3σ Upper Bound (${stats.upperBound.toFixed(1)})`,
                 data: Array(labels.length).fill(stats.upperBound),
                 borderColor: '#ff9800', // Orange color for bounds
                 borderWidth: 2,
@@ -405,7 +443,7 @@ function typingApp() {
             
             // 3σ Lower Bound Line
             lowerBoundLine = {
-                label: '3σ Lower Bound',
+                label: `3σ Lower Bound (${Math.max(0, stats.lowerBound).toFixed(1)})`,
                 data: Array(labels.length).fill(Math.max(0, stats.lowerBound)), // Ensure non-negative
                 borderColor: '#ff9800', // Orange color for bounds
                 borderWidth: 2,
@@ -429,7 +467,7 @@ function typingApp() {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Average WPM',
+                        label: `Average WPM (${getCumulativeAverageWpm(data).toFixed(1)})`,
                         data: data,
                         borderColor: accent,
                         backgroundColor: accent + '33',
@@ -542,7 +580,7 @@ function typingApp() {
             // Create a straight horizontal line at the final WPM value
             const finalWpmValue = Math.max(0, app.finalWpm);
             finalWpmLine = {
-                label: 'Final WPM (with penalties)',
+                label: `WPM Penalties (${app.errorPenalties})`,
                 data: Array(labels.length).fill(finalWpmValue),
                 borderColor: '#ef4444', // Red color for penalties
                 borderWidth: 2,
@@ -565,7 +603,7 @@ function typingApp() {
         if (modalStats.standardDeviation > 0 && labels.length > 2) {
             // 3σ Upper Bound Line for modal
             modalUpperBoundLine = {
-                label: '3σ Upper Bound',
+                label: `3σ Upper Bound (${modalStats.upperBound.toFixed(1)})`,
                 data: Array(labels.length).fill(modalStats.upperBound),
                 borderColor: '#ff9800', // Orange color for bounds
                 borderWidth: 2,
@@ -581,7 +619,7 @@ function typingApp() {
             
             // 3σ Lower Bound Line for modal
             modalLowerBoundLine = {
-                label: '3σ Lower Bound',
+                label: `3σ Lower Bound (${Math.max(0, modalStats.lowerBound).toFixed(1)})`,
                 data: Array(labels.length).fill(Math.max(0, modalStats.lowerBound)), // Ensure non-negative
                 borderColor: '#ff9800', // Orange color for bounds
                 borderWidth: 2,
@@ -605,7 +643,7 @@ function typingApp() {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Average WPM',
+                        label: `Average WPM (${getCumulativeAverageWpm(data).toFixed(1)})`,
                         data: data,
                         borderColor: accent,
                         backgroundColor: accent + '33',
@@ -866,10 +904,16 @@ function typingApp() {
         get outlierStats() {
             const stats = calculateWordWpmStatistics(this);
             
+            // Sort fastest words from highest to lowest WPM (descending)
+            const sortedFastest = [...stats.outliers.upper].sort((a, b) => b.wpm - a.wpm);
+            
+            // Sort slowest words from lowest to highest WPM (ascending)
+            const sortedSlowest = [...stats.outliers.lower].sort((a, b) => a.wpm - b.wpm);
+            
             return {
                 hasOutliers: stats.outliers.upper.length > 0 || stats.outliers.lower.length > 0,
-                fastest: stats.outliers.upper,
-                slowest: stats.outliers.lower,
+                fastest: sortedFastest,
+                slowest: sortedSlowest,
                 statistics: {
                     mean: stats.mean,
                     standardDeviation: stats.standardDeviation,
@@ -1078,14 +1122,9 @@ function typingApp() {
                 });
                 
                 this.wordTimes[this.currentWordIndex] = wordWpm;
-                // Update chart data
-                const validWpms = this.wordStats.map(stat => stat.wpm).filter(wpm => !isNaN(wpm) && isFinite(wpm));
-                if (validWpms.length > 0) {
-                    const avg = Math.round(validWpms.reduce((sum, wpm) => sum + wpm, 0) / validWpms.length);
-                    wpmChartData.push(avg);
-                } else {
-                    wpmChartData.push(0);
-                }
+                // Update chart data using centralized calculation for consistency
+                const avg = calculateConsistentAverage(this, false, 1);
+                wpmChartData.push(avg);
                 setTimeout(() => updateWpmChart(this.isDarkMode), 50);
             }
             
@@ -1127,19 +1166,8 @@ function typingApp() {
         },
         
         updateActiveStats() {
-            // Calculate average WPM from completed words
-            if (this.wordStats.length > 0) {
-                const validWpms = this.wordStats
-                    .map(stat => stat.wpm)
-                    .filter(wpm => !isNaN(wpm) && isFinite(wpm));
-                
-                if (validWpms.length > 0) {
-                    // Apply WPM penalties
-                    this.averageWpm = Math.max(0, Math.round(
-                        validWpms.reduce((sum, wpm) => sum + wpm, 0) / validWpms.length
-                    ) - this.errorPenalties);
-                }
-            }
+            // UPDATED: Use centralized average calculation with penalties, rounded to 1 decimal place
+            this.averageWpm = calculateConsistentAverage(this, true, 1);
             
             // Calculate character-level accuracy (industry standard)
             this.accuracy = this.calculateCharacterAccuracy();
@@ -1388,8 +1416,12 @@ function typingApp() {
             
             // Normal flow for non-blind mode tests
             this.showResults = true;
-            this.finalWpm = this.averageWpm;
+            // Use consistent calculation for finalWpm to match outlier statistics
+            this.finalWpm = calculateConsistentAverage(this, this.errorPenalties > 0, 1);
             this.finalAccuracy = this.accuracy;
+            
+            // Update chart one final time to ensure label consistency
+            setTimeout(() => updateWpmChart(this.isDarkMode), 100);
             
             // Check and save new best score if applicable
             const isNewBest = await this.checkAndSaveBestScore();
@@ -1404,8 +1436,12 @@ function typingApp() {
             this.showResults = true;
             
             // Set final scores for results display
-            this.finalWpm = this.averageWpm;
+            // Use consistent calculation for finalWpm to match outlier statistics
+            this.finalWpm = calculateConsistentAverage(this, this.errorPenalties > 0, 1);
             this.finalAccuracy = this.accuracy;
+            
+            // Update chart one final time to ensure label consistency
+            setTimeout(() => updateWpmChart(this.isDarkMode), 100);
             
             // Check and save new best score if applicable
             const isNewBest = await this.checkAndSaveBestScore();
@@ -1573,18 +1609,9 @@ function typingApp() {
         
         // Calculate the unpenalized average WPM for display in results
         // This shows the raw average without error penalties
+        // UPDATED: Use centralized average calculation without penalties, to 1 decimal place
         getUnpenalizedAverageWpm() {
-            if (!this.wordStats || this.wordStats.length === 0) {
-                return 0;
-            }
-            
-            const validStats = this.wordStats.filter(stat => stat && typeof stat.wpm === 'number' && !isNaN(stat.wpm));
-            if (validStats.length === 0) {
-                return 0;
-            }
-            
-            const total = validStats.reduce((sum, stat) => sum + stat.wpm, 0);
-            return Math.round(total / validStats.length);
+            return calculateConsistentAverage(this, false, 1);
         }
     };
 }
