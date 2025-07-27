@@ -34,8 +34,10 @@ test.describe('Web Utilities Index Page', () => {
     // Check fullscreen toggle button exists
     await expect(page.locator('#fullscreen-toggle')).toBeVisible();
     
-    // Check version is displayed
-    await expect(page.locator('.version')).toBeVisible();
+    // Check deployment info is displayed
+    await expect(page.locator('#deployment-info')).toBeVisible();
+    await expect(page.locator('#deploy-date')).toContainText('Last updated:');
+    await expect(page.locator('#deploy-details')).toContainText('UTC');
     
     // Check if app cards are present (should have more than one)
     await expect(page.locator('.app-card')).toHaveCount(await page.locator('.app-card').count());
