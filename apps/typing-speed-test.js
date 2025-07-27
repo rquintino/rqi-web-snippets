@@ -36,6 +36,7 @@
  * 
  * === Statistics ===
  * - updateActiveStats()      : Calculates current word WPM and average WPM
+ * - calculateCharacterAccuracy() : Calculates character-level accuracy (industry standard)
  * - getWordWpmClass(index)   : Returns CSS class based on word's relative WPM
  * - getWordColor(wpm)        : Returns color based on WPM performance
  * - getWordBackgroundColor(index) : Returns background color based on relative WPM
@@ -281,6 +282,28 @@ function typingApp() {
                 stepped: true
             };
         }
+        
+        // Conditional final WPM line with penalties for error visualization
+        let finalWpmLine = null;
+        if (app && app.errorPenalties > 0 && data.length > 0 && app.finalWpm !== undefined) {
+            // Create a straight horizontal line at the final WPM value
+            const finalWpmValue = Math.max(0, app.finalWpm);
+            finalWpmLine = {
+                label: 'Final WPM (with penalties)',
+                data: Array(labels.length).fill(finalWpmValue),
+                borderColor: '#ef4444', // Red color for penalties
+                borderWidth: 2,
+                borderDash: [5, 5], // Dashed line to distinguish from average
+                pointRadius: 0, // No points for straight line
+                fill: false,
+                order: 2,
+                type: 'line',
+                backgroundColor: 'rgba(239,68,68,0.1)',
+                spanGaps: true,
+                stepped: true
+            };
+        }
+        
         if (wpmChart) {
             wpmChart.destroy();
         }
@@ -290,7 +313,7 @@ function typingApp() {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Avg WPM',
+                        label: 'Average WPM',
                         data: data,
                         borderColor: accent,
                         backgroundColor: accent + '33',
@@ -314,7 +337,9 @@ function typingApp() {
                         order: 1
                     },
                     // Reference line for best WPM
-                    ...(bestWpmLine ? [bestWpmLine] : [])
+                    ...(bestWpmLine ? [bestWpmLine] : []),
+                    // Conditional final WPM line with penalties
+                    ...(finalWpmLine ? [finalWpmLine] : [])
                 ]
             },
             options: {
@@ -388,6 +413,28 @@ function typingApp() {
                 spanGaps: true
             };
         }
+        
+        // Conditional final WPM line with penalties (mirrors main chart)
+        let finalWpmLine = null;
+        if (app && app.errorPenalties > 0 && data.length > 0 && app.finalWpm !== undefined) {
+            // Create a straight horizontal line at the final WPM value
+            const finalWpmValue = Math.max(0, app.finalWpm);
+            finalWpmLine = {
+                label: 'Final WPM (with penalties)',
+                data: Array(labels.length).fill(finalWpmValue),
+                borderColor: '#ef4444', // Red color for penalties
+                borderWidth: 2,
+                borderDash: [5, 5], // Dashed line to distinguish from average
+                pointRadius: 0, // No points for straight line
+                fill: false,
+                order: 2,
+                type: 'line',
+                backgroundColor: 'rgba(239,68,68,0.1)',
+                spanGaps: true,
+                stepped: true
+            };
+        }
+        
         if (wpmChartModal) {
             wpmChartModal.destroy();
         }
@@ -397,7 +444,7 @@ function typingApp() {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Avg WPM',
+                        label: 'Average WPM',
                         data: data,
                         borderColor: accent,
                         backgroundColor: accent + '33',
@@ -419,7 +466,9 @@ function typingApp() {
                         fill: false,
                         order: 1
                     },
-                    ...(bestWpmLine ? [bestWpmLine] : [])
+                    ...(bestWpmLine ? [bestWpmLine] : []),
+                    // Conditional final WPM line with penalties
+                    ...(finalWpmLine ? [finalWpmLine] : [])
                 ]
             },
             options: {
@@ -688,6 +737,15 @@ function typingApp() {
             window.typingAppInstance = this;
             setTimeout(() => updateWpmChart(this.isDarkMode), 100);
             await this.loadBestScore();
+            
+            // Add global Tab key listener for results/blind reveal screens
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Tab' && (this.started || this.showResults || this.showBlindReveal)) {
+                    event.preventDefault();
+                    this.restart();
+                }
+            });
+            
             // Modal chart event binding
             this.$watch('showChartModal', value => {
                 if (value) {
@@ -755,22 +813,28 @@ function typingApp() {
             }
             
             const currentWord = this.words[this.currentWordIndex];
-            const lastCharIndex = this.typedWord.length - 1;
             
-            // Only check the most recently typed character
-            if (lastCharIndex >= 0) {
-                const isCorrect = this.typedWord[lastCharIndex] === currentWord[lastCharIndex];
-                this.wordCharStates[this.currentWordIndex][lastCharIndex] = isCorrect;
-                
-                // Play sound and add penalty only for the incorrect character
-                if (!isCorrect) {
-                    playErrorSound();
-                    this.errorPenalties++;
-                    // Show WPM penalty animation
-                    this.showWpmPenalty = true;
-                    setTimeout(() => {
-                        this.showWpmPenalty = false;
-                    }, 1000);
+            // Character-level accuracy tracks FIRST ATTEMPT at each position
+            // Once a character position has been attempted, its state is locked in
+            // This follows industry standard (Monkeytype/Keybr) behavior
+            for (let charIndex = 0; charIndex < this.typedWord.length; charIndex++) {
+                if (charIndex < currentWord.length) {
+                    // Only record the state if this position hasn't been attempted yet
+                    if (this.wordCharStates[this.currentWordIndex][charIndex] === undefined) {
+                        const isCorrect = this.typedWord[charIndex] === currentWord[charIndex];
+                        this.wordCharStates[this.currentWordIndex][charIndex] = isCorrect;
+                        
+                        // Play sound and add penalty only for incorrect characters
+                        if (!isCorrect) {
+                            playErrorSound();
+                            this.errorPenalties++;
+                            // Show WPM penalty animation
+                            this.showWpmPenalty = true;
+                            setTimeout(() => {
+                                this.showWpmPenalty = false;
+                            }, 1000);
+                        }
+                    }
                 }
             }
 
@@ -779,7 +843,11 @@ function typingApp() {
         },
         
         handleKeydown(event) {
-            if (event.key === ' ') {
+            if (event.key === 'Tab') {
+                event.preventDefault(); // Prevent default tab behavior
+                this.restart();
+                return;
+            } else if (event.key === ' ') {
                 event.preventDefault();
                 if (this.typedWord.length > 0) {  // Only check word if something was typed
                     this.checkWord();
@@ -889,14 +957,53 @@ function typingApp() {
                 }
             }
             
-            // Calculate accuracy
-            const totalWords = this.currentWordIndex;
-            if (totalWords > 0) {
-                const errors = Object.keys(this.wordErrors).length;
-                this.accuracy = Math.round(((totalWords - errors) / totalWords) * 100);
-            } else {
-                this.accuracy = 100;
+            // Calculate character-level accuracy (industry standard)
+            this.accuracy = this.calculateCharacterAccuracy();
+        },
+        
+        calculateCharacterAccuracy() {
+            let totalChars = 0;
+            let correctChars = 0;
+            
+            // Include current word being typed
+            const wordsToCheck = this.currentWordIndex + (this.typedWord.length > 0 ? 1 : 0);
+            
+            for (let wordIndex = 0; wordIndex < wordsToCheck; wordIndex++) {
+                const word = this.words[wordIndex];
+                if (!word) continue;
+                
+                if (wordIndex === this.currentWordIndex) {
+                    // Current word being typed - only count typed characters
+                    for (let charIndex = 0; charIndex < this.typedWord.length && charIndex < word.length; charIndex++) {
+                        totalChars++;
+                        const charState = this.wordCharStates[wordIndex]?.[charIndex];
+                        if (charState === true) {
+                            correctChars++;
+                        }
+                    }
+                } else {
+                    // Completed words - count all characters
+                    for (let charIndex = 0; charIndex < word.length; charIndex++) {
+                        totalChars++;
+                        const charState = this.wordCharStates[wordIndex]?.[charIndex];
+                        if (charState === true) {
+                            correctChars++;
+                        } else if (charState === undefined) {
+                            // If no character state recorded, check if word was correct overall
+                            // This handles edge cases for words completed before character tracking was fully implemented
+                            if (!this.wordErrors[wordIndex]) {
+                                correctChars++;
+                            }
+                        }
+                    }
+                }
             }
+            
+            if (totalChars === 0) {
+                return 100; // No characters typed yet
+            }
+            
+            return Math.round((correctChars / totalChars) * 100);
         },
         
         getWordWpmClass(wordIndex) {
@@ -1278,6 +1385,22 @@ function typingApp() {
             }
         },
         showChartModalHandler,
-        hideChartModalHandler
+        hideChartModalHandler,
+        
+        // Calculate the unpenalized average WPM for display in results
+        // This shows the raw average without error penalties
+        getUnpenalizedAverageWpm() {
+            if (!this.wordStats || this.wordStats.length === 0) {
+                return 0;
+            }
+            
+            const validStats = this.wordStats.filter(stat => stat && typeof stat.wpm === 'number' && !isNaN(stat.wpm));
+            if (validStats.length === 0) {
+                return 0;
+            }
+            
+            const total = validStats.reduce((sum, stat) => sum + stat.wpm, 0);
+            return Math.round(total / validStats.length);
+        }
     };
 }

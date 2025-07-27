@@ -208,6 +208,10 @@
                     <div class="stat-value" x-text="Math.round(finalWpm)"></div>
                     <div class="stat-label">Final WPM</div>
                 </div>
+                <div class="stat" x-show="errorPenalties > 0">
+                    <div class="stat-value" x-text="getUnpenalizedAverageWpm()"></div>
+                    <div class="stat-label">Average WPM</div>
+                </div>
                 <div class="stat">
                     <div class="stat-value" x-text="finalAccuracy + '%' "></div>
                     <div class="stat-label">Final Accuracy</div>
@@ -219,6 +223,12 @@
                 </div>
                 <div class="stat">
                     <button class="icon-btn" @click="resetBestScore()" title="Reset Best Score" style="font-size:1.2rem;">🔄</button>
+                </div>
+            </div>
+            <div class="penalty-explanation" x-show="errorPenalties > 0" x-cloak>
+                <div class="penalty-indicator">
+                    <span class="penalty-icon">⚠️</span>
+                    <span x-text="`${errorPenalties} typing error${errorPenalties === 1 ? '' : 's'} reduced your final WPM`"></span>
                 </div>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2rem;margin-bottom:1rem;">
@@ -241,7 +251,7 @@
         </div>
     </div>
     
-    <div class="version">v2025-07-26.4</div>
+    <div class="version">v2025-07-26.7</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     
