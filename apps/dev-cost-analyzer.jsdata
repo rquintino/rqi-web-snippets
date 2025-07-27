@@ -258,5 +258,68 @@ window.devCostAnalyzerData = [
             "Performance optimization for large datasets"
         ],
         "hours": { "junior": 35, "intermediate": 23, "advanced": 15 }
+    },
+    {
+        "name": "Pomodoro Timer",
+        "file": "pomodoro-timer.html",
+        "purpose": "Complete Pomodoro technique timer with work/break session management",
+        "complexity": 5,
+        "totalLines": 418,
+        "features": [
+            "25-minute work sessions with customizable duration",
+            "5-minute short breaks and 15-minute long breaks",
+            "Visual countdown timer with circular SVG progress ring",
+            "Start/Pause/Reset functionality with session management",
+            "Session type indicator (Work/Break) with automatic transitions",
+            "Sound notification system for session completion",
+            "Session counter tracking with Pomodoro cycle logic",
+            "Settings persistence with localStorage",
+            "Modern minimal UI with dark/light toggle",
+            "Fullscreen toggle and responsive design"
+        ],
+        "dependencies": ["Alpine.js 3.x", "SVG animations", "Web Audio API"],
+        "challenges": [
+            "Circular progress ring SVG animation calculations",
+            "Timer interval management and accuracy",
+            "Session state transitions and logic",
+            "Audio notification implementation",
+            "Settings persistence and validation"
+        ],
+        "hours": { "junior": 25, "intermediate": 16, "advanced": 10 }
+    },
+    {
+        "name": "LinkedIn Carousel Generator",
+        "file": "carrousel-generator.html",
+        "purpose": "Advanced LinkedIn carousel slide creator with images, text callouts, and PDF export",
+        "complexity": 9,
+        "totalLines": 2996,
+        "features": [
+            "Create LinkedIn carousel slides with multiple aspect ratios (1:1, 4:5)",
+            "Drag and drop image upload with clipboard paste support",
+            "Draggable and resizable text callouts with live editing",
+            "Background image positioning and scaling with interact.js",
+            "Slide management: add, delete, duplicate, reorder with smooth transitions",
+            "PDF export with html2canvas and jsPDF integration",
+            "Live PDF preview pane with download functionality",
+            "Profile avatar and information overlay system",
+            "Swipe icon customization with multiple positions",
+            "Auto-save to IndexedDB with localStorage fallback",
+            "Advanced interaction system for drag/resize elements",
+            "Complex viewport management with crop area visualization",
+            "Font size controls and text styling options",
+            "Dark/Light mode with fullscreen support"
+        ],
+        "dependencies": ["Alpine.js 3.x", "html2canvas 1.4.1", "jsPDF 2.5.1", "interact.js 1.10.27", "IndexedDB API"],
+        "challenges": [
+            "Complex Canvas-to-PDF rendering with html2canvas",
+            "Advanced drag/resize interactions with interact.js library",
+            "IndexedDB data persistence with complex nested objects",
+            "Multi-viewport PDF generation with aspect ratio handling",
+            "Real-time element positioning and z-index management",
+            "Image file processing and memory management",
+            "Cross-browser compatibility for advanced canvas operations",
+            "Performance optimization for large image processing"
+        ],
+        "hours": { "junior": 55, "intermediate": 36, "advanced": 24 }
     }
 ];

@@ -64,7 +64,7 @@ test.describe('Development Cost Analyzer', () => {
     
     // Check initial app cards are displayed
     const appCards = page.locator('.app-card');
-    await expect(appCards).toHaveCount(10);
+    await expect(appCards).toHaveCount(12);
     
     // Test complexity filter
     await page.selectOption('select[x-model="filterComplexity"]', 'high');
@@ -208,7 +208,7 @@ test.describe('Development Cost Analyzer', () => {
     await expect(statCards).toHaveCount(4);
     
     // Check total apps stat
-    await expect(page.locator('.stat-card').first()).toContainText('10');
+    await expect(page.locator('.stat-card').first()).toContainText('12');
     
     // Check lines of code stat shows numbers
     const locStat = page.locator('.stat-card').nth(1);
@@ -273,7 +273,7 @@ test.describe('Development Cost Analyzer', () => {
     
     // Check complexity badges are present
     const complexityBadges = page.locator('.complexity-badge');
-    await expect(complexityBadges).toHaveCount(10);
+    await expect(complexityBadges).toHaveCount(12);
     
     // Check badge format (should contain "/10")
     await expect(complexityBadges.first()).toContainText('/10');
@@ -330,7 +330,7 @@ test.describe('Development Cost Analyzer', () => {
     
     // Check launch buttons are present for all apps
     const launchButtons = page.locator('.launch-btn');
-    await expect(launchButtons).toHaveCount(10);
+    await expect(launchButtons).toHaveCount(12);
     
     // Check launch button has correct attributes
     const firstLaunchBtn = launchButtons.first();

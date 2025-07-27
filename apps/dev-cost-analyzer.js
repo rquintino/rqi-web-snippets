@@ -326,28 +326,31 @@ function devCostAnalyzer() {
             }
             
             try {
+                // Sort apps by mid-level development time (ascending)
+                const sortedApps = [...this.appData].sort((a, b) => a.hours.intermediate - b.hours.intermediate);
+                
                 this.charts.timeDistribution = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: this.appData.map(app => app.name),
+                    labels: sortedApps.map(app => app.name),
                     datasets: [
                         {
                             label: 'Junior Developer',
-                            data: this.appData.map(app => app.hours.junior),
+                            data: sortedApps.map(app => app.hours.junior),
                             backgroundColor: '#ff6b6b',
                             borderColor: '#ff6b6b',
                             borderWidth: 1
                         },
                         {
                             label: 'Mid-level Developer',
-                            data: this.appData.map(app => app.hours.intermediate),
+                            data: sortedApps.map(app => app.hours.intermediate),
                             backgroundColor: '#4ecdc4',
                             borderColor: '#4ecdc4',
                             borderWidth: 1
                         },
                         {
                             label: 'Senior Developer',
-                            data: this.appData.map(app => app.hours.advanced),
+                            data: sortedApps.map(app => app.hours.advanced),
                             backgroundColor: '#45b7d1',
                             borderColor: '#45b7d1',
                             borderWidth: 1
