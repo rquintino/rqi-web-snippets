@@ -8,7 +8,8 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "screenshots": "node scripts/generate-screenshots.js",
-    "screenshots:clean": "del /q apps\\*.jpeg 2>nul || true"
+    "screenshots:clean": "del /q apps\\*.jpeg 2>nul || true",
+    "update-deploy-info": "node scripts/update-deployment-info.js"
   },
   "keywords": [],
   "author": "Rui Quintino",

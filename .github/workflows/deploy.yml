@@ -43,6 +43,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Generate deployment info
+      run: node scripts/update-deployment-info.js
+      env:
+        TZ: UTC
+    
     - name: Setup Pages
       uses: actions/configure-pages@v4
       

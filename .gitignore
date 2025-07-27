@@ -57,5 +57,10 @@ coverage/
 .claude/
 claude-settings.json
 
-# Specs folder
-specs/
+
+
+# Demo videos folder
+videos/
+
+# Generated deployment info (regenerated on deploy)
+apps/shared/deployment-info.js
