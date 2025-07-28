@@ -236,6 +236,12 @@ h1 {font-size:1.25rem;font-weight:600}
   z-index: 1000;
 }
 
+/* Hide blue border in preview mode and PDF export */
+.with-preview .viewport::after,
+.hidden-pdf-container .viewport::after {
+  display: none;
+}
+
 .viewport.square {
   width: min(70vh, 70vw, 600px);
   height: min(70vh, 70vw, 600px);
