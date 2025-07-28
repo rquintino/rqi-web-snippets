@@ -8,6 +8,7 @@ This system automatically displays deployment information on the main index page
 - **Commit information** showing the latest changes
 - **Environment detection** (Local vs GitHub Pages)
 - **Unobtrusive display** in bottom-left corner with hover details
+- **Cache-busting version update** in index.html to prevent browser caching issues
 
 ## Files
 
@@ -27,7 +28,8 @@ This system automatically displays deployment information on the main index page
    - Git commit hash and message
    - Environment info (GitHub Pages vs Local)
 3. **Generates file**: JavaScript module with deployment info
-4. **Index page displays**: Formatted deployment date and details
+4. **Updates cache-busting**: Modifies index.html to use timestamp-based version for deployment-info.js
+5. **Index page displays**: Formatted deployment date and details with fresh content (no browser caching)
 
 ## Manual Usage
 

@@ -71,6 +71,31 @@ window.deploymentInfo = ${JSON.stringify(deploymentInfo, null, 2)};
 
     fs.writeFileSync(jsPath, jsContent);
 
+    // Update cache-busting version in index.html
+    const indexPath = path.join(__dirname, '..', 'index.html');
+    
+    try {
+        if (fs.existsSync(indexPath)) {
+            let indexContent = fs.readFileSync(indexPath, 'utf8');
+            
+            // Create cache-busting version from timestamp (removing non-alphanumeric chars)
+            const cacheVersion = deploymentInfo.timestamp.replace(/[^a-zA-Z0-9]/g, '');
+            
+            // Update deployment-info.js version
+            const updatedContent = indexContent.replace(
+                /deployment-info\.js\?v=[^"']*/g,
+                `deployment-info.js?v=${cacheVersion}`
+            );
+            
+            if (updatedContent !== indexContent) {
+                fs.writeFileSync(indexPath, updatedContent);
+                console.log('🔄 Updated cache-busting version in index.html:', cacheVersion);
+            }
+        }
+    } catch (error) {
+        console.warn('⚠️  Warning: Could not update index.html cache-busting version:', error.message);
+    }
+
     console.log('✅ Deployment info updated successfully');
     console.log('📅 Deploy Date:', deploymentInfo.deployDate);
     console.log('⏰ Deploy Time:', deploymentInfo.deployTime);
