@@ -159,6 +159,11 @@ function typingApp() {
         }
     }
     
+    // Expose IndexedDB functions to window for testing
+    window.saveToIndexedDB = saveToIndexedDB;
+    window.getFromIndexedDB = getFromIndexedDB;
+    window.removeFromIndexedDB = removeFromIndexedDB;
+    
     // Create error sound using Web Audio API
     function playErrorSound() {
         if (!audioContext) {
@@ -989,9 +994,14 @@ function typingApp() {
             });
         },
         
+        getBestScoreStorageKey() {
+            const baseKey = `typing-best-wpm-${this.selectedDictionary}`;
+            return this.blindModeSelected ? `${baseKey}-blind` : baseKey;
+        },
+        
         async loadBestScore() {
             try {
-                const storageKey = `typing-best-wpm-${this.selectedDictionary}`;
+                const storageKey = this.getBestScoreStorageKey();
                 const stored = await getFromIndexedDB(storageKey);
                 this.bestScore = stored ? parseFloat(stored) : null;
                 if (isNaN(this.bestScore)) this.bestScore = null;
@@ -1003,7 +1013,7 @@ function typingApp() {
         
         async saveBestScore(newScore) {
             try {
-                const storageKey = `typing-best-wpm-${this.selectedDictionary}`;
+                const storageKey = this.getBestScoreStorageKey();
                 await saveToIndexedDB(storageKey, newScore.toString());
                 this.bestScore = newScore;
             } catch (error) {
@@ -1528,6 +1538,9 @@ function typingApp() {
                 console.warn('Failed to save blind mode setting:', error);
             }
             
+            // Load the correct best score for the current mode
+            await this.loadBestScore();
+            
             // Return focus to the input field
             this.$nextTick(() => {
                 this.$refs.input.focus();
@@ -1581,7 +1594,7 @@ function typingApp() {
         },
         async resetBestScore() {
             try {
-                const storageKey = `typing-best-wpm-${this.selectedDictionary}`;
+                const storageKey = this.getBestScoreStorageKey();
                 await removeFromIndexedDB(storageKey);
                 this.bestScore = null;
             } catch (error) {
