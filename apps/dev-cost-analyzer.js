@@ -142,9 +142,9 @@ function devCostAnalyzer() {
             };
             
             this.totalHours = {
-                junior: this.appData.reduce((sum, app) => sum + app.hours.junior, 0),
-                intermediate: this.appData.reduce((sum, app) => sum + app.hours.intermediate, 0),
-                advanced: this.appData.reduce((sum, app) => sum + app.hours.advanced, 0)
+                junior: this.appData.reduce((sum, app) => sum + this.getAppHours(app, 'junior'), 0),
+                intermediate: this.appData.reduce((sum, app) => sum + this.getAppHours(app, 'intermediate'), 0),
+                advanced: this.appData.reduce((sum, app) => sum + this.getAppHours(app, 'advanced'), 0)
             };
         },
         
@@ -202,6 +202,16 @@ function devCostAnalyzer() {
             
             // Proportionally adjust cost based on line count
             return Math.round(baseCost * (totalLines / baseLines));
+        },
+        
+        // Dynamic hours calculation based on includeTests filter
+        getAppHours(app, level) {
+            const totalLines = this.includeTests ? (app.totalLines + (app.testLines || 0)) : app.totalLines;
+            const baseHours = app.hours[level];
+            const baseLines = app.totalLines;
+            
+            // Proportionally adjust hours based on line count
+            return Math.round(baseHours * (totalLines / baseLines));
         },
         
         // Filtering and Sorting
@@ -429,11 +439,11 @@ function devCostAnalyzer() {
                 this.includeTests ? (app.totalLines + (app.testLines || 0)) : app.totalLines,
                 app.dependencies.length,
                 app.features.length,
-                app.hours.junior,
+                this.getAppHours(app, 'junior'),
                 this.getAppCost(app, 'junior'),
-                app.hours.intermediate,
+                this.getAppHours(app, 'intermediate'),
                 this.getAppCost(app, 'intermediate'),
-                app.hours.advanced,
+                this.getAppHours(app, 'advanced'),
                 this.getAppCost(app, 'advanced')
             ]);
             

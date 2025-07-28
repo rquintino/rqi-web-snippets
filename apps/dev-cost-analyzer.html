@@ -187,20 +187,23 @@
                                 <span class="label">Features:</span>
                                 <span class="value" x-text="app.features.length"></span>
                             </div>
+                            <div class="metric">
+                                <!-- Empty placeholder for 2x2 grid -->
+                            </div>
                         </div>
                         
                         <div class="development-costs">
                             <div class="cost-row">
                                 <span>Junior:</span>
-                                <span x-text="'$' + getAppCost(app, 'junior').toLocaleString()"></span>
+                                <span x-text="'$' + getAppCost(app, 'junior').toLocaleString() + ' (' + getAppHours(app, 'junior') + 'h)'"></span>
                             </div>
                             <div class="cost-row">
                                 <span>Mid-level:</span>
-                                <span x-text="'$' + getAppCost(app, 'intermediate').toLocaleString()"></span>
+                                <span x-text="'$' + getAppCost(app, 'intermediate').toLocaleString() + ' (' + getAppHours(app, 'intermediate') + 'h)'"></span>
                             </div>
                             <div class="cost-row">
                                 <span>Senior:</span>
-                                <span x-text="'$' + getAppCost(app, 'advanced').toLocaleString()"></span>
+                                <span x-text="'$' + getAppCost(app, 'advanced').toLocaleString() + ' (' + getAppHours(app, 'advanced') + 'h)'"></span>
                             </div>
                         </div>
                         
@@ -351,9 +354,9 @@
         </div>
     </div>
 
-    <div class="version">v2025-07-28.8</div>
+    <div class="version">v2025-07-28.11</div>
     <script src="dev-cost-analyzer.jsdata?v=2025-07-28.3"></script>
-    <script src="dev-cost-analyzer.js?v=2025-07-28.6"></script>
+    <script src="dev-cost-analyzer.js?v=2025-07-28.11"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>
