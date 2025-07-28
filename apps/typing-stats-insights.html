@@ -218,7 +218,7 @@
                             <div class="replay-display">
                                 <h4>Typing Replay</h4>
                                 <div class="replay-text-container">
-                                    <div class="replay-text" x-html="replayTextDisplay"></div>
+                                    <div class="replay-text" x-text="replayTextDisplay"></div>
                                     <div class="replay-cursor" x-show="isReplaying" :style="`left: ${replayCursorX}px`"></div>
                                 </div>
                                 <div class="replay-stats">
@@ -295,7 +295,7 @@
                                 <span class="rec-icon" x-text="rec.icon"></span>
                                 <span class="rec-title" x-text="rec.title"></span>
                             </div>
-                            <div class="rec-content" x-html="rec.content"></div>
+                            <div class="rec-content" x-text="rec.content"></div>
                         </div>
                     </template>
                 </div>
@@ -314,7 +314,7 @@
     <div class="session-summary" x-show="showSummary" x-transition>
         <div class="summary-content">
             <h3>Session Summary</h3>
-            <div x-html="summaryContent"></div>
+            <div x-text="summaryContent"></div>
             <button @click="showSummary = false" class="btn">Close</button>
         </div>
     </div>

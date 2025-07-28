@@ -10,7 +10,15 @@
  * - renderCharts() - Create interactive visualizations using Chart.js
  * - exportCSV() / exportJSON() - Export analysis data in various formats
  * - filterApps() / sortApps() - Interactive filtering and sorting capabilities
+ * - sanitizeHTML() - Sanitize HTML content to prevent XSS attacks
  */
+
+// HTML sanitization function to prevent XSS
+function sanitizeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 
 function devCostAnalyzer() {
     return {
@@ -500,11 +508,12 @@ function devCostAnalyzer() {
             `;
             
             const printWindow = window.open('', '_blank');
+            const sanitizedContent = sanitizeHTML(reportContent);
             printWindow.document.write(`
                 <html>
                     <head><title>Development Cost Analysis</title></head>
                     <body style="font-family: Arial, sans-serif; margin: 20px;">
-                        ${reportContent}
+                        ${sanitizedContent}
                     </body>
                 </html>
             `);
