@@ -20,6 +20,7 @@ function devCostAnalyzer() {
         sortBy: 'complexity',
         filterComplexity: 'all',
         showAssumptions: false,
+        includeTests: true,
         
         // Cost Configuration
         rates: {
@@ -135,9 +136,9 @@ function devCostAnalyzer() {
         
         updateTotalCosts() {
             this.totalCosts = {
-                junior: this.appData.reduce((sum, app) => sum + app.costs.junior, 0),
-                intermediate: this.appData.reduce((sum, app) => sum + app.costs.intermediate, 0),
-                advanced: this.appData.reduce((sum, app) => sum + app.costs.advanced, 0)
+                junior: this.appData.reduce((sum, app) => sum + this.getAppCost(app, 'junior'), 0),
+                intermediate: this.appData.reduce((sum, app) => sum + this.getAppCost(app, 'intermediate'), 0),
+                advanced: this.appData.reduce((sum, app) => sum + this.getAppCost(app, 'advanced'), 0)
             };
             
             this.totalHours = {
@@ -150,6 +151,14 @@ function devCostAnalyzer() {
         // Computed Properties
         get totalLinesOfCode() {
             return this.appData.reduce((sum, app) => sum + app.totalLines, 0);
+        },
+        
+        get totalTestLinesOfCode() {
+            return this.appData.reduce((sum, app) => sum + (app.testLines || 0), 0);
+        },
+        
+        get totalLinesIncludingTests() {
+            return this.totalLinesOfCode + this.totalTestLinesOfCode;
         },
         
         get averageComplexity() {
@@ -172,11 +181,27 @@ function devCostAnalyzer() {
         },
         
         get minCost() {
-            return Math.min(...this.appData.map(app => app.costs.intermediate));
+            return Math.min(...this.appData.map(app => this.getAppCost(app, 'intermediate')));
         },
         
         get maxCost() {
-            return Math.max(...this.appData.map(app => app.costs.intermediate));
+            return Math.max(...this.appData.map(app => this.getAppCost(app, 'intermediate')));
+        },
+        
+        // Test Filter Toggle
+        toggleTestsFilter() {
+            this.updateTotalCosts();
+            this.renderCharts();
+        },
+        
+        // Dynamic cost calculation based on includeTests filter
+        getAppCost(app, level) {
+            const totalLines = this.includeTests ? (app.totalLines + (app.testLines || 0)) : app.totalLines;
+            const baseCost = app.costs[level];
+            const baseLines = app.totalLines;
+            
+            // Proportionally adjust cost based on line count
+            return Math.round(baseCost * (totalLines / baseLines));
         },
         
         // Filtering and Sorting
@@ -250,7 +275,7 @@ function devCostAnalyzer() {
             
             const data = this.appData.map(app => ({
                 x: app.complexity,
-                y: app.costs.intermediate,
+                y: this.getAppCost(app, 'intermediate'),
                 name: app.name
             }));
             
@@ -401,15 +426,15 @@ function devCostAnalyzer() {
             const rows = this.appData.map(app => [
                 app.name,
                 app.complexity,
-                app.totalLines,
+                this.includeTests ? (app.totalLines + (app.testLines || 0)) : app.totalLines,
                 app.dependencies.length,
                 app.features.length,
                 app.hours.junior,
-                app.costs.junior,
+                this.getAppCost(app, 'junior'),
                 app.hours.intermediate,
-                app.costs.intermediate,
+                this.getAppCost(app, 'intermediate'),
                 app.hours.advanced,
-                app.costs.advanced
+                this.getAppCost(app, 'advanced')
             ]);
             
             const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -424,9 +449,10 @@ function devCostAnalyzer() {
                 total_hours: this.totalHours,
                 summary: {
                     total_apps: this.appData.length,
-                    total_lines_of_code: this.totalLinesOfCode,
+                    total_lines_of_code: this.includeTests ? this.totalLinesIncludingTests : this.totalLinesOfCode,
                     average_complexity: this.averageComplexity,
-                    total_dependencies: this.totalDependencies
+                    total_dependencies: this.totalDependencies,
+                    includes_test_code: this.includeTests
                 },
                 applications: this.appData
             };
@@ -444,7 +470,7 @@ function devCostAnalyzer() {
                 <h2>Summary</h2>
                 <ul>
                     <li>Total Applications: ${this.appData.length}</li>
-                    <li>Total Lines of Code: ${this.totalLinesOfCode.toLocaleString()}</li>
+                    <li>Total Lines of Code: ${(this.includeTests ? this.totalLinesIncludingTests : this.totalLinesOfCode).toLocaleString()}</li>
                     <li>Average Complexity: ${this.averageComplexity.toFixed(1)}/10</li>
                     <li>Total Development Cost (Mid-level): $${this.totalCosts.intermediate.toLocaleString()}</li>
                 </ul>
@@ -455,9 +481,9 @@ function devCostAnalyzer() {
                         <h3>${app.name} (Complexity: ${app.complexity}/10)</h3>
                         <p>${app.purpose}</p>
                         <p><strong>Development Costs:</strong> 
-                           Junior: $${app.costs.junior.toLocaleString()} | 
-                           Mid-level: $${app.costs.intermediate.toLocaleString()} | 
-                           Senior: $${app.costs.advanced.toLocaleString()}
+                           Junior: $${this.getAppCost(app, 'junior').toLocaleString()} | 
+                           Mid-level: $${this.getAppCost(app, 'intermediate').toLocaleString()} | 
+                           Senior: $${this.getAppCost(app, 'advanced').toLocaleString()}
                         </p>
                     </div>
                 `).join('')}

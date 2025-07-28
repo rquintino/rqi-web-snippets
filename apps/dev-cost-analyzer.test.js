@@ -345,4 +345,147 @@ test.describe('Development Cost Analyzer', () => {
     // Check launch button styling and icon
     await expect(firstLaunchBtn).toContainText('🌐');
   });
+
+  test('test code filter toggle functionality', async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'dev-cost-analyzer.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(TIMEOUTS.CHART_RENDER);
+    
+    // Check filter is in correct position (next to Cost Calculator title)
+    const panelHeader = page.locator('.panel-header');
+    await expect(panelHeader).toBeVisible();
+    
+    const testFilter = panelHeader.locator('.test-filter');
+    await expect(testFilter).toBeVisible();
+    
+    const toggleLabel = testFilter.locator('.toggle-label');
+    await expect(toggleLabel).toContainText('Include Test Code');
+    
+    // Check filter is initially checked (default state)
+    const checkbox = testFilter.locator('input[type="checkbox"]');
+    await expect(checkbox).toBeChecked();
+    
+    // Get initial LOC value (should include tests)
+    const locValue = page.locator('.stat-card').filter({ hasText: 'Lines of Code' }).locator('.stat-value');
+    const initialLoc = await locValue.textContent();
+    
+    // Check subtitle shows breakdown
+    const locSubtitle = page.locator('.stat-sublabel').first();
+    await expect(locSubtitle).toContainText('production +');
+    await expect(locSubtitle).toContainText('tests');
+    
+    // Toggle filter OFF (exclude tests)
+    await toggleLabel.click();
+    await page.waitForTimeout(500); // Wait for calculations to update
+    
+    // Check filter is now unchecked
+    await expect(checkbox).not.toBeChecked();
+    
+    // Get new LOC value (should be lower without tests)
+    const newLoc = await locValue.textContent();
+    expect(parseInt(newLoc.replace(/,/g, ''))).toBeLessThan(parseInt(initialLoc.replace(/,/g, '')));
+    
+    // Check subtitle shows production only (should switch to the other subtitle)
+    const productionOnlySubtitle = page.locator('.stat-sublabel').filter({ hasText: 'Production code only' });
+    await expect(productionOnlySubtitle).toBeVisible();
+    
+    // Check for no errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
+  });
+
+  test('test filter affects individual app costs', async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'dev-cost-analyzer.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(TIMEOUTS.CHART_RENDER);
+    
+    // Get first app card
+    const firstAppCard = page.locator('.app-card').first();
+    await expect(firstAppCard).toBeVisible();
+    
+    // Get initial cost values (with tests included)
+    const juniorCost = firstAppCard.locator('.cost-row').filter({ hasText: 'Junior:' }).locator('span').nth(1);
+    const initialJuniorCost = await juniorCost.textContent();
+    
+    const seniorCost = firstAppCard.locator('.cost-row').filter({ hasText: 'Senior:' }).locator('span').nth(1);
+    const initialSeniorCost = await seniorCost.textContent();
+    
+    // Get initial LOC for this app
+    const appLoc = firstAppCard.locator('.metric').filter({ hasText: 'Lines of Code:' }).locator('.value');
+    const initialAppLoc = await appLoc.textContent();
+    
+    // Toggle filter OFF (exclude tests)
+    const testFilter = page.locator('.test-filter');
+    await testFilter.locator('.toggle-label').click();
+    await page.waitForTimeout(500);
+    
+    // Check app costs decreased
+    const newJuniorCost = await juniorCost.textContent();
+    const newSeniorCost = await seniorCost.textContent();
+    const newAppLoc = await appLoc.textContent();
+    
+    expect(parseInt(newJuniorCost.replace(/[$,]/g, ''))).toBeLessThan(parseInt(initialJuniorCost.replace(/[$,]/g, '')));
+    expect(parseInt(newSeniorCost.replace(/[$,]/g, ''))).toBeLessThan(parseInt(initialSeniorCost.replace(/[$,]/g, '')));
+    expect(parseInt(newAppLoc.replace(/,/g, ''))).toBeLessThan(parseInt(initialAppLoc.replace(/,/g, '')));
+    
+    // Check for no errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
+  });
+
+  test('test filter affects total cost summary', async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'dev-cost-analyzer.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(TIMEOUTS.CHART_RENDER);
+    
+    // Get initial total costs (with tests included)
+    const costCards = page.locator('.cost-card');
+    const juniorTotal = costCards.filter({ hasText: 'Junior Developer' }).locator('.cost-value');
+    const seniorTotal = costCards.filter({ hasText: 'Senior Developer' }).locator('.cost-value');
+    
+    const initialJuniorTotal = await juniorTotal.textContent();
+    const initialSeniorTotal = await seniorTotal.textContent();
+    
+    // Toggle filter OFF (exclude tests)
+    const testFilter = page.locator('.test-filter');
+    await testFilter.locator('.toggle-label').click();
+    await page.waitForTimeout(500);
+    
+    // Check total costs decreased
+    const newJuniorTotal = await juniorTotal.textContent();
+    const newSeniorTotal = await seniorTotal.textContent();
+    
+    expect(parseInt(newJuniorTotal.replace(/[$,]/g, ''))).toBeLessThan(parseInt(initialJuniorTotal.replace(/[$,]/g, '')));
+    expect(parseInt(newSeniorTotal.replace(/[$,]/g, ''))).toBeLessThan(parseInt(initialSeniorTotal.replace(/[$,]/g, '')));
+    
+    // Check for no errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
+  });
+
+  test('test filter affects charts', async ({ page }) => {
+    await page.goto(`file://${path.resolve(__dirname, 'dev-cost-analyzer.html')}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(TIMEOUTS.CHART_RENDER);
+    
+    // Wait for charts to be ready
+    await expect(page.locator('#complexityCostChart')).toBeVisible();
+    
+    // Toggle filter OFF (should trigger chart re-render)
+    const testFilter = page.locator('.test-filter');
+    await testFilter.locator('.toggle-label').click();
+    await page.waitForTimeout(TIMEOUTS.CHART_RENDER);
+    
+    // Charts should still be visible after filter change
+    await expect(page.locator('#complexityCostChart')).toBeVisible();
+    await expect(page.locator('#timeDistributionChart')).toBeVisible();
+    
+    // Toggle back ON
+    await testFilter.locator('.toggle-label').click();
+    await page.waitForTimeout(TIMEOUTS.CHART_RENDER);
+    
+    // Charts should still be visible
+    await expect(page.locator('#complexityCostChart')).toBeVisible();
+    await expect(page.locator('#timeDistributionChart')).toBeVisible();
+    
+    // Check for no errors
+    expectNoErrors(errorListeners.errors, errorListeners.pageErrors, errorListeners.networkErrors);
+  });
 });

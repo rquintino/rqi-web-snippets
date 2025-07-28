@@ -6,7 +6,8 @@ window.devCostAnalyzerData = [
         "file": "typing-stats.html",
         "purpose": "Real-time typing analytics with deep behavioral insights",
         "complexity": 9,
-        "totalLines": 1255,
+        "totalLines": 1045,
+        "testLines": 236,
         "features": [
             "Real-time typing metrics (WPM, accuracy, error rate)",
             "Digraph analytics (letter transition analysis)",
@@ -32,7 +33,8 @@ window.devCostAnalyzerData = [
         "file": "typing-stats-insights.html",
         "purpose": "Advanced behavioral analysis dashboard for typing data",
         "complexity": 10,
-        "totalLines": 2128,
+        "totalLines": 1873,
+        "testLines": 223,
         "features": [
             "JSON log file batch processing",
             "Multiple chart types (Dygraphs, Chart.js)",
@@ -58,7 +60,8 @@ window.devCostAnalyzerData = [
         "file": "typing-speed-test.html",
         "purpose": "Modern typing speed test with real-time performance visualization",
         "complexity": 8,
-        "totalLines": 1876,
+        "totalLines": 3559,
+        "testLines": 2330,
         "features": [
             "Real-time WPM calculation per word",
             "Word-by-word performance visualization",
@@ -84,7 +87,8 @@ window.devCostAnalyzerData = [
         "file": "how-does-genai-learn.html",
         "purpose": "Interactive visualization of GenAI learning through masking and prediction",
         "complexity": 7,
-        "totalLines": 1151,
+        "totalLines": 1164,
+        "testLines": 307,
         "features": [
             "Sliding window text masking demonstration",
             "Real-time prediction simulation",
@@ -109,7 +113,8 @@ window.devCostAnalyzerData = [
         "file": "image-mask.html",
         "purpose": "Privacy-focused image masking tool with multiple effects",
         "complexity": 7,
-        "totalLines": 877,
+        "totalLines": 726,
+        "testLines": 436,
         "features": [
             "Canvas-based image editing",
             "Multiple masking effects (blur, pixelate, blackout, noise)",
@@ -134,7 +139,8 @@ window.devCostAnalyzerData = [
         "file": "markdown-viewer.html",
         "purpose": "Three-pane markdown editor with TOC and live preview",
         "complexity": 6,
-        "totalLines": 654,
+        "totalLines": 498,
+        "testLines": 158,
         "features": [
             "Three-pane layout (Input, TOC, Preview)",
             "Collapsible input pane",
@@ -159,7 +165,8 @@ window.devCostAnalyzerData = [
         "file": "foundation-model-training.html",
         "purpose": "Visualization of the multi-billion dollar AI training process",
         "complexity": 7,
-        "totalLines": 724,
+        "totalLines": 398,
+        "testLines": 100,
         "features": [
             "3-step training pipeline visualization",
             "Dynamic GPU cluster scaling animation",
@@ -184,7 +191,8 @@ window.devCostAnalyzerData = [
         "file": "whats-new-with-genai.html",
         "purpose": "Interactive comparison between Traditional AI and Generative AI",
         "complexity": 4,
-        "totalLines": 685,
+        "totalLines": 473,
+        "testLines": 103,
         "features": [
             "Side-by-side AI comparison visualization",
             "Network background animations",
@@ -208,7 +216,8 @@ window.devCostAnalyzerData = [
         "file": "how-llms-work.html",
         "purpose": "Interactive visualization of LLM input processing and output generation",
         "complexity": 3,
-        "totalLines": 703,
+        "totalLines": 527,
+        "testLines": 170,
         "features": [
             "Three-section flow visualization",
             "Animated network connections",
@@ -232,7 +241,8 @@ window.devCostAnalyzerData = [
         "file": "dev-cost-analyzer.html",
         "purpose": "Comprehensive analysis dashboard for all web applications in repository with cost estimation",
         "complexity": 8,
-        "totalLines": 862,
+        "totalLines": 1664,
+        "testLines": 347,
         "features": [
             "Cost estimation calculator with multiple developer skill levels",
             "Interactive complexity scoring and breakdown visualization",
@@ -265,6 +275,7 @@ window.devCostAnalyzerData = [
         "purpose": "Complete Pomodoro technique timer with work/break session management",
         "complexity": 5,
         "totalLines": 418,
+        "testLines": 244,
         "features": [
             "25-minute work sessions with customizable duration",
             "5-minute short breaks and 15-minute long breaks",
@@ -292,7 +303,8 @@ window.devCostAnalyzerData = [
         "file": "carrousel-generator.html",
         "purpose": "Advanced LinkedIn carousel slide creator with images, text callouts, and PDF export",
         "complexity": 9,
-        "totalLines": 2996,
+        "totalLines": 3002,
+        "testLines": 2501,
         "features": [
             "Create LinkedIn carousel slides with multiple aspect ratios (1:1, 4:5)",
             "Drag and drop image upload with clipboard paste support",

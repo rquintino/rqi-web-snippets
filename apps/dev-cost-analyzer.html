@@ -44,7 +44,16 @@
     <div class="main-container">
         <!-- Cost Calculator Panel -->
         <div class="calculator-panel">
-            <h2>💰 Cost Calculator</h2>
+            <div class="panel-header">
+                <h2>💰 Cost Calculator</h2>
+                <div class="test-filter">
+                    <label class="toggle-label">
+                        <input type="checkbox" x-model="includeTests" @change="toggleTestsFilter()" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-text">Include Test Code</span>
+                    </label>
+                </div>
+            </div>
             <div class="disclaimer">
                 <span class="disclaimer-text">📊 Estimates generated with Claude Sonnet</span>
                 <button class="info-btn" @click="showAssumptions = !showAssumptions" title="View calculation assumptions">ℹ️</button>
@@ -96,8 +105,15 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">📝</div>
-                    <div class="stat-value" x-text="totalLinesOfCode.toLocaleString()"></div>
+                    <div class="stat-value" x-text="(includeTests ? totalLinesIncludingTests : totalLinesOfCode).toLocaleString()"></div>
                     <div class="stat-label">Lines of Code</div>
+                    <div class="stat-sublabel" x-show="includeTests">
+                        <span x-text="totalLinesOfCode.toLocaleString()"></span> production + 
+                        <span x-text="totalTestLinesOfCode.toLocaleString()"></span> tests
+                    </div>
+                    <div class="stat-sublabel" x-show="!includeTests">
+                        Production code only
+                    </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">⚡</div>
@@ -161,7 +177,7 @@
                         <div class="app-metrics">
                             <div class="metric">
                                 <span class="label">Lines of Code:</span>
-                                <span class="value" x-text="app.totalLines.toLocaleString()"></span>
+                                <span class="value" x-text="(includeTests ? (app.totalLines + (app.testLines || 0)) : app.totalLines).toLocaleString()"></span>
                             </div>
                             <div class="metric">
                                 <span class="label">Dependencies:</span>
@@ -176,15 +192,15 @@
                         <div class="development-costs">
                             <div class="cost-row">
                                 <span>Junior:</span>
-                                <span x-text="'$' + app.costs.junior.toLocaleString()"></span>
+                                <span x-text="'$' + getAppCost(app, 'junior').toLocaleString()"></span>
                             </div>
                             <div class="cost-row">
                                 <span>Mid-level:</span>
-                                <span x-text="'$' + app.costs.intermediate.toLocaleString()"></span>
+                                <span x-text="'$' + getAppCost(app, 'intermediate').toLocaleString()"></span>
                             </div>
                             <div class="cost-row">
                                 <span>Senior:</span>
-                                <span x-text="'$' + app.costs.advanced.toLocaleString()"></span>
+                                <span x-text="'$' + getAppCost(app, 'advanced').toLocaleString()"></span>
                             </div>
                         </div>
                         
@@ -335,9 +351,9 @@
         </div>
     </div>
 
-    <div class="version">v2025-07-20.6</div>
-    <script src="dev-cost-analyzer.jsdata?v=2025-07-27.2"></script>
-    <script src="dev-cost-analyzer.js?v=2025-07-27.3"></script>
+    <div class="version">v2025-07-28.8</div>
+    <script src="dev-cost-analyzer.jsdata?v=2025-07-28.3"></script>
+    <script src="dev-cost-analyzer.js?v=2025-07-28.6"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>
