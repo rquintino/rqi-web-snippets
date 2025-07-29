@@ -285,76 +285,151 @@ function typingApp() {
 
     // === STATISTICAL CALCULATION METHODS ===
     
+    // Statistical constants for sigma band calculations
+    const SIGMA_STATS_CONFIG = {
+        MIN_SAMPLE_SIZE: 10,           // Minimum words needed for reliable statistics
+        SIGMA_MULTIPLIER: 3,           // Number of standard deviations for bounds
+        MIN_SD_PERCENT: 0.05,          // Minimum SD as percentage of mean (5%)
+        MIN_BAND_WIDTH_PERCENT: 0.20   // Minimum band width as percentage of mean (20%)
+    };
+
+    /**
+     * Returns empty statistics object when insufficient data is available
+     */
+    function getEmptyStatistics() {
+        return {
+            mean: 0,
+            standardDeviation: 0,
+            upperBound: 0,
+            lowerBound: 0,
+            outliers: {
+                upper: [],
+                lower: []
+            }
+        };
+    }
+
+    /**
+     * Filters and validates word statistics for mathematical calculations
+     * @param {Object} app - The typing app instance
+     * @returns {Array} Array of valid word statistics
+     */
+    function getValidWordStats(app) {
+        if (!app || !app.wordStats) return [];
+        
+        return app.wordStats.filter(stat => 
+            stat && 
+            typeof stat.wpm === 'number' && 
+            !isNaN(stat.wpm) && 
+            isFinite(stat.wpm)
+        );
+    }
+
+    /**
+     * Calculates the original statistical bounds used for outlier detection
+     * (separate from display bounds which may have safeguards applied)
+     * @param {Object} app - The typing app instance
+     * @returns {Object} Original statistical bounds
+     */
+    function calculateOriginalStatisticalBounds(app) {
+        const validStats = getValidWordStats(app);
+        
+        if (validStats.length < SIGMA_STATS_CONFIG.MIN_SAMPLE_SIZE) {
+            return { upperBound: 0, lowerBound: 0, mean: 0, standardDeviation: 0 };
+        }
+        
+        const rawWpms = validStats.map(stat => stat.wpm);
+        const rawMean = rawWpms.reduce((sum, wpm) => sum + wpm, 0) / rawWpms.length;
+        const variance = rawWpms.reduce((sum, wpm) => Math.pow(wpm - rawMean, 2), 0) / rawWpms.length;
+        const standardDeviation = Math.sqrt(variance);
+        const upperBound = rawMean + (SIGMA_STATS_CONFIG.SIGMA_MULTIPLIER * standardDeviation);
+        const lowerBound = Math.max(0, rawMean - (SIGMA_STATS_CONFIG.SIGMA_MULTIPLIER * standardDeviation));
+        
+        return { upperBound, lowerBound, mean: rawMean, standardDeviation };
+    }
+
+    /**
+     * Calculates mathematically consistent WPM statistics with safeguards against
+     * narrow sigma bands and unreliable small-sample statistics.
+     * 
+     * Key improvements:
+     * - Requires minimum 10 words for reliable statistics
+     * - Uses consistent raw values for mean and standard deviation
+     * - Applies minimum band width safeguards (20% of mean)
+     * - Separates outlier detection from band display bounds
+     * 
+     * @param {Object} app - The typing app instance
+     * @returns {Object} Statistical measures with bounds and outliers
+     */
     function calculateWordWpmStatistics(app) {
-        if (!app || !app.wordStats || app.wordStats.length < 2) {
-            return {
-                mean: 0,
-                standardDeviation: 0,
-                upperBound: 0,
-                lowerBound: 0,
-                outliers: {
-                    upper: [],
-                    lower: []
-                }
-            };
+        const validStats = getValidWordStats(app);
+        
+        // Require minimum sample size for reliable statistics
+        if (validStats.length < SIGMA_STATS_CONFIG.MIN_SAMPLE_SIZE) {
+            return getEmptyStatistics();
         }
         
-        const validWpms = app.wordStats
-            .map(stat => stat.wpm)
-            .filter(wpm => typeof wpm === 'number' && !isNaN(wpm) && isFinite(wpm));
+        // Extract raw WPM values for mathematical consistency
+        const rawWpms = validStats.map(stat => stat.wpm);
         
-        if (validWpms.length < 2) {
-            return {
-                mean: 0,
-                standardDeviation: 0,
-                upperBound: 0,
-                lowerBound: 0,
-                outliers: {
-                    upper: [],
-                    lower: []
-                }
-            };
-        }
+        // Calculate mean using raw values (not rounded for precision)
+        const rawMean = rawWpms.reduce((sum, wpm) => sum + wpm, 0) / rawWpms.length;
         
-        // Calculate mean using centralized function for consistency
-        const mean = calculateConsistentAverage(app, false, 1);
-        
-        // Calculate standard deviation using the same filtered data as the centralized function
-        const validStats = app.wordStats.filter(stat => stat && typeof stat.wpm === 'number' && !isNaN(stat.wpm));
-        const validStatsWpms = validStats.map(stat => stat.wpm);
-        const variance = validStatsWpms.reduce((sum, wpm) => Math.pow(wpm - mean, 2), 0) / validStatsWpms.length;
+        // Calculate standard deviation using same raw values and raw mean
+        const variance = rawWpms.reduce((sum, wpm) => Math.pow(wpm - rawMean, 2), 0) / rawWpms.length;
         const standardDeviation = Math.sqrt(variance);
         
-        // Calculate 3σ bounds
-        const upperBound = mean + (3 * standardDeviation);
-        const lowerBound = mean - (3 * standardDeviation);
-        console.log(`WPM Stats - Mean: ${mean}, SD: ${standardDeviation}, Upper Bound: ${upperBound}, Lower Bound: ${lowerBound}`);
-        // Identify outliers
+        // Apply minimum standard deviation safeguard to prevent artificially narrow bands
+        const minStandardDeviation = Math.max(
+            standardDeviation, 
+            rawMean * SIGMA_STATS_CONFIG.MIN_SD_PERCENT
+        );
+        
+        // Calculate initial 3σ bounds with minimum SD
+        let upperBound = rawMean + (SIGMA_STATS_CONFIG.SIGMA_MULTIPLIER * minStandardDeviation);
+        let lowerBound = Math.max(0, rawMean - (SIGMA_STATS_CONFIG.SIGMA_MULTIPLIER * minStandardDeviation));
+        
+        // Apply minimum band width safeguard for user experience
+        const minBandWidth = rawMean * SIGMA_STATS_CONFIG.MIN_BAND_WIDTH_PERCENT;
+        const currentBandWidth = upperBound - lowerBound;
+        
+        if (currentBandWidth < minBandWidth) {
+            const expansion = (minBandWidth - currentBandWidth) / 2;
+            upperBound += expansion;
+            lowerBound = Math.max(0, lowerBound - expansion);
+        }
+        
+        // Log statistics for debugging (non-sensitive data only)
+        console.log(`WPM Stats - Mean: ${rawMean.toFixed(1)}, SD: ${standardDeviation.toFixed(1)}, ` +
+                   `Min SD: ${minStandardDeviation.toFixed(1)}, Upper: ${upperBound.toFixed(1)}, ` +
+                   `Lower: ${lowerBound.toFixed(1)}, Band Width: ${((upperBound - lowerBound) / rawMean * 100).toFixed(1)}%`);
+        
+        // Get original statistical bounds for outlier detection
+        const originalBounds = calculateOriginalStatisticalBounds(app);
+        
         const outliers = {
             upper: [],
             lower: []
         };
         
-        app.wordStats.forEach((stat, index) => {
-            if (typeof stat.wpm === 'number' && !isNaN(stat.wpm) && isFinite(stat.wpm)) {
-                if (stat.wpm > upperBound) {
-                    outliers.upper.push({
-                        word: stat.word,
-                        wpm: stat.wpm,
-                        index: index
-                    });
-                } else if (stat.wpm < lowerBound) {
-                    outliers.lower.push({
-                        word: stat.word,
-                        wpm: stat.wpm,
-                        index: index
-                    });
-                }
+        validStats.forEach((stat, index) => {
+            if (stat.wpm > originalBounds.upperBound) {
+                outliers.upper.push({
+                    word: stat.word,
+                    wpm: stat.wpm,
+                    index: index
+                });
+            } else if (stat.wpm < originalBounds.lowerBound) {
+                outliers.lower.push({
+                    word: stat.word,
+                    wpm: stat.wpm,
+                    index: index
+                });
             }
         });
         
         return {
-            mean,
+            mean: rawMean,
             standardDeviation,
             upperBound,
             lowerBound,
@@ -429,7 +504,7 @@ function typingApp() {
         let upperBoundLine = null;
         let lowerBoundLine = null;
         
-        if (stats.standardDeviation > 0 && labels.length > 2) {
+        if (stats.standardDeviation > 0 && labels.length >= SIGMA_STATS_CONFIG.MIN_SAMPLE_SIZE) {
             // 3σ Upper Bound Line
             upperBoundLine = {
                 label: `3σ Upper Bound (${stats.upperBound.toFixed(1)})`,
@@ -605,7 +680,7 @@ function typingApp() {
         let modalUpperBoundLine = null;
         let modalLowerBoundLine = null;
         
-        if (modalStats.standardDeviation > 0 && labels.length > 2) {
+        if (modalStats.standardDeviation > 0 && labels.length >= SIGMA_STATS_CONFIG.MIN_SAMPLE_SIZE) {
             // 3σ Upper Bound Line for modal
             modalUpperBoundLine = {
                 label: `3σ Upper Bound (${modalStats.upperBound.toFixed(1)})`,
@@ -915,15 +990,19 @@ function typingApp() {
             // Sort slowest words from lowest to highest WPM (ascending)
             const sortedSlowest = [...stats.outliers.lower].sort((a, b) => a.wpm - b.wpm);
             
+            // Get the ACTUAL bounds used for outlier detection (not safeguarded display bounds)
+            const actualBounds = calculateOriginalStatisticalBounds(this);
+            
             return {
                 hasOutliers: stats.outliers.upper.length > 0 || stats.outliers.lower.length > 0,
                 fastest: sortedFastest,
                 slowest: sortedSlowest,
                 statistics: {
-                    mean: stats.mean,
-                    standardDeviation: stats.standardDeviation,
-                    upperBound: stats.upperBound,
-                    lowerBound: stats.lowerBound
+                    mean: actualBounds.mean,
+                    standardDeviation: actualBounds.standardDeviation,
+                    // Use actual detection bounds for UI display consistency
+                    upperBound: actualBounds.upperBound,
+                    lowerBound: actualBounds.lowerBound
                 }
             };
         },

@@ -238,8 +238,8 @@ test.describe('Typing Speed Test - 3 Standard Deviation Lines and Outlier Highli
         const inputField = page.locator('.input-field');
         await inputField.focus();
         
-        // Type words with variation
-        const words = ['fast', 'slow', 'medium', 'quick', 'turtle', 'rabbit', 'speed', 'test'];
+        // Type words with variation (need at least 10 for sigma bands)
+        const words = ['fast', 'slow', 'medium', 'quick', 'turtle', 'rabbit', 'speed', 'test', 'more', 'words', 'for', 'bands'];
         
         for (let i = 0; i < words.length; i++) {
             const word = words[i];

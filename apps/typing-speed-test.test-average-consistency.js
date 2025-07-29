@@ -289,8 +289,8 @@ test.describe('Typing Speed Test - Average Metric Consistency', () => {
     await page.waitForSelector('.input-field');
     await page.focus('.input-field');
 
-    // Type enough words to trigger outlier calculation
-    const testWords = ['the', 'quick', 'brown', 'fox', 'jumps', 'over', 'lazy', 'dog'];
+    // Type enough words to trigger outlier calculation (need at least 10)
+    const testWords = ['the', 'quick', 'brown', 'fox', 'jumps', 'over', 'lazy', 'dog', 'and', 'cat', 'run', 'fast'];
     
     for (let i = 0; i < testWords.length; i++) {
       const word = testWords[i];
