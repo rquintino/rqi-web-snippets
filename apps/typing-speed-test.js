@@ -38,7 +38,6 @@
  * - updateActiveStats()      : Calculates current word WPM and average WPM
  * - calculateCharacterAccuracy() : Calculates character-level accuracy (industry standard)
  * - getWordWpmClass(index)   : Returns CSS class based on word's relative WPM
- * - getWordColor(wpm)        : Returns color based on WPM performance
  * - getWordBackgroundColor(index) : Returns background color based on relative WPM
  * - getCharClassForReveal(wordIndex, charIndex) : Returns character class for blind reveal phase
  * - checkAndSaveBestScore()  : Checks and saves new best score if applicable
@@ -346,6 +345,55 @@ function typingApp() {
         const lowerBound = Math.max(0, rawMean - (SIGMA_STATS_CONFIG.SIGMA_MULTIPLIER * standardDeviation));
         
         return { upperBound, lowerBound, mean: rawMean, standardDeviation };
+    }
+
+    /**
+     * Groups outliers by unique word and calculates statistics for each group.
+     * 
+     * @param {Array} outliers - Array of outlier objects with word and wpm properties
+     * @returns {Array} Array of grouped outliers with word, meanWpm, standardDeviation, instanceCount
+     */
+    function groupOutliersByWord(outliers) {
+        if (!outliers || outliers.length === 0) return [];
+        
+        // Group outliers by word
+        const wordGroups = {};
+        outliers.forEach(outlier => {
+            if (!outlier || !outlier.word || typeof outlier.wpm !== 'number') return; // Skip invalid entries
+            
+            const word = outlier.word;
+            if (!wordGroups[word]) {
+                wordGroups[word] = [];
+            }
+            wordGroups[word].push(outlier.wpm);
+        });
+        
+        // Calculate statistics for each word group
+        const groupedOutliers = [];
+        Object.keys(wordGroups).forEach(word => {
+            const wpms = wordGroups[word];
+            if (wpms.length > 0) {
+                const meanWpm = wpms.reduce((sum, wpm) => sum + wpm, 0) / wpms.length;
+                
+                // Calculate standard deviation
+                let standardDeviation = 0;
+                if (wpms.length > 1) {
+                    const variance = wpms.reduce((sum, wpm) => Math.pow(wpm - meanWpm, 2), 0) / wpms.length;
+                    standardDeviation = Math.sqrt(variance);
+                }
+                
+                groupedOutliers.push({
+                    word: word,
+                    meanWpm: meanWpm,
+                    standardDeviation: standardDeviation,
+                    instanceCount: wpms.length,
+                    // Keep original properties for backward compatibility
+                    wpm: meanWpm
+                });
+            }
+        });
+        
+        return groupedOutliers;
     }
 
     /**
@@ -966,33 +1014,20 @@ function typingApp() {
         
         showChartModal: false,
         
-        // Word sorting
-        wordSortOrder: 'wpm-asc',
-        
-        // Computed properties
-        get sortedWordStats() {
-            if (this.wordSortOrder === 'none') {
-                return this.wordStats;
-            }
-            
-            return [...this.wordStats].sort((a, b) => {
-                if (this.wordSortOrder === 'wpm-asc') {
-                    return a.wpm - b.wpm;
-                } else {
-                    return b.wpm - a.wpm;
-                }
-            });
-        },
         
         // Computed property for outlier statistics
         get outlierStats() {
             const stats = calculateWordWpmStatistics(this);
             
-            // Sort fastest words from highest to lowest WPM (descending)
-            const sortedFastest = [...stats.outliers.upper].sort((a, b) => b.wpm - a.wpm);
+            // Group outliers by word and calculate statistics for each group
+            const groupedFastest = groupOutliersByWord(stats.outliers.upper);
+            const groupedSlowest = groupOutliersByWord(stats.outliers.lower);
             
-            // Sort slowest words from lowest to highest WPM (ascending)
-            const sortedSlowest = [...stats.outliers.lower].sort((a, b) => a.wpm - b.wpm);
+            // Sort grouped fastest words from highest to lowest mean WPM (descending)
+            const sortedFastest = groupedFastest.sort((a, b) => b.meanWpm - a.meanWpm);
+            
+            // Sort grouped slowest words from lowest to highest mean WPM (ascending)
+            const sortedSlowest = groupedSlowest.sort((a, b) => a.meanWpm - b.meanWpm);
             
             // Get the ACTUAL bounds used for outlier detection (not safeguarded display bounds)
             const actualBounds = calculateOriginalStatisticalBounds(this);
@@ -1547,15 +1582,6 @@ function typingApp() {
             return '';
         },
         
-        getWordColor(wpm) {
-            // This is used for the results display
-            if (wpm >= 80) return '#4ca754';
-            if (wpm >= 60) return '#7cb342';
-            if (wpm >= 40) return 'var(--accent)';
-            if (wpm >= 30) return '#ff9800';
-            if (wpm >= 20) return '#ff5722';
-            return 'var(--error)';
-        },
         
         getCursorElement() {
             // Get the current word element

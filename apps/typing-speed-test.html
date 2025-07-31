@@ -212,10 +212,6 @@
             <span x-show="started && !showResults">Restart</span>
             <span x-show="showResults">Try Again</span>
         </button>
-        <div class="chart-container" style="position:relative;">
-            <canvas id="wpmChart" width="640" height="480" style="max-width:100%;background:var(--bg-secondary);border-radius:1rem;"></canvas>
-            <button class="icon-btn" @click="showChartModalHandler()" title="Expand chart" style="position:absolute;top:0.5rem;right:0.5rem;font-size:1.2rem;z-index:2;">🔍</button>
-        </div>
         <div class="results" x-show="showResults" x-cloak>
             <h3>Test Complete!</h3>
             <div class="stats">
@@ -246,24 +242,12 @@
                     <span x-text="`${errorPenalties} typing error${errorPenalties === 1 ? '' : 's'} reduced your final WPM`"></span>
                 </div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2rem;margin-bottom:1rem;">
-                <h4 style="margin:0;">Word Performance</h4>
-                <div class="sort-controls">
-                    <select x-model="wordSortOrder" class="dict-select" style="width:auto;">
-                        <option value="wpm-asc">WPM (Low to High)</option>
-                        <option value="wpm-desc">WPM (High to Low)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="word-stats">
-                <template x-for="(stat, index) in sortedWordStats" :key="index">
-                    <div class="word-stat" :style="`color: ${getWordColor(stat.wpm)}`">
-                        <span x-text="stat.word"></span>
-                        <span x-text="Math.round(stat.wpm) + ' wpm'"></span>
-                    </div>
-                </template>
-            </div>
-            
+        </div>
+        <div class="chart-container" style="position:relative;">
+            <canvas id="wpmChart" width="640" height="480" style="max-width:100%;background:var(--bg-secondary);border-radius:1rem;"></canvas>
+            <button class="icon-btn" @click="showChartModalHandler()" title="Expand chart" style="position:absolute;top:0.5rem;right:0.5rem;font-size:1.2rem;z-index:2;">🔍</button>
+        </div>
+        <div class="results-additional" x-show="showResults" x-cloak>
             <!-- Outlier Highlights Table -->
             <div x-show="outlierStats.hasOutliers" x-cloak style="margin-top:2rem;">
                 <h4 style="margin:0 0 1rem 0;color:var(--accent);" x-text="`Performance Outliers (3σ, ${outlierStats.statistics.mean.toFixed(1)}±${outlierStats.statistics.standardDeviation.toFixed(1)})`"></h4>
@@ -274,8 +258,8 @@
                         <div class="outlier-words-list">
                             <template x-for="(outlier, index) in outlierStats.fastest" :key="'fast-' + index">
                                 <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #4ca754;">
-                                    <span x-text="outlier.word" style="font-weight:600;"></span>
-                                    <span x-text="Math.round(outlier.wpm) + ' wpm'" style="color:#4ca754;font-weight:700;"></span>
+                                    <span x-text="outlier.word + ' (' + outlier.instanceCount + 'x)'" style="font-weight:600;"></span>
+                                    <span x-text="Math.round(outlier.meanWpm) + ' wpm (±' + outlier.standardDeviation.toFixed(1) + ')'" style="color:#4ca754;font-weight:700;"></span>
                                 </div>
                             </template>
                         </div>
@@ -287,8 +271,8 @@
                         <div class="outlier-words-list">
                             <template x-for="(outlier, index) in outlierStats.slowest" :key="'slow-' + index">
                                 <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #ff5722;">
-                                    <span x-text="outlier.word" style="font-weight:600;"></span>
-                                    <span x-text="Math.round(outlier.wpm) + ' wpm'" style="color:#ff5722;font-weight:700;"></span>
+                                    <span x-text="outlier.word + ' (' + outlier.instanceCount + 'x)'" style="font-weight:600;"></span>
+                                    <span x-text="Math.round(outlier.meanWpm) + ' wpm (±' + outlier.standardDeviation.toFixed(1) + ')'" style="color:#ff5722;font-weight:700;"></span>
                                 </div>
                             </template>
                         </div>
@@ -308,7 +292,7 @@
         </div>
     </div>
     
-    <div class="version">v2025-07-30.7</div>
+    <div class="version">v2025-07-31.1</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     
@@ -324,7 +308,7 @@
     <canvas id="confetti-canvas" width="1200" height="800" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2000;"></canvas>
     
     <script src="typing-speed-test.jsdata"></script>
-    <script src="typing-speed-test.js?v=2025-07-30.7"></script>
+    <script src="typing-speed-test.js?v=2025-07-31.4"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>
