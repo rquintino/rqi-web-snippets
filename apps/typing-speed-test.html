@@ -134,6 +134,20 @@
                    title="In Blind Mode, words are masked as you type, forcing you to read ahead. Feedback is only shown at the end of the test.">
                 <span x-text="blindModeSelected ? '👁️‍🗨️ Blind Mode' : '👁️ Blind Mode'"></span>
             </button>
+            <div class="adaptive-control" title="Focus on words from previous test that were typed slowly">
+                <label for="adaptive-slider" style="font-size: 0.9rem; color: var(--text-secondary);">Adaptive:</label>
+                <input 
+                    id="adaptive-slider" 
+                    type="range" 
+                    min="0" 
+                    max="50"
+                    step="5"
+                    x-model.number="adaptiveDifficulty"
+                    @input="saveAdaptiveDifficulty()"
+                    style="width: 60px; margin: 0 0.5rem;"
+                />
+                <span class="adaptive-value" style="font-size: 0.9rem; color: var(--text-secondary); min-width: 30px;" x-text="adaptiveDifficulty + '%'"></span>
+            </div>
             <div class="penalty-indicator" x-show="errorPenalties > 0" title="WPM Penalties">
                 <span class="penalty-icon">⚠️</span>
                 <span class="penalty-count" x-text="errorPenalties"></span>
@@ -281,10 +295,20 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Export Controls -->
+            <div class="export-controls">
+                <button class="export-btn" @click="exportResults('csv')" title="Export as CSV for spreadsheet analysis">
+                    📊 Export CSV
+                </button>
+                <button class="export-btn" @click="exportResults('json')" title="Export as JSON for developers">
+                    📄 Export JSON
+                </button>
+            </div>
         </div>
     </div>
     
-    <div class="version">v2025-07-29.2</div>
+    <div class="version">v2025-07-30.7</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
     
@@ -300,7 +324,7 @@
     <canvas id="confetti-canvas" width="1200" height="800" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2000;"></canvas>
     
     <script src="typing-speed-test.jsdata"></script>
-    <script src="typing-speed-test.js?v=2025-07-29.2"></script>
+    <script src="typing-speed-test.js?v=2025-07-30.7"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>

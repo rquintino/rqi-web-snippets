@@ -960,6 +960,10 @@ function typingApp() {
         selectedDictionary: 'english-100',
         availableDictionaries: {},
         
+        // Adaptive difficulty mode
+        adaptiveDifficulty: 0,
+        previousSlowOutliers: [],
+        
         showChartModal: false,
         
         // Word sorting
@@ -1033,6 +1037,12 @@ function typingApp() {
                 if (savedDictionary !== null && window.typingWordLists && window.typingWordLists[savedDictionary]) {
                     this.selectedDictionary = savedDictionary;
                 }
+                
+                // Load adaptive difficulty setting
+                const savedAdaptiveDifficulty = await getFromIndexedDB('typing-adaptive-difficulty');
+                if (savedAdaptiveDifficulty !== null) {
+                    this.adaptiveDifficulty = parseInt(savedAdaptiveDifficulty, 10) || 0;
+                }
             } catch (error) {
                 console.warn('Failed to load settings:', error);
             }
@@ -1100,12 +1110,140 @@ function typingApp() {
             }
         },
         
+        /**
+         * Generates 50 words for the typing test, with optional adaptive difficulty
+         * that increases the probability of including slow words from previous test.
+         * 
+         * Adaptive mode requirements:
+         * - adaptiveDifficulty > 0 (0-50%)
+         * - At least 3 valid slow outliers from previous test
+         * 
+         * Algorithm:
+         * - Calculate outlier count based on difficulty percentage
+         * - Fill with outlier words (with wraparound if needed)
+         * - Fill remaining slots with random words
+         * - Shuffle to avoid predictable patterns
+         */
         generateWords() {
             // Load from selected dictionary
             this.words = [];
             const list = window.typingWordList || (window.typingWordLists ? window.typingWordLists['english-100'] : []);
-            for (let i = 0; i < 50; i++) {
-                this.words.push(list[Math.floor(Math.random() * list.length)]);
+            
+            // Check if adaptive mode should be active
+            if (this.adaptiveDifficulty > 0 && this.previousSlowOutliers && this.previousSlowOutliers.length >= 3) {
+                const outlierCount = Math.floor(50 * (this.adaptiveDifficulty / 100));
+                const randomCount = 50 - outlierCount;
+                
+                // Add outlier words using weighted sampling (slower words get higher probability)
+                for (let i = 0; i < outlierCount; i++) {
+                    const selectedWord = this.selectWeightedOutlierWord();
+                    if (selectedWord && typeof selectedWord === 'string' && selectedWord.length > 0) {
+                        this.words.push(selectedWord);
+                    } else {
+                        // Fallback to random word if outlier selection fails
+                        this.words.push(list[Math.floor(Math.random() * list.length)]);
+                    }
+                }
+                
+                // Fill remaining with random words
+                for (let i = 0; i < randomCount; i++) {
+                    this.words.push(list[Math.floor(Math.random() * list.length)]);
+                }
+                
+                // Shuffle to avoid predictable patterns
+                this.words = this.shuffleArray(this.words);
+            } else {
+                // Current behavior (random selection)
+                for (let i = 0; i < 50; i++) {
+                    this.words.push(list[Math.floor(Math.random() * list.length)]);
+                }
+            }
+        },
+
+        /**
+         * Fisher-Yates shuffle algorithm for randomizing word order
+         * @param {Array} array - Array to shuffle
+         * @returns {Array} New shuffled array (original unchanged)
+         */
+        shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        },
+
+        /**
+         * Selects a word from previousSlowOutliers using weighted sampling.
+         * Slower words (lower WPM) get exponentially higher probability of selection.
+         * 
+         * Weight calculation: weight = 1 / (wpm^2)
+         * This gives much higher weight to very slow words.
+         * 
+         * @returns {string|null} Selected outlier word, or null if no valid outliers
+         */
+        selectWeightedOutlierWord() {
+            if (!this.previousSlowOutliers || this.previousSlowOutliers.length === 0) {
+                return null;
+            }
+
+            // Calculate weights for each outlier (inverse square of WPM)
+            const weights = this.previousSlowOutliers.map(outlier => {
+                const wpm = Math.max(outlier.wpm, 1); // Prevent division by zero
+                return 1 / (wpm * wpm); // Exponential weighting - slower words get much higher weight
+            });
+
+            // Calculate total weight
+            const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+            
+            // Select random point in weight distribution
+            const randomValue = Math.random() * totalWeight;
+            
+            // Find which outlier corresponds to this random point
+            let cumulativeWeight = 0;
+            for (let i = 0; i < this.previousSlowOutliers.length; i++) {
+                cumulativeWeight += weights[i];
+                if (randomValue <= cumulativeWeight) {
+                    return this.previousSlowOutliers[i].word;
+                }
+            }
+            
+            // Fallback to last outlier (shouldn't happen with proper math)
+            return this.previousSlowOutliers[this.previousSlowOutliers.length - 1].word;
+        },
+
+        /**
+         * Stores validated slow outlier data from current test for use in next test.
+         * Filters out any invalid entries to prevent runtime errors.
+         * Called automatically when test completes.
+         */
+        storeOutlierDataForNextTest() {
+            // Store slow outliers for adaptive mode in next test
+            if (this.outlierStats && this.outlierStats.hasOutliers && this.outlierStats.slowest && this.outlierStats.slowest.length > 0) {
+                // Filter out any undefined or invalid outlier entries
+                this.previousSlowOutliers = this.outlierStats.slowest.filter(outlier => 
+                    outlier && 
+                    outlier.word && 
+                    typeof outlier.word === 'string' && 
+                    outlier.word.length > 0 &&
+                    typeof outlier.wpm === 'number' && 
+                    !isNaN(outlier.wpm)
+                );
+            } else {
+                this.previousSlowOutliers = [];
+            }
+        },
+
+        /**
+         * Saves the current adaptive difficulty setting to IndexedDB for persistence.
+         * Called automatically when the difficulty slider changes.
+         */
+        async saveAdaptiveDifficulty() {
+            try {
+                await saveToIndexedDB('typing-adaptive-difficulty', this.adaptiveDifficulty.toString());
+            } catch (error) {
+                console.warn('Failed to save adaptive difficulty setting:', error);
             }
         },
         
@@ -1509,6 +1647,9 @@ function typingApp() {
             this.finalWpm = calculateConsistentAverage(this, this.errorPenalties > 0, 1);
             this.finalAccuracy = this.accuracy;
             
+            // Store outlier data for next test (adaptive mode)
+            this.storeOutlierDataForNextTest();
+            
             // Update chart one final time to ensure label consistency
             setTimeout(() => updateWpmChart(this.isDarkMode), 100);
             
@@ -1528,6 +1669,9 @@ function typingApp() {
             // Use consistent calculation for finalWpm to match outlier statistics
             this.finalWpm = calculateConsistentAverage(this, this.errorPenalties > 0, 1);
             this.finalAccuracy = this.accuracy;
+            
+            // Store outlier data for next test (adaptive mode)
+            this.storeOutlierDataForNextTest();
             
             // Update chart one final time to ensure label consistency
             setTimeout(() => updateWpmChart(this.isDarkMode), 100);
@@ -1561,6 +1705,11 @@ function typingApp() {
             if (this.wpmUpdateTimer) {
                 clearInterval(this.wpmUpdateTimer);
                 this.wpmUpdateTimer = null;
+            }
+            
+            // Ensure previousSlowOutliers is always an array
+            if (!this.previousSlowOutliers) {
+                this.previousSlowOutliers = [];
             }
             
             this.words = [];
@@ -1683,6 +1832,9 @@ function typingApp() {
         async changeDictionary(event) {
             this.selectedDictionary = event.target.value;
             
+            // Clear previous outliers when changing dictionary
+            this.previousSlowOutliers = [];
+            
             // Save selected dictionary to IndexedDB
             try {
                 await saveToIndexedDB('typing-selected-dictionary', this.selectedDictionary);
@@ -1704,6 +1856,108 @@ function typingApp() {
         // UPDATED: Use centralized average calculation without penalties, to 1 decimal place
         getUnpenalizedAverageWpm() {
             return calculateConsistentAverage(this, false, 1);
+        },
+        
+        // Export functionality
+        exportResults(format) {
+            try {
+                // Validate input
+                if (!format || (format !== 'csv' && format !== 'json')) {
+                    console.error('Invalid export format:', format);
+                    return;
+                }
+                
+                const timestamp = new Date().toISOString();
+                const data = this.prepareExportData(timestamp);
+                
+                if (format === 'csv') {
+                    this.downloadCSV(data, timestamp);
+                } else if (format === 'json') {
+                    this.downloadJSON(data, timestamp);
+                }
+            } catch (error) {
+                console.error('Export failed:', error);
+                // Could show user-friendly error message in the future
+            }
+        },
+
+        prepareExportData(timestamp) {
+            return {
+                metadata: {
+                    exportDate: timestamp,
+                    testDate: timestamp,
+                    dictionary: this.selectedDictionary,
+                    blindMode: this.blindModeSelected,
+                    totalWords: this.words.length
+                },
+                summary: {
+                    finalWpm: this.finalWpm,
+                    finalAccuracy: this.finalAccuracy,
+                    errorPenalties: this.errorPenalties,
+                    bestScore: this.bestScore,
+                    averageWpm: this.getUnpenalizedAverageWpm()
+                },
+                rawData: {
+                    originalWords: this.words,
+                    typedWords: this.typedWords,
+                    wordCharStates: this.wordCharStates,
+                    wordErrors: this.wordErrors,
+                    wpmChartData: [...wpmChartData],
+                    currentWordIndex: this.currentWordIndex
+                },
+                wordStats: this.wordStats.map((stat, index) => ({
+                    wordNumber: index + 1,
+                    word: stat.word,
+                    wpm: stat.wpm,
+                    correct: stat.correct,
+                    timeMinutes: stat.time
+                })),
+                outliers: {
+                    fastest: this.outlierStats.fastest,
+                    slowest: this.outlierStats.slowest,
+                    statistics: this.outlierStats.statistics
+                }
+            };
+        },
+
+        generateExportFilename(timestamp, extension) {
+            const dateString = timestamp.slice(0, 19).replace(/:/g, '-');
+            return `typing-test-${dateString}.${extension}`;
+        },
+
+        downloadCSV(data, timestamp) {
+            // CSV Headers and rows for word-by-word data
+            const csvHeaders = 'Word Number,Word,WPM,Correct,Time (minutes)\n';
+            const csvRows = data.wordStats.map(stat => 
+                `${stat.wordNumber},"${stat.word}",${stat.wpm},${stat.correct},${stat.timeMinutes}`
+            ).join('\n');
+            
+            // Summary section
+            const summarySection = `\n\nSUMMARY\nFinal WPM,${data.summary.finalWpm}\nFinal Accuracy,${data.summary.finalAccuracy}%\nError Penalties,${data.summary.errorPenalties}\nBest Score,${data.summary.bestScore || 'N/A'}\nDictionary,${data.metadata.dictionary}\nBlind Mode,${data.metadata.blindMode}\n`;
+            
+            const csvContent = csvHeaders + csvRows + summarySection;
+            const filename = this.generateExportFilename(timestamp, 'csv');
+            
+            this.downloadFile(csvContent, filename, 'text/csv');
+        },
+
+        downloadJSON(data, timestamp) {
+            const jsonContent = JSON.stringify(data, null, 2);
+            const filename = this.generateExportFilename(timestamp, 'json');
+            
+            this.downloadFile(jsonContent, filename, 'application/json');
+        },
+
+        downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
     };
 }
