@@ -92,15 +92,15 @@ test.describe('Typing Stats App', () => {
     // Wait longer for metrics to update
     await page.waitForTimeout(500);
     
-    // Check that keystrokes metric updated
-    const keystrokesMetric = page.locator('.metric-tile').filter({ hasText: 'Keystrokes' }).locator('.metric-value');
-    const keystrokesValue = await keystrokesMetric.textContent();
-    expect(parseInt(keystrokesValue)).toBeGreaterThan(0);
-    
     // Check that words metric updated
     const wordsMetric = page.locator('.metric-tile').filter({ hasText: 'Words' }).locator('.metric-value');
     const wordsValue = await wordsMetric.textContent();
     expect(parseInt(wordsValue)).toBeGreaterThan(0);
+    
+    // Check that last word WPM metric updated
+    const lastWordWpmMetric = page.locator('.metric-tile').filter({ hasText: 'Last Word WPM' }).locator('.metric-value');
+    const lastWordWpmValue = await lastWordWpmMetric.textContent();
+    expect(parseFloat(lastWordWpmValue)).toBeGreaterThanOrEqual(0); // Should be 0 or positive
     
     // Download button should now be enabled
     const downloadBtn = page.locator('button:has-text("Download JSON")');
@@ -110,8 +110,8 @@ test.describe('Typing Stats App', () => {
   test('metrics display with correct labels', async ({ page }) => {
     const expectedMetrics = [
       'Active Time',
-      'Keystrokes',
       'Words',
+      'Last Word WPM',
       'Avg WPM (Gross)',
       'Avg WPM (Net)',
       'Running WPM',
@@ -174,7 +174,7 @@ test.describe('Typing Stats App', () => {
 
   test('version number is displayed', async ({ page }) => {
     await expect(page.locator('.version')).toBeVisible();
-    await expect(page.locator('.version')).toContainText('v2025-07-20.1');
+    await expect(page.locator('.version')).toContainText('v2025-08-06.1');
   });
 
   test('reset session clears data', async ({ page }) => {
@@ -188,9 +188,9 @@ test.describe('Typing Stats App', () => {
     await textInput.type('test data');
     await page.waitForTimeout(500);
     
-    // Verify data exists
-    const keystrokesValue = await page.locator('.metric-tile').filter({ hasText: 'Keystrokes' }).locator('.metric-value').textContent();
-    expect(parseInt(keystrokesValue)).toBeGreaterThan(0);
+    // Verify data exists - check words metric since keystrokes was removed
+    const wordsValue = await page.locator('.metric-tile').filter({ hasText: 'Words' }).locator('.metric-value').textContent();
+    expect(parseInt(wordsValue)).toBeGreaterThan(0);
     
     // Reset session
     await page.locator('button:has-text("Reset Session")').click();
@@ -201,8 +201,12 @@ test.describe('Typing Stats App', () => {
     // Wait for metrics to update
     await page.waitForTimeout(300);
     
-    const newKeystrokesValue = await page.locator('.metric-tile').filter({ hasText: 'Keystrokes' }).locator('.metric-value').textContent();
-    expect(parseInt(newKeystrokesValue)).toBe(0);
+    const newWordsValue = await page.locator('.metric-tile').filter({ hasText: 'Words' }).locator('.metric-value').textContent();
+    expect(parseInt(newWordsValue)).toBe(0);
+    
+    // Also check that Last Word WPM resets
+    const lastWordWpmValue = await page.locator('.metric-tile').filter({ hasText: 'Last Word WPM' }).locator('.metric-value').textContent();
+    expect(parseFloat(lastWordWpmValue)).toBe(0);
   });
 
   test('typing with new metrics shows rhythm and peak WPM', async ({ page }) => {

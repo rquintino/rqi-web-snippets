@@ -113,6 +113,18 @@ function typingStats() {
         recentKeystrokes: [], // for peak WPM calculation
         wpmHistory: [], // track WPM over time for peak calculation
         
+        // Last word WPM tracking
+        currentWordStartTime: null,
+        currentWordLength: 0,
+        lastWordWpm: 0,
+        
+        // Constants for word WPM calculation
+        STANDARD_WORD_LENGTH: 5, // Standard 5 characters per word for WPM calculation
+        MILLISECONDS_PER_MINUTE: 60000,
+        
+        // Word boundary characters for word completion detection
+        WORD_BOUNDARIES: [' ', 'Tab', 'Enter', '.', ',', ';', ':', '!', '?', '"', "'"],
+        
         // Performance optimization
         metricsUpdateThrottle: 100, // ms between metric updates
         lastMetricsUpdate: 0,
@@ -212,6 +224,9 @@ function typingStats() {
             this.trackRecentKeystroke(timestamp);
             this.updateDigraphs(event.key, timestamp);
             
+            // Handle last word WPM tracking
+            this.handleLastWordWpmTracking(event, timestamp);
+            
             this.lastKeyTime = timestamp;
         },
         
@@ -249,6 +264,71 @@ function typingStats() {
             this.recentKeystrokes.push(timestamp);
             const tenSecondsAgo = timestamp - 10000;
             this.recentKeystrokes = this.recentKeystrokes.filter(t => t > tenSecondsAgo);
+        },
+        
+        handleLastWordWpmTracking(event, timestamp) {
+            const key = event.key;
+            
+            // Check if this is a word boundary (space, tab, enter)
+            if (this.isWordBoundary(key)) {
+                this.completeCurrentWord(timestamp);
+            } else if (this.isPrintableCharacter(key)) {
+                // Start tracking word if not already started
+                if (!this.currentWordStartTime) {
+                    this.currentWordStartTime = timestamp;
+                    this.currentWordLength = 0;
+                }
+                
+                // Handle backspace/delete
+                if (key === 'Backspace' || key === 'Delete') {
+                    if (this.currentWordLength > 0) {
+                        this.currentWordLength--;
+                    }
+                    // If word becomes empty, reset timing
+                    if (this.currentWordLength === 0) {
+                        this.currentWordStartTime = null;
+                    }
+                } else {
+                    // Regular character, increment length
+                    this.currentWordLength++;
+                }
+            }
+        },
+        
+        isWordBoundary(key) {
+            return this.WORD_BOUNDARIES.includes(key);
+        },
+        
+        isPrintableCharacter(key) {
+            // Include backspace and delete for word length tracking
+            if (key === 'Backspace' || key === 'Delete') {
+                return true;
+            }
+            // Regular printable characters (single character keys)
+            return key.length === 1;
+        },
+        
+        completeCurrentWord(timestamp) {
+            if (this.currentWordStartTime && this.currentWordLength > 0) {
+                // Calculate WPM using standard 5-letter word equivalent
+                const wordTimeMinutes = (timestamp - this.currentWordStartTime) / this.MILLISECONDS_PER_MINUTE;
+                const wordWpm = (this.currentWordLength / this.STANDARD_WORD_LENGTH) / wordTimeMinutes;
+                
+                // Update last word WPM (ensure it's a valid finite number)
+                this.lastWordWpm = this.validateWpmValue(wordWpm);
+            }
+            
+            // Reset word tracking for next word
+            this.resetWordTracking();
+        },
+        
+        validateWpmValue(wpm) {
+            return isFinite(wpm) && wpm > 0 ? wpm : 0;
+        },
+        
+        resetWordTracking() {
+            this.currentWordStartTime = null;
+            this.currentWordLength = 0;
         },
         
         handleKeyUp(event) {
@@ -576,6 +656,8 @@ function typingStats() {
             this.avgFlight = 0;
             this.rhythmConsistency = 0;
             this.peakWPM = 0;
+            this.lastWordWpm = 0;
+            this.resetWordTracking();
         },
         
         formatTime(seconds) {

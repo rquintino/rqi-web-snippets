@@ -96,14 +96,14 @@
                     <div class="pause-indicator" x-show="isPaused" x-transition>⏸️</div>
                 </div>
 
-                <div class="metric-tile" @mouseenter="showTooltip($event, 'Total key presses recorded')" @mouseleave="hideTooltip()">
-                    <div class="metric-value" x-text="keyStrokes"></div>
-                    <div class="metric-label">Keystrokes</div>
-                </div>
-
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'Words delimited by spaces and punctuation')" @mouseleave="hideTooltip()">
                     <div class="metric-value" x-text="words"></div>
                     <div class="metric-label">Words</div>
+                </div>
+
+                <div class="metric-tile" @mouseenter="showTooltip($event, 'WPM of the most recently completed word using 5-letter standard')" @mouseleave="hideTooltip()">
+                    <div class="metric-value" x-text="lastWordWpm.toFixed(1)"></div>
+                    <div class="metric-label">Last Word WPM</div>
                 </div>
 
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'Gross WPM: (keystrokes÷5) ÷ active minutes\\nBased on active typing time only\\nBenchmarks: 40 (novice) / 70 (proficient)')" @mouseleave="hideTooltip()">
@@ -194,10 +194,10 @@
     <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
 
     <!-- Version -->
-    <div class="version">v2025-07-20.1</div>
+    <div class="version">v2025-08-06.1</div>
 
     <script src="shared/shared.js?v=2025-07-27.1"></script>
-    <script src="typing-stats.js?v=2025-07-27.1"></script>
+    <script src="typing-stats.js?v=2025-08-06.1"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>
