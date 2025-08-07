@@ -6,8 +6,11 @@
  * 
  * Key methods:
  * - handleKeyDown/Up: Captures keystroke events with precise timing
+ * - handleContentEditableInput: Processes input from contenteditable text area
+ * - completeWordWithColor: Finalizes typed words with color coding based on WPM
  * - updateMetrics: Calculates real-time WPM, accuracy, dwell/flight times
  * - updateDigraphs: Tracks letter transition patterns and speeds
+ * - renderColoredContent: Updates display with color-coded completed words
  * - downloadSession: Exports complete session data as JSON
  * - resetSession: Clears all data and starts fresh
  */
@@ -123,6 +126,10 @@ function typingStats() {
         currentWordLength: 0,
         lastWordWpm: 0,
         
+        // Word coloring feature
+        wordHistory: [], // Store completed word WPM data with colors
+        currentWordText: '', // Track current incomplete word
+        
         // Constants for word WPM calculation
         STANDARD_WORD_LENGTH: 5, // Standard 5 characters per word for WPM calculation
         MILLISECONDS_PER_MINUTE: 60000,
@@ -153,6 +160,9 @@ function typingStats() {
             this.initializePreferences();
             this.initializeUI();
             this.startMetricsUpdateLoop();
+            
+            // Make app instance globally available for testing
+            window.typingAppInstance = this;
         },
         
         initializeTimerSupport() {
@@ -324,6 +334,11 @@ function typingStats() {
                 
                 // Update last word WPM (ensure it's a valid finite number)
                 this.lastWordWpm = this.validateWpmValue(wordWpm);
+                
+                // Store completed word with color data
+                if (this.currentWordText && this.currentWordText.trim()) {
+                    this.completeWordWithColor(this.currentWordText.trim(), this.lastWordWpm, timestamp);
+                }
                 
                 // Trigger WPM feedback if enabled
                 if (this.targetWpm && this.lastWordWpm > 0) {
@@ -580,6 +595,189 @@ function typingStats() {
             // The metrics will continue based on natural keystrokes
         },
         
+        handleContentEditableInput(event) {
+            // Extract text content from contenteditable div  
+            const content = event.target.textContent || '';
+            this.textContent = content;
+            
+            // Update current word text for tracking
+            this.updateCurrentWordText(content);
+        },
+        
+        updateCurrentWordText(content) {
+            // Find the current word being typed (after last space)
+            const words = content.split(/\s+/);
+            const lastWord = words[words.length - 1] || '';
+            
+            // Only update if there's actual content
+            if (content.trim()) {
+                this.currentWordText = lastWord;
+            } else {
+                this.currentWordText = '';
+            }
+            
+        },
+        
+        completeWordWithColor(wordText, wpm, timestamp) {
+            // Store word in history
+            const wordData = {
+                word: wordText,
+                wpm: wpm,
+                timestamp: timestamp,
+                index: this.wordHistory.length
+            };
+            this.wordHistory.push(wordData);
+            
+            // Update contenteditable content with colored span (debounced for performance)
+            this.$nextTick(() => {
+                this.renderColoredContent();
+            });
+            
+            return wordData;
+        },
+        
+        getColorFromWpm(wpm, targetWpm) {
+            if (!targetWpm || !wpm) return '';
+            
+            if (wpm < targetWpm) {
+                // Below target: Always red (hue = 0)
+                return `hsl(0, 70%, 50%)`;
+            } else {
+                // Above target: Green intensity based on how far above
+                const ratio = Math.min(wpm / targetWpm, 1.5);
+                const hue = Math.min((ratio - 1) * 240 + 60, 120); // 60 (yellow-green) to 120 (green)
+                return `hsl(${hue}, 70%, 50%)`;
+            }
+        },
+        
+        getWordColorFromWpm(wpm) {
+            return this.getColorFromWpm(wpm, this.targetWpm) || 'var(--text-primary)';
+        },
+        
+        renderColoredContent() {
+            const textInput = this.$refs.textInput;
+            if (!textInput) return;
+            
+            // Get current text content
+            const content = textInput.textContent || '';
+            const words = content.split(/(\s+)/); // Keep separators
+            
+            let html = '';
+            let wordIndex = 0;
+            
+            for (const segment of words) {
+                if (segment.trim()) {
+                    // This is a word
+                    const wordData = this.wordHistory[wordIndex];
+                    if (wordData && wordData.word === segment.trim()) {
+                        // This word is completed and has color data
+                        const color = this.getWordColorFromWpm(wordData.wpm);
+                        // Escape HTML to prevent XSS
+                        const escapedWord = this.escapeHtml(wordData.word);
+                        const escapedSegment = this.escapeHtml(segment);
+                        html += `<span class="colored-word" style="color: ${this.escapeHtml(color)}" 
+                                      onmouseover="window.typingAppInstance.showWordTooltip(event, ${wordData.wpm}, '${escapedWord}')" 
+                                      onmouseleave="window.typingAppInstance.hideTooltip()">${escapedSegment}</span>`;
+                        wordIndex++;
+                    } else {
+                        // This is the current word being typed (uncolored)
+                        html += this.escapeHtml(segment);
+                    }
+                } else {
+                    // This is whitespace/separator
+                    html += segment;
+                }
+            }
+            
+            // Update the contenteditable with colored HTML
+            const currentPos = this.getCaretPosition(textInput);
+            textInput.innerHTML = html;
+            this.setCaretPosition(textInput, currentPos);
+        },
+        
+        showWordTooltip(event, wpm, word) {
+            this.tooltip.show = true;
+            this.tooltip.text = `${word}: ${wpm.toFixed(1)} WPM`;
+            this.tooltip.x = event.pageX + 10;
+            this.tooltip.y = event.pageY - 30;
+        },
+        
+        getCaretPosition(element) {
+            let caretPos = 0;
+            if (window.getSelection) {
+                const selection = window.getSelection();
+                if (selection.rangeCount) {
+                    const range = selection.getRangeAt(0);
+                    // Get the text position relative to the element's total text content
+                    const preCaretRange = range.cloneRange();
+                    preCaretRange.selectNodeContents(element);
+                    preCaretRange.setEnd(range.endContainer, range.endOffset);
+                    caretPos = preCaretRange.toString().length;
+                }
+            }
+            return caretPos;
+        },
+        
+        setCaretPosition(element, pos) {
+            const range = document.createRange();
+            const selection = window.getSelection();
+            
+            try {
+                // Walk through all text nodes to find the correct position
+                let textLength = 0;
+                let targetNode = null;
+                let targetOffset = 0;
+                
+                const walker = document.createTreeWalker(
+                    element,
+                    NodeFilter.SHOW_TEXT,
+                    null,
+                    false
+                );
+                
+                let node;
+                while (node = walker.nextNode()) {
+                    const nodeLength = node.textContent.length;
+                    if (textLength + nodeLength >= pos) {
+                        targetNode = node;
+                        targetOffset = pos - textLength;
+                        break;
+                    }
+                    textLength += nodeLength;
+                }
+                
+                if (targetNode) {
+                    range.setStart(targetNode, Math.min(targetOffset, targetNode.textContent.length));
+                } else {
+                    // If we can't find the position, place cursor at the end
+                    range.selectNodeContents(element);
+                    range.collapse(false);
+                }
+                
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+            } catch (e) {
+                // Fallback: place cursor at end
+                try {
+                    range.selectNodeContents(element);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                } catch (fallbackError) {
+                    // If even fallback fails, just ignore
+                }
+            }
+        },
+        
+        escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+        
         downloadSession() {
             if (this.events.length === 0) return;
             
@@ -645,6 +843,15 @@ function typingStats() {
             this.wpmHistory = [];
             this.digraphSortBy = 'avgLatency';
             this.digraphSortDesc = true;
+            
+            // Clear word coloring data
+            this.wordHistory = [];
+            this.currentWordText = '';
+            
+            // Clear contenteditable content
+            if (this.$refs.textInput) {
+                this.$refs.textInput.innerHTML = '';
+            }
         },
         
         resetTiming() {
@@ -916,10 +1123,7 @@ function typingStats() {
         },
         
         getLastWordColor() {
-            if (!this.lastWordWpm || !this.targetWpm) return '';
-            const ratio = Math.min(this.lastWordWpm / this.targetWpm, 1.5);
-            const hue = ratio * 120;
-            return `hsl(${hue}, 70%, 50%)`;
+            return this.getColorFromWpm(this.lastWordWpm, this.targetWpm);
         },
         
         triggerWpmFeedback() {

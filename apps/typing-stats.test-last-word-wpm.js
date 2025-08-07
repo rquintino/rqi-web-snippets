@@ -219,7 +219,8 @@ test.describe('Typing Stats - Last Word WPM Feature', () => {
     await expect(valueElement).toHaveText('0.0');
     
     // Text input should be cleared
-    await expect(textInput).toHaveValue('');
+    const textContent = await textInput.textContent();
+    expect(textContent.trim()).toBe('');
   });
 
 });

@@ -174,7 +174,7 @@ test.describe('Typing Stats App', () => {
 
   test('version number is displayed', async ({ page }) => {
     await expect(page.locator('.version')).toBeVisible();
-    await expect(page.locator('.version')).toContainText('v2025-08-06.2');
+    await expect(page.locator('.version')).toContainText('v2025-08-07.1');
   });
 
   test('reset session clears data', async ({ page }) => {
@@ -196,7 +196,8 @@ test.describe('Typing Stats App', () => {
     await page.locator('button:has-text("Reset Session")').click();
     
     // Verify data is cleared
-    await expect(textInput).toHaveValue('');
+    const textContent = await textInput.textContent();
+    expect(textContent.trim()).toBe('');
     
     // Wait for metrics to update
     await page.waitForTimeout(300);

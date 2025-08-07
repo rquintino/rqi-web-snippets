@@ -22,6 +22,8 @@
     - Target WPM feedback: Set custom WPM goals with real-time audio/visual feedback for slow words
     - Color gradient display: Last word WPM changes color based on performance vs target
     - Audio alerts: Sound notification when typing below target speed to encourage practice
+    - Word-level color coding: Completed words display with colors based on their individual typing speed
+    - Interactive tooltips: Hover over colored words to see their specific WPM performance
     -->
     
     <link rel="stylesheet" href="typing-stats.css">
@@ -81,17 +83,17 @@
 
         <!-- Text Input Area -->
         <div class="input-section">
-            <textarea 
+            <div 
+                contenteditable="true"
                 x-ref="textInput"
-                class="text-input"
-                placeholder="Start typing here... Your text will be analyzed in real-time."
+                class="text-input contenteditable-input"
+                @input="handleContentEditableInput($event)"
                 @keydown="handleKeyDown($event)"
                 @keyup="handleKeyUp($event)"
-                @paste="handlePaste($event)"
-                x-model="textContent"
                 aria-label="Text input for typing analysis"
                 role="textbox"
-            ></textarea>
+                data-placeholder="Start typing here... Your text will be analyzed in real-time."
+            ></div>
         </div>
 
         <!-- Real-time Metrics Panel -->
@@ -201,10 +203,10 @@
     <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
 
     <!-- Version -->
-    <div class="version">v2025-08-06.2</div>
+    <div class="version">v2025-08-07.1</div>
 
     <script src="shared/shared.js?v=2025-07-27.1"></script>
-    <script src="typing-stats.js?v=2025-08-06.2"></script>
+    <script src="typing-stats.js?v=2025-08-07.6"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>
