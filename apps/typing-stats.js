@@ -38,6 +38,11 @@ function typingStats() {
         experienceLevel: 'Intermediate',
         tooltip: { show: false, text: '', x: 0, y: 0 },
         
+        // Target WPM feedback system
+        targetWpm: 70, // Default based on experience level
+        soundEnabled: true,
+        audioContext: null,
+        
         // Experience level thresholds matrix
         levelThresholds: {
             'Beginner': {
@@ -165,6 +170,9 @@ function typingStats() {
             this.$nextTick(() => {
                 this.$refs.textInput.focus();
             });
+            
+            // Expose typing stats instance to window for testing
+            window.typingStatsInstance = this;
         },
         
         
@@ -316,6 +324,11 @@ function typingStats() {
                 
                 // Update last word WPM (ensure it's a valid finite number)
                 this.lastWordWpm = this.validateWpmValue(wordWpm);
+                
+                // Trigger WPM feedback if enabled
+                if (this.targetWpm && this.lastWordWpm > 0) {
+                    this.triggerWpmFeedback();
+                }
             }
             
             // Reset word tracking for next word
@@ -726,11 +739,16 @@ function typingStats() {
                     const prefs = typeof saved === 'string' ? JSON.parse(saved) : saved;
                     this.darkMode = prefs.darkMode !== undefined ? prefs.darkMode : true;
                     this.experienceLevel = prefs.experienceLevel || 'Intermediate';
+                    this.targetWpm = prefs.targetWpm || this.getDefaultTargetWpm();
+                } else {
+                    // Set default target WPM based on experience level
+                    this.targetWpm = this.getDefaultTargetWpm();
                 }
             } catch (error) {
                 console.warn('Could not load preferences:', error);
                 this.darkMode = true; // fallback to default
                 this.experienceLevel = 'Intermediate';
+                this.targetWpm = this.getDefaultTargetWpm();
             }
         },
 
@@ -738,11 +756,24 @@ function typingStats() {
             try {
                 await setItem('typingStats_preferences', {
                     darkMode: this.darkMode,
-                    experienceLevel: this.experienceLevel
+                    experienceLevel: this.experienceLevel,
+                    targetWpm: this.targetWpm
                 });
             } catch (error) {
                 console.warn('Could not save preferences:', error);
             }
+        },
+        
+        getDefaultTargetWpm() {
+            const levelDefaults = {
+                'Beginner': 25,
+                'Novice': 50,
+                'Intermediate': 70,
+                'Proficient': 90,
+                'Advanced': 110,
+                'Expert/Elite': 130
+            };
+            return levelDefaults[this.experienceLevel] || 70;
         },
         
         getThresholdText(metric) {
@@ -856,6 +887,63 @@ function typingStats() {
             } else {
                 this.digraphSortBy = column;
                 this.digraphSortDesc = column === 'avgLatency'; // Default desc for latency, asc for count
+            }
+        },
+        
+        // Target WPM feedback methods
+        playSlowWordSound() {
+            if (!this.soundEnabled) return;
+            
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+            oscillator.frequency.linearRampToValueAtTime(220, this.audioContext.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(this.audioContext.currentTime + 0.2);
+        },
+        
+        getLastWordColor() {
+            if (!this.lastWordWpm || !this.targetWpm) return '';
+            const ratio = Math.min(this.lastWordWpm / this.targetWpm, 1.5);
+            const hue = ratio * 120;
+            return `hsl(${hue}, 70%, 50%)`;
+        },
+        
+        triggerWpmFeedback() {
+            if (this.lastWordWpm < this.targetWpm) {
+                this.playSlowWordSound();
+                this.flashLastWordDisplay();
+            }
+        },
+        
+        flashLastWordDisplay() {
+            // Find the last word WPM element by traversing the DOM
+            const allMetricTiles = document.querySelectorAll('.metric-tile');
+            let lastWordElement = null;
+            
+            allMetricTiles.forEach(tile => {
+                const label = tile.querySelector('.metric-label');
+                if (label && label.textContent.includes('Last Word WPM')) {
+                    lastWordElement = tile.querySelector('.metric-value');
+                }
+            });
+            
+            if (lastWordElement) {
+                lastWordElement.classList.add('last-word-flash');
+                setTimeout(() => lastWordElement.classList.remove('last-word-flash'), 500);
             }
         }
     };

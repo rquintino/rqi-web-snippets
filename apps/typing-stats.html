@@ -19,6 +19,9 @@
     - Modern, minimalistic UI with dark/light mode toggle
     - Fullscreen toggle
     - Home button to return to index
+    - Target WPM feedback: Set custom WPM goals with real-time audio/visual feedback for slow words
+    - Color gradient display: Last word WPM changes color based on performance vs target
+    - Audio alerts: Sound notification when typing below target speed to encourage practice
     -->
     
     <link rel="stylesheet" href="typing-stats.css">
@@ -70,6 +73,10 @@
                     <option>Expert/Elite</option>
                 </select>
             </div>
+            <div class="pause-settings">
+                <label for="targetWpm">Target WPM:</label>
+                <input type="number" id="targetWpm" x-model.number="targetWpm" min="10" max="200" class="wpm-input" @change="savePreferences()">
+            </div>
         </div>
 
         <!-- Text Input Area -->
@@ -102,7 +109,7 @@
                 </div>
 
                 <div class="metric-tile" @mouseenter="showTooltip($event, 'WPM of the most recently completed word using 5-letter standard')" @mouseleave="hideTooltip()">
-                    <div class="metric-value" x-text="lastWordWpm.toFixed(1)"></div>
+                    <div class="metric-value last-word-feedback" x-text="lastWordWpm.toFixed(1)" :style="{ color: getLastWordColor() }"></div>
                     <div class="metric-label">Last Word WPM</div>
                 </div>
 
@@ -194,10 +201,10 @@
     <div class="tooltip" x-show="tooltip.show" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }" x-text="tooltip.text"></div>
 
     <!-- Version -->
-    <div class="version">v2025-08-06.1</div>
+    <div class="version">v2025-08-06.2</div>
 
     <script src="shared/shared.js?v=2025-07-27.1"></script>
-    <script src="typing-stats.js?v=2025-08-06.1"></script>
+    <script src="typing-stats.js?v=2025-08-06.2"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>
