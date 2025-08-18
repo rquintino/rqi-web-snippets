@@ -58,8 +58,11 @@ coverage/
 claude-settings.json
 
 
+.obsidian
 
 # Demo videos folder
 videos/
+specs/
+draft/
 
 # Note: apps/shared/deployment-info.js is tracked as placeholder, overwritten on deploy
