@@ -25,6 +25,7 @@ This repository contains a collection of standalone web utilities and applicatio
 
 ### 3. Dependencies
 - External libraries must be loaded from reputable CDNs
+- After identifying each external dependency, search the web and respective package lists to see the latest and recommended version for each library
 - Only use well-established libraries with strong security track records, if in doubt, stop and confirm with user
 - Don't use libraries with any known security or privacy risks
 
@@ -66,10 +67,12 @@ This repository contains a collection of standalone web utilities and applicatio
 - Group selectors that share declarations: .b,.c{color:#fff}
 
 ### Automated Testing
+- For any kind of testing you need to do you always use playwright tests, you can't manually open the app because you are an ai agent, so dont try to manually open the app.
 - For automated testing we're using playwright/test with node.js
 - For each app the tests will be in <apptitle>.test.js file
 - Always ensure the minimal test which is the app loads without network or console errors
 - When adding a feature also add needed tests, be exhaustive, always
+- Always include a test that generate an app screenshot and analyse the screenshot to check that all the app ui is properly loaded and working (when creating app for the first time)
 
 #### Critical Testing Pattern for Console Error Detection
 - **ALWAYS** set up console error listeners BEFORE loading the page in tests
