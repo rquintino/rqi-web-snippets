@@ -72,7 +72,7 @@ This repository contains a collection of standalone web utilities and applicatio
 - For each app the tests will be in <apptitle>.test.js file
 - Always ensure the minimal test which is the app loads without network or console errors
 - When adding a feature also add needed tests, be exhaustive, always
-- Always include a test that generate an app screenshot and analyse the screenshot to check that all the app ui is properly loaded and working (when creating app for the first time)
+- Always include a test that generate an app screenshot and analyse the screenshot to check that all the app ui is properly loaded and working (when creating app for the first time). the screenshot name should be <appname>-screenshot.png.
 
 #### Critical Testing Pattern for Console Error Detection
 - **ALWAYS** set up console error listeners BEFORE loading the page in tests
@@ -133,7 +133,7 @@ setTimeout(checkLibrary, 100);
 - Always be mindful of security and privacy
 
 ### Shared Footer Component
-- For "Created by" footer with LinkedIn link, include shared/footer.js in all utility pages to avoid duplication
+- For "Created by" footer with LinkedIn link, include shared/footer.js in all utility pages to avoid duplication. shared folder is inside the apps.
 - All utility pages should include `<script src="shared/footer.js"></script>` before closing body tag (path relative to apps/ folder)
 - The shared/footer.js automatically adds a "Created by" footer with LinkedIn link in bottom-right
 - Automatically detects and adapts to dark/light mode themes
@@ -185,8 +185,8 @@ setTimeout(checkLibrary, 100);
 ### Development Flow
 - Simply open any utility's HTML file in the apps/ folder in a web browser to use it. No installation or setup required.
 - Right after creating the first version of each app (HTML file) open that automatically in the user's browser
-- Keep a single apps/index.html that should have links to all existing pages. Make it modern, fun
-- All app/utilities files should have a home button that goes back to the apps/index.html file
+- Keep a single /index.html that should have links to all existing pages. Make it modern, fun
+- All app/utilities files should have a home button that goes back to the /index.html file (index.html is one level above apps folder)
 - When editing large files always use multiple edits instead of a full rewrite of the file as it will likely fail
 
 ## Testing Commands
