@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo do Galo</title>
+    <link rel="stylesheet" href="tictactoe.css?v=2025-08-19.1">
+    <script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <!-- 
+    Functional Requirements:
+    - 3x3 grid tic-tac-toe game
+    - Human player vs Computer AI
+    - Player is X, Computer is O
+    - Simple AI strategy: random moves with basic winning/blocking logic
+    - Game state tracking (win, draw, in progress)
+    - Score tracking across games
+    - Reset game functionality
+    - Responsive design with dark/light theme
+    - Fullscreen toggle
+    -->
+
+    <div x-data="{ 
+        isDark: false, 
+        isFullscreen: false,
+        board: ['', '', '', '', '', '', '', '', ''],
+        currentPlayer: 'X',
+        gameOver: false,
+        winner: null,
+        playerScore: 0,
+        computerScore: 0,
+        draws: 0,
+        gameMessage: 'Sua vez! Clique numa casa vazia.',
+        
+        init() {
+            this.isDark = localStorage.getItem('tictactoe-theme') === 'dark';
+            this.updateTheme();
+        },
+        
+        toggleTheme() {
+            this.isDark = !this.isDark;
+            localStorage.setItem('tictactoe-theme', this.isDark ? 'dark' : 'light');
+            this.updateTheme();
+        },
+        
+        updateTheme() {
+            document.documentElement.classList.toggle('dark', this.isDark);
+        },
+        
+        toggleFullscreen() {
+            if (!this.isFullscreen) {
+                document.documentElement.requestFullscreen();
+                this.isFullscreen = true;
+            } else {
+                document.exitFullscreen();
+                this.isFullscreen = false;
+            }
+        },
+        
+        makeMove(index) {
+            if (this.board[index] !== '' || this.gameOver || this.currentPlayer !== 'X') return;
+            
+            this.board[index] = 'X';
+            
+            if (this.checkWin('X')) {
+                this.gameOver = true;
+                this.winner = 'X';
+                this.playerScore++;
+                this.gameMessage = 'Parabéns! Você ganhou!';
+                return;
+            }
+            
+            if (this.checkDraw()) {
+                this.gameOver = true;
+                this.draws++;
+                this.gameMessage = 'Empate!';
+                return;
+            }
+            
+            this.currentPlayer = 'O';
+            this.gameMessage = 'Computador a pensar...';
+            
+            setTimeout(() => {
+                this.computerMove();
+            }, 500);
+        },
+        
+        computerMove() {
+            if (this.gameOver) return;
+            
+            let move = this.getBestMove();
+            this.board[move] = 'O';
+            
+            if (this.checkWin('O')) {
+                this.gameOver = true;
+                this.winner = 'O';
+                this.computerScore++;
+                this.gameMessage = 'O computador ganhou!';
+                return;
+            }
+            
+            if (this.checkDraw()) {
+                this.gameOver = true;
+                this.draws++;
+                this.gameMessage = 'Empate!';
+                return;
+            }
+            
+            this.currentPlayer = 'X';
+            this.gameMessage = 'Sua vez! Clique numa casa vazia.';
+        },
+        
+        getBestMove() {
+            // First try to win
+            for (let i = 0; i < 9; i++) {
+                if (this.board[i] === '') {
+                    this.board[i] = 'O';
+                    if (this.checkWin('O')) {
+                        this.board[i] = '';
+                        return i;
+                    }
+                    this.board[i] = '';
+                }
+            }
+            
+            // Then try to block player win
+            for (let i = 0; i < 9; i++) {
+                if (this.board[i] === '') {
+                    this.board[i] = 'X';
+                    if (this.checkWin('X')) {
+                        this.board[i] = '';
+                        return i;
+                    }
+                    this.board[i] = '';
+                }
+            }
+            
+            // Take center if available
+            if (this.board[4] === '') return 4;
+            
+            // Take corners
+            const corners = [0, 2, 6, 8];
+            const availableCorners = corners.filter(i => this.board[i] === '');
+            if (availableCorners.length > 0) {
+                return availableCorners[Math.floor(Math.random() * availableCorners.length)];
+            }
+            
+            // Take any available space
+            const available = this.board.map((cell, i) => cell === '' ? i : null).filter(i => i !== null);
+            return available[Math.floor(Math.random() * available.length)];
+        },
+        
+        checkWin(player) {
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+                [0, 4, 8], [2, 4, 6] // diagonals
+            ];
+            
+            return winPatterns.some(pattern => 
+                pattern.every(index => this.board[index] === player)
+            );
+        },
+        
+        checkDraw() {
+            return this.board.every(cell => cell !== '') && !this.winner;
+        },
+        
+        resetGame() {
+            this.board = ['', '', '', '', '', '', '', '', ''];
+            this.currentPlayer = 'X';
+            this.gameOver = false;
+            this.winner = null;
+            this.gameMessage = 'Sua vez! Clique numa casa vazia.';
+        },
+        
+        resetScore() {
+            this.playerScore = 0;
+            this.computerScore = 0;
+            this.draws = 0;
+        }
+    }" 
+    :class="{'dark': isDark}" 
+    class="min-h-screen transition-colors duration-300">
+
+        <!-- Header Controls -->
+        <div class="fixed top-4 left-4 z-10">
+            <button @click="window.location.href='../index.html'" class="home-btn">
+                🏠
+            </button>
+        </div>
+
+        <div class="fixed top-4 right-4 z-10 flex gap-2">
+            <button @click="toggleTheme()" class="control-btn">
+                <span x-show="!isDark">🌙</span>
+                <span x-show="isDark">☀️</span>
+            </button>
+            <button @click="toggleFullscreen()" class="control-btn">
+                <span x-show="!isFullscreen">⛶</span>
+                <span x-show="isFullscreen">⛷</span>
+            </button>
+        </div>
+
+        <!-- Main Game Container -->
+        <div class="container">
+            <h1 class="title">Jogo do Galo</h1>
+            
+            <!-- Score Display -->
+            <div class="score-board">
+                <div class="score-item">
+                    <span class="score-label">Você (X)</span>
+                    <span class="score-value" x-text="playerScore"></span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">Empates</span>
+                    <span class="score-value" x-text="draws"></span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">Computador (O)</span>
+                    <span class="score-value" x-text="computerScore"></span>
+                </div>
+            </div>
+
+            <!-- Game Status -->
+            <div class="game-status" x-text="gameMessage"></div>
+
+            <!-- Game Board -->
+            <div class="game-board">
+                <template x-for="(cell, index) in board" :key="index">
+                    <button 
+                        @click="makeMove(index)" 
+                        class="cell" 
+                        :class="{'winning-cell': winner && checkWin(winner)}"
+                        x-text="cell">
+                    </button>
+                </template>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="controls">
+                <button @click="resetGame()" class="btn btn-primary">Novo Jogo</button>
+                <button @click="resetScore()" class="btn btn-secondary">Reset Pontuação</button>
+            </div>
+
+            <!-- Version -->
+            <div class="version">v2025-08-19.1</div>
+        </div>
+
+        <script src="shared/footer.js"></script>
+        <script src="tictactoe.js?v=2025-08-19.1"></script>
+    </div>
+</body>
+</html>

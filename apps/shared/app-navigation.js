@@ -88,6 +88,13 @@ const APPS_REGISTRY = [
         description: "Focus timer using the Pomodoro technique with work sessions, breaks, and progress tracking",
         icon: "⏱️",
         screenshot: "pomodoro-timer.jpeg"
+    },
+    {
+        filename: "tictactoe.html",
+        title: "Jogo do Galo",
+        description: "Classic tic-tac-toe game with smart AI opponent",
+        icon: "⭕",
+        screenshot: "tictactoe-screenshot.png"
     }
 ];
 
