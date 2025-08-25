@@ -1,11 +1,11 @@
 // Auto-generated deployment info - do not edit manually
 window.deploymentInfo = {
-  "timestamp": "2025-07-27T11:38:57.161Z",
-  "deployDate": "July 27, 2025",
-  "deployTime": "11:38 AM UTC",
+  "timestamp": "2025-08-25T22:22:58.104Z",
+  "deployDate": "August 25, 2025",
+  "deployTime": "10:22 PM UTC",
   "environment": "Local",
-  "commitHash": "55b23e3f687a27ff2e4e4e9a76ef789b8dd86755",
-  "shortHash": "55b23e3",
-  "commitMessage": "fix: increase timeout for test job to prevent premature failures",
-  "authorDate": "2025-07-27 12:32:52 +0100"
+  "commitHash": "487b1de8ddb3770ebdc3dfa5451c3935a8f8364b",
+  "shortHash": "487b1de",
+  "commitMessage": "feat: add legal language requirement for client applications in development cost analyzer",
+  "authorDate": "2025-08-23 13:00:53 +0100"
 };

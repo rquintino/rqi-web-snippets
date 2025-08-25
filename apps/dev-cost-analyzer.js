@@ -241,6 +241,7 @@ function devCostAnalyzer() {
         },
         
         sortApps() {
+            return;
             this.filteredApps.sort((a, b) => {
                 switch (this.sortBy) {
                     case 'complexity':
