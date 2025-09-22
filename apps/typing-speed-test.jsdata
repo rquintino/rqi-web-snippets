@@ -131,6 +131,22 @@ window.typingWordLists = {
         // ee — left-middle finger (E→E)
         'see', 'tree', 'meet', 'need', 'seed', 'seem', 'feel', 'green', 'sleep', 'street', 'cheer', 'queen', 'deer',
         'freedom', 'sweet', 'speed', 'beetle', 'steep', 'sheep', 'speech'
+    ],
+    'left-hand-difficult': [
+        // Left-hand difficult words focused on challenging patterns
+        'steward', 'rewards', 'created', 'wasted', 'tested', 'crafted', 'drafted', 'greatest', 'seaweed', 'cravat',
+        'battered', 'avatar', 'bread', 'beast', 'feast', 'draft', 'craft', 'waste', 'taste', 'gates',
+        'dates', 'rates', 'fates', 'states', 'creates', 'sweater', 'water', 'after', 'greed', 'breed',
+        'creed', 'freed', 'graze', 'craze', 'fazed', 'crazed', 'grazed', 'traced', 'braced', 'graced',
+        'raced', 'faced', 'sacred', 'scared', 'geared', 'ceased', 'decreased', 'creased', 'greased', 'released'
+    ],
+    'right-hand-difficult': [
+        // Right-hand difficult words focused on challenging patterns
+        'milk', 'hill', 'kill', 'pill', 'junk', 'hulk', 'punk', 'lump', 'jump', 'pump',
+        'hump', 'hymn', 'kiln', 'pulp', 'loop', 'pool', 'noon', 'moon', 'loon', 'hook',
+        'look', 'nook', 'kook', 'pony', 'only', 'holy', 'lily', 'oily', 'pink', 'link',
+        'kink', 'honk', 'monk', 'yolk', 'hull', 'pull', 'null', 'lull', 'july', 'join',
+        'loin', 'mill', 'knoll', 'jinni', 'hippo', 'opium', 'union', 'onion', 'mummy', 'yummy'
     ]
 };
 // For backward compatibility
