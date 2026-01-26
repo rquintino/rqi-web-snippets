@@ -138,92 +138,180 @@ class NetworkBackground {
     }
 }
 
+// Translations
+const translations = {
+    en: {
+        mainTitle: "What's New with GenAI?",
+        subtitle: "Traditional AI vs Generative AI",
+        traditionalAI: "Traditional AI",
+        generativeAI: "Generative AI",
+        traditionalPeriod: "(2000-2020)",
+        generativePeriod: "(2022+)",
+        oneModelPerTask: "One Model Per Very Specific Task",
+        oneFoundationModel: "One Foundation Model, Multiple Tasks",
+        foundationModel: "Foundation Model",
+        tasks: {
+            detectFraud: "Detect Credit Card Fraud",
+            recognizeFaces: "Recognize Faces in Photos",
+            recommendMovies: "Recommend Next Netflix Movie",
+            predictSales: "Predict Walmart Sales",
+            transcribeSpeech: "Transcribe English Speech",
+            diagnoseCancer: "Diagnose Skin Cancer"
+        },
+        capabilities: {
+            textGeneration: "Text Generation",
+            codeGeneration: "Code Generation",
+            imageCreation: "Image Creation",
+            analysis: "Analysis",
+            translation: "Translation",
+            summarization: "Summarization",
+            videoCreation: "Video Creation",
+            musicComposition: "Music Composition",
+            voiceSynthesis: "Voice Synthesis",
+            emailWriting: "Email Writing",
+            researchAssistant: "Research Assistant",
+            dataVisualization: "Data Visualization",
+            logoDesign: "Logo Design",
+            recipeCreation: "Recipe Creation",
+            presentationMaker: "Presentation Maker",
+            storyWriting: "Story Writing",
+            mathSolver: "Math Solver",
+            languageLearning: "Language Learning",
+            codeReview: "Code Review",
+            marketingCopy: "Marketing Copy",
+            legalDocuments: "Legal Documents",
+            medicalDiagnosis: "Medical Diagnosis",
+            gameDevelopment: "Game Development",
+            socialMedia: "Social Media"
+        },
+        benefits: {
+            oneModel: "One model, countless tasks",
+            anyFormat: "Understands any data format",
+            readyToUse: "Ready to use immediately",
+            plainEnglish: "Talk to it in plain English",
+            multiModal: "Text, images, video & audio",
+            noSetup: "No technical setup required"
+        }
+    },
+    pt: {
+        mainTitle: "O que há de novo na GenAI?",
+        subtitle: "IA Tradicional vs IA Generativa",
+        traditionalAI: "IA Tradicional",
+        generativeAI: "IA Generativa",
+        traditionalPeriod: "(2000-2020)",
+        generativePeriod: "(2022+)",
+        oneModelPerTask: "Um Modelo Por Tarefa Muito Específica",
+        oneFoundationModel: "Um Modelo Base, Múltiplas Tarefas",
+        foundationModel: "Modelo Base",
+        tasks: {
+            detectFraud: "Detetar Fraude de Cartão de Crédito",
+            recognizeFaces: "Reconhecer Rostos em Fotos",
+            recommendMovies: "Recomendar Próximo Filme Netflix",
+            predictSales: "Prever Vendas do Walmart",
+            transcribeSpeech: "Transcrever Discurso em Inglês",
+            diagnoseCancer: "Diagnosticar Cancro de Pele"
+        },
+        capabilities: {
+            textGeneration: "Geração de Texto",
+            codeGeneration: "Geração de Código",
+            imageCreation: "Criação de Imagens",
+            analysis: "Análise",
+            translation: "Tradução",
+            summarization: "Resumo",
+            videoCreation: "Criação de Vídeo",
+            musicComposition: "Composição Musical",
+            voiceSynthesis: "Síntese de Voz",
+            emailWriting: "Escrita de E-mails",
+            researchAssistant: "Assistente de Pesquisa",
+            dataVisualization: "Visualização de Dados",
+            logoDesign: "Design de Logótipos",
+            recipeCreation: "Criação de Receitas",
+            presentationMaker: "Criador de Apresentações",
+            storyWriting: "Escrita de Histórias",
+            mathSolver: "Resolução de Matemática",
+            languageLearning: "Aprendizagem de Línguas",
+            codeReview: "Revisão de Código",
+            marketingCopy: "Textos de Marketing",
+            legalDocuments: "Documentos Legais",
+            medicalDiagnosis: "Diagnóstico Médico",
+            gameDevelopment: "Desenvolvimento de Jogos",
+            socialMedia: "Redes Sociais"
+        },
+        benefits: {
+            oneModel: "Um modelo, inúmeras tarefas",
+            anyFormat: "Compreende qualquer formato",
+            readyToUse: "Pronto a usar imediatamente",
+            plainEnglish: "Fale com ele em linguagem natural",
+            multiModal: "Texto, imagens, vídeo e áudio",
+            noSetup: "Sem configuração técnica"
+        }
+    }
+};
+
 // Main Alpine.js Data Function
 function whatsNewWithGenai() {
     return {
         darkMode: true,
         fullscreen: false,
+        language: 'en',
         activeSection: null,
         networkBackgrounds: [],
         
         traditionalTasks: [
-            { 
-                name: "Detect Credit Card Fraud", 
-                emoji: "🛡️", 
-                color: "red",
-                gradient: "linear-gradient(to right, #22c55e, #3b82f6)"
-            },
-            { 
-                name: "Recognize Faces in Photos", 
-                emoji: "👁️", 
-                color: "green",
-                gradient: "linear-gradient(to right, #22c55e, #3b82f6)"
-            },
-            { 
-                name: "Recommend Next Netflix Movie", 
-                emoji: "📺", 
-                color: "purple",
-                gradient: "linear-gradient(to right, #22c55e, #3b82f6)"
-            },
-            { 
-                name: "Predict Walmart Sales", 
-                emoji: "🛒", 
-                color: "orange",
-                gradient: "linear-gradient(to right, #22c55e, #3b82f6)"
-            },
-            { 
-                name: "Transcribe English Speech", 
-                emoji: "🎤", 
-                color: "cyan",
-                gradient: "linear-gradient(to right, #22c55e, #3b82f6)"
-            },
-            { 
-                name: "Diagnose Skin Cancer", 
-                emoji: "🔬", 
-                color: "blue",
-                gradient: "linear-gradient(to right, #22c55e, #3b82f6)"
-            }
+            { key: "detectFraud", emoji: "🛡️", color: "red", gradient: "linear-gradient(to right, #22c55e, #3b82f6)" },
+            { key: "recognizeFaces", emoji: "👁️", color: "green", gradient: "linear-gradient(to right, #22c55e, #3b82f6)" },
+            { key: "recommendMovies", emoji: "📺", color: "purple", gradient: "linear-gradient(to right, #22c55e, #3b82f6)" },
+            { key: "predictSales", emoji: "🛒", color: "orange", gradient: "linear-gradient(to right, #22c55e, #3b82f6)" },
+            { key: "transcribeSpeech", emoji: "🎤", color: "cyan", gradient: "linear-gradient(to right, #22c55e, #3b82f6)" },
+            { key: "diagnoseCancer", emoji: "🔬", color: "blue", gradient: "linear-gradient(to right, #22c55e, #3b82f6)" }
         ],
         
         allCapabilities: [
-            { name: "Text Generation", icon: "✍️" },
-            { name: "Code Generation", icon: "💻" },
-            { name: "Image Creation", icon: "🎨" },
-            { name: "Analysis", icon: "🔍" },
-            { name: "Translation", icon: "🌐" },
-            { name: "Summarization", icon: "📝" },
-            { name: "Video Creation", icon: "🎬" },
-            { name: "Music Composition", icon: "🎵" },
-            { name: "Voice Synthesis", icon: "🗣️" },
-            { name: "Email Writing", icon: "📧" },
-            { name: "Research Assistant", icon: "📚" },
-            { name: "Data Visualization", icon: "📊" },
-            { name: "Logo Design", icon: "🎯" },
-            { name: "Recipe Creation", icon: "👨‍🍳" },
-            { name: "Presentation Maker", icon: "📈" },
-            { name: "Story Writing", icon: "📖" },
-            { name: "Math Solver", icon: "🧮" },
-            { name: "Language Learning", icon: "🌍" },
-            { name: "Code Review", icon: "🔬" },
-            { name: "Marketing Copy", icon: "📢" },
-            { name: "Legal Documents", icon: "⚖️" },
-            { name: "Medical Diagnosis", icon: "🏥" },
-            { name: "Game Development", icon: "🎮" },
-            { name: "Social Media", icon: "📱" }
+            { key: "textGeneration", icon: "✍️" },
+            { key: "codeGeneration", icon: "💻" },
+            { key: "imageCreation", icon: "🎨" },
+            { key: "analysis", icon: "🔍" },
+            { key: "translation", icon: "🌐" },
+            { key: "summarization", icon: "📝" },
+            { key: "videoCreation", icon: "🎬" },
+            { key: "musicComposition", icon: "🎵" },
+            { key: "voiceSynthesis", icon: "🗣️" },
+            { key: "emailWriting", icon: "📧" },
+            { key: "researchAssistant", icon: "📚" },
+            { key: "dataVisualization", icon: "📊" },
+            { key: "logoDesign", icon: "🎯" },
+            { key: "recipeCreation", icon: "👨‍🍳" },
+            { key: "presentationMaker", icon: "📈" },
+            { key: "storyWriting", icon: "📖" },
+            { key: "mathSolver", icon: "🧮" },
+            { key: "languageLearning", icon: "🌍" },
+            { key: "codeReview", icon: "🔬" },
+            { key: "marketingCopy", icon: "📢" },
+            { key: "legalDocuments", icon: "⚖️" },
+            { key: "medicalDiagnosis", icon: "🏥" },
+            { key: "gameDevelopment", icon: "🎮" },
+            { key: "socialMedia", icon: "📱" }
         ],
         
         genaiCapabilities: [],
         rotationTimer: null,
         
-        genaibenefits: [
-            "One model, countless tasks",
-            "Understands any data format", 
-            "Ready to use immediately",
-            "Talk to it in plain English",
-            "Text, images, video & audio",
-            "No technical setup required"
-        ],
+        genaiBenefitKeys: ['oneModel', 'anyFormat', 'readyToUse', 'plainEnglish', 'multiModal', 'noSetup'],
         
+        // Translation helper
+        t(key) {
+            const keys = key.split('.');
+            let value = translations[this.language];
+            for (const k of keys) {
+                value = value?.[k];
+            }
+            return value || key;
+        },
+
+        toggleLanguage() {
+            this.language = this.language === 'en' ? 'pt' : 'en';
+        },
+
         init() {
             this.initCapabilities();
             this.initNetworkBackgrounds();
@@ -273,8 +361,8 @@ function whatsNewWithGenai() {
             // Step 2: After fade out completes, change content and fade in
             setTimeout(() => {
                 // Get available capabilities (not currently shown)
-                const currentCapabilities = this.genaiCapabilities.map(c => c.name);
-                const availableCapabilities = this.allCapabilities.filter(c => !currentCapabilities.includes(c.name));
+                const currentCapabilities = this.genaiCapabilities.map(c => c.key);
+                const availableCapabilities = this.allCapabilities.filter(c => !currentCapabilities.includes(c.key));
                 
                 // Replace selected capabilities
                 indicesToReplace.forEach(index => {
