@@ -1,15 +1,107 @@
 /**
  * Foundation Model Training Visualization
- * 
+ *
  * Main purpose: Interactive visualization of AI foundation model training process
- * 
+ *
  * Key methods:
  * - foundationModelApp(): Main Alpine.js component with training simulation
  * - NetworkCanvas: Canvas-based network animation with floating nodes and connections
  * - trainingLoop(): Manages training progress simulation over 30 days
  * - setCompletedAIModel(): Randomly selects AI model on completion
  * - canvasAnimations(): Handles network background animations
+ * - toggleLang(): Switches between EN/PT languages
+ * - t(key): Returns translated text for current language
  */
+
+const translations = {
+    en: {
+        pageTitle: 'Foundation Model Training',
+        headerTitle: 'How Foundation Models Are Trained',
+        headerSubtitle: 'The Multi-Billion Dollar Process Behind GenAI',
+        step1Title: '1. Massive Data Collection',
+        step2Title: '2. Neural Network Training',
+        step3Title: '3. Foundation Model',
+        dataText: 'Text',
+        dataCode: 'Code',
+        dataImages: 'Images',
+        dataAudio: 'Audio',
+        dataVideo: 'Video',
+        dataData: 'Data',
+        trillions: 'Trillions',
+        ofTokens: 'of tokens',
+        gpus: 'GPUs',
+        january: 'January',
+        dayOf: 'Day',
+        complete: 'Complete',
+        ready: 'Ready',
+        waiting: 'Waiting...',
+        forDeployment: 'for deployment',
+        forTrainingCompletion: 'for training completion',
+        modelReadyDeployment: 'Model ready for deployment',
+        gpusWorking: '10,000 GPUs working 24/7',
+        trainingComplete: 'Training Complete!',
+        scalingCluster: 'Scaling cluster...',
+        preTraining: 'Pre-training model...',
+        postTraining: 'Post-training alignment...',
+        leadingCompanies: 'Leading AI Companies',
+        openaiTagline: 'Ensuring AGI benefits all of humanity',
+        anthropicTagline: 'AI safety and research company',
+        metaTagline: 'Democratizing AI through open source',
+        googleTagline: 'Organizing the worlds information with AI'
+    },
+    pt: {
+        pageTitle: 'Treino de Modelos Base',
+        headerTitle: 'Como os Modelos Base sao Treinados',
+        headerSubtitle: 'O Processo de Milhares de Milhoes por Detras da GenAI',
+        step1Title: '1. Recolha Massiva de Dados',
+        step2Title: '2. Treino da Rede Neuronal',
+        step3Title: '3. Modelo Base',
+        dataText: 'Texto',
+        dataCode: 'Codigo',
+        dataImages: 'Imagens',
+        dataAudio: 'Audio',
+        dataVideo: 'Video',
+        dataData: 'Dados',
+        trillions: 'Trilioes',
+        ofTokens: 'de tokens',
+        gpus: 'GPUs',
+        january: 'Janeiro',
+        dayOf: 'Dia',
+        complete: 'Completo',
+        ready: 'Pronto',
+        waiting: 'A aguardar...',
+        forDeployment: 'para utilizacao',
+        forTrainingCompletion: 'pelo fim do treino',
+        modelReadyDeployment: 'Modelo pronto para utilizacao',
+        gpusWorking: '10,000 GPUs a trabalhar 24/7',
+        trainingComplete: 'Treino Completo!',
+        scalingCluster: 'A escalar cluster...',
+        preTraining: 'Pre-treino do modelo...',
+        postTraining: 'Alinhamento pos-treino...',
+        leadingCompanies: 'Empresas Lideres em IA',
+        openaiTagline: 'Garantir que a AGI beneficia toda a humanidade',
+        anthropicTagline: 'Empresa de seguranca e investigacao em IA',
+        metaTagline: 'Democratizar a IA atraves do open source',
+        googleTagline: 'Organizar a informacao do mundo com IA'
+    }
+};
+
+const aiModelsData = {
+    en: [
+        { name: "Nexus", greeting: "Hello! I'm Nexus, your new AI companion. I'm ready to connect ideas and solve complex problems with you!" },
+        { name: "Zenith", greeting: "Greetings! I'm Zenith and I'm ready to help you reach new heights in productivity and creativity!" },
+        { name: "Aurora", greeting: "Hi there! I'm Aurora, bringing a new dawn to AI assistance. Let's illuminate possibilities together!" },
+        { name: "Prism", greeting: "Hello! I'm Prism, ready to refract your challenges into colorful solutions and insights!" },
+        { name: "Quantum", greeting: "Greetings! I'm Quantum, prepared to compute at the speed of thought and explore infinite possibilities!" }
+    ],
+    pt: [
+        { name: "Nexus", greeting: "Ola! Sou o Nexus, o teu novo companheiro de IA. Estou pronto para conectar ideias e resolver problemas complexos contigo!" },
+        { name: "Zenith", greeting: "Saudacoes! Sou o Zenith e estou pronto para te ajudar a atingir novos patamares de produtividade e criatividade!" },
+        { name: "Aurora", greeting: "Ola! Sou a Aurora, trazendo uma nova era para a assistencia de IA. Vamos iluminar possibilidades juntos!" },
+        { name: "Prism", greeting: "Ola! Sou o Prism, pronto para transformar os teus desafios em solucoes coloridas e insights!" },
+        { name: "Quantum", greeting: "Saudacoes! Sou o Quantum, preparado para computar a velocidade do pensamento e explorar possibilidades infinitas!" }
+    ]
+};
 
 function foundationModelApp() {
     return {
@@ -23,6 +115,7 @@ function foundationModelApp() {
         isTraining: false,
         isDark: true,
         isFullscreen: false,
+        lang: 'en',
         trainingCanvas: null,
         modelCanvas: null,
         trainingInterval: null,
@@ -54,7 +147,31 @@ function foundationModelApp() {
             }
         ],
 
+        t(key) {
+            return translations[this.lang]?.[key] || translations.en[key] || key;
+        },
+
+        toggleLang() {
+            this.lang = this.lang === 'en' ? 'pt' : 'en';
+            localStorage.setItem('foundation-lang', this.lang);
+            document.title = this.t('pageTitle');
+            this.updateCompanyTaglines();
+        },
+
+        updateCompanyTaglines() {
+            this.companies[0].tagline = this.t('openaiTagline');
+            this.companies[1].tagline = this.t('anthropicTagline');
+            this.companies[2].tagline = this.t('metaTagline');
+            this.companies[3].tagline = this.t('googleTagline');
+        },
+
         init() {
+            const savedLang = localStorage.getItem('foundation-lang');
+            if (savedLang) {
+                this.lang = savedLang;
+            }
+            document.title = this.t('pageTitle');
+            this.updateCompanyTaglines();
             this.startTrainingLoop();
             this.initCanvasAnimations();
         },
@@ -104,38 +221,16 @@ function foundationModelApp() {
         },
 
         setCompletedAIModel() {
-            const aiModels = [
-                { 
-                    name: "Nexus", 
-                    greeting: "Hello! I'm Nexus, your new AI companion. I'm ready to connect ideas and solve complex problems with you!" 
-                },
-                { 
-                    name: "Zenith", 
-                    greeting: "Greetings! I'm Zenith and I'm ready to help you reach new heights in productivity and creativity!" 
-                },
-                { 
-                    name: "Aurora", 
-                    greeting: "Hi there! I'm Aurora, bringing a new dawn to AI assistance. Let's illuminate possibilities together!" 
-                },
-                { 
-                    name: "Prism", 
-                    greeting: "Hello! I'm Prism, ready to refract your challenges into colorful solutions and insights!" 
-                },
-                { 
-                    name: "Quantum", 
-                    greeting: "Greetings! I'm Quantum, prepared to compute at the speed of thought and explore infinite possibilities!" 
-                }
-            ];
-            
+            const aiModels = aiModelsData[this.lang] || aiModelsData.en;
             const selectedModel = aiModels[Math.floor(Math.random() * aiModels.length)];
             this.aiModel = selectedModel;
             this.showGreeting = true;
-            
+
             setTimeout(() => this.showGreeting = false, 4000);
         },
 
         getMonthName() {
-            return 'January';
+            return this.t('january');
         },
 
         getGpuCount() {
@@ -147,13 +242,13 @@ function foundationModelApp() {
 
         getProgressLabel() {
             if (this.trainingProgress >= 100) {
-                return "✅ Training Complete!";
+                return '✅ ' + this.t('trainingComplete');
             } else if (this.gpuScalingPhase) {
-                return "Scaling cluster...";
+                return this.t('scalingCluster');
             } else if (this.trainingProgress < 70) {
-                return "Pre-training model...";
+                return this.t('preTraining');
             } else {
-                return "Post-training alignment...";
+                return this.t('postTraining');
             }
         },
 

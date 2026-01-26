@@ -1,19 +1,87 @@
 /**
  * How LLMs Work - Interactive Visualization
- * 
+ *
  * Purpose: Alpine.js component for visualizing how Large Language Models process inputs
  * Main methods:
  * - llmVisualization(): Main Alpine.js data function
  * - toggleTheme(): Switches between light/dark themes
  * - toggleFullscreen(): Enables/disables fullscreen mode
- * - generateNetworkConnections(): Creates network connection data for SVG
- * - generatePatternNodes(): Creates pattern node data for visualization
+ * - toggleLang(): Switches between EN/PT languages
+ * - t(key): Returns translated text for current language
  */
+
+const translations = {
+    en: {
+        pageTitle: 'How LLMs Work - Interactive Visualization',
+        contextWindow: 'Context Window',
+        contextDesc: 'Multiple layers of input combined and sent to the AI model',
+        foundationModel: 'Foundation Model',
+        foundationModelEx: '(ex. Claude, GPT-4o)',
+        modelDesc: 'Frozen learned patterns of language/public knowledge',
+        generatedOutputs: 'Generated Outputs',
+        outputsDesc: 'Generated responses in multiple formats',
+        userPrompt: 'User Prompt',
+        userPromptEx: '"Write a professional email to decline a meeting"',
+        conversationThread: 'Conversation Thread',
+        conversationDesc: 'Previous messages and context',
+        additionalFiles: 'Additional Files',
+        filesDesc: 'Documents, data, and references',
+        systemInstructions: 'System Instructions',
+        systemDesc: 'Behavior and response guidelines',
+        text: 'Text',
+        textDesc: 'Writing, summarization, translation, Q&A, analysis',
+        code: 'Code',
+        codeDesc: 'Programming, debugging, automation, scripts',
+        toolUsage: 'Tool Usage',
+        toolDesc: 'Gmail, Calendar, CRM, databases, web search',
+        visualContent: 'Visual Content',
+        visualDesc: 'Generated images and diagrams',
+        videoSound: 'Video and Sound',
+        videoDesc: 'Multimedia content and audio generation',
+        frozenPatterns: '🔒 FROZEN PATTERNS',
+        frozenDesc: 'Learned knowledge cannot be changed during inference',
+        input: 'Input',
+        output: 'Output'
+    },
+    pt: {
+        pageTitle: 'Como Funcionam os LLMs - Visualização Interativa',
+        contextWindow: 'Janela de Contexto',
+        contextDesc: 'Múltiplas camadas de entrada combinadas e enviadas ao modelo de IA',
+        foundationModel: 'Modelo Base',
+        foundationModelEx: '(ex. Claude, GPT-4o)',
+        modelDesc: 'Padrões aprendidos congelados de linguagem/conhecimento público',
+        generatedOutputs: 'Respostas Geradas',
+        outputsDesc: 'Respostas geradas em múltiplos formatos',
+        userPrompt: 'Prompt do Utilizador',
+        userPromptEx: '"Escreve um email profissional para recusar uma reunião"',
+        conversationThread: 'Histórico da Conversa',
+        conversationDesc: 'Mensagens anteriores e contexto',
+        additionalFiles: 'Ficheiros Adicionais',
+        filesDesc: 'Documentos, dados e referências',
+        systemInstructions: 'Instruções do Sistema',
+        systemDesc: 'Diretrizes de comportamento e resposta',
+        text: 'Texto',
+        textDesc: 'Escrita, resumos, tradução, Q&A, análise',
+        code: 'Código',
+        codeDesc: 'Programação, depuração, automação, scripts',
+        toolUsage: 'Uso de Ferramentas',
+        toolDesc: 'Gmail, Calendário, CRM, bases de dados, pesquisa web',
+        visualContent: 'Conteúdo Visual',
+        visualDesc: 'Imagens e diagramas gerados',
+        videoSound: 'Vídeo e Som',
+        videoDesc: 'Conteúdo multimédia e geração de áudio',
+        frozenPatterns: '🔒 PADRÕES CONGELADOS',
+        frozenDesc: 'Conhecimento aprendido não pode ser alterado durante a inferência',
+        input: 'Entrada',
+        output: 'Saída'
+    }
+};
 
 function llmVisualization() {
     return {
         isDark: true,
         isFullscreen: false,
+        lang: 'en',
         patternNodes: [
             { x: 20, y: 20, size: 18, delay: 0 },
             { x: 60, y: 15, size: 14, delay: 100 },
@@ -37,6 +105,10 @@ function llmVisualization() {
             { x: 75, y: 50, size: 18, delay: 1900 }
         ],
         
+        t(key) {
+            return translations[this.lang]?.[key] || translations.en[key] || key;
+        },
+
         init() {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
@@ -45,8 +117,19 @@ function llmVisualization() {
             if (savedTheme) {
                 this.isDark = savedTheme === 'dark';
             }
+            const savedLang = localStorage.getItem('llm-lang');
+            if (savedLang) {
+                this.lang = savedLang;
+            }
+            document.title = this.t('pageTitle');
         },
-        
+
+        toggleLang() {
+            this.lang = this.lang === 'en' ? 'pt' : 'en';
+            localStorage.setItem('llm-lang', this.lang);
+            document.title = this.t('pageTitle');
+        },
+
         toggleTheme() {
             this.isDark = !this.isDark;
             localStorage.setItem('llm-theme', this.isDark ? 'dark' : 'light');

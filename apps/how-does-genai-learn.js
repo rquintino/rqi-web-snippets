@@ -1,8 +1,8 @@
 /*
  * How Does GenAI Learn - Visualization
- * 
+ *
  * Main Purpose: Demonstrates how language models learn through masked word prediction
- * 
+ *
  * Key Methods:
  * - maskPredictApp(): Main Alpine.js application state
  * - tokenizeText(): Breaks text into words for processing
@@ -10,13 +10,89 @@
  * - startTraining(): Initiates the training simulation
  * - simulateTraining(): Runs prediction attempts with visual feedback
  * - updateAccuracy(): Calculates training performance metrics
+ * - toggleLang(): Switches between EN/PT languages
+ * - t(key): Returns translated text for current language
  */
+
+const translations = {
+    en: {
+        pageTitle: 'How Does GenAI Learn',
+        headerTitle: 'How Does GenAI Learn?',
+        headerSubtitle: 'How Language Models Learn by Masking and Guessing the Next Word',
+        sourceTextTitle: 'Source Text',
+        sourceTextSources: '(Internet 🌐, Books📚, Code 📃,...)',
+        predictTitle: 'Predict using trained LLM',
+        trainingExamples: 'Training Examples',
+        examples: 'Examples',
+        predictionAccuracy: 'Prediction Accuracy',
+        correct: 'Correct',
+        position: 'Position',
+        progress: 'Progress',
+        transformingData: '📊 Transforming Data',
+        trainingModel: '🎯 Training Model',
+        transformData: 'Transform Data',
+        trainLLM: 'Train LLM',
+        predictLLM: 'Predict using LLM',
+        transformingDataBtn: 'Transforming Data...',
+        trainingLLMBtn: 'Training LLM...',
+        predictingLLMBtn: 'Predicting using LLM...',
+        complete: 'Complete!',
+        textGenComplete: 'Text generation completed!',
+        wordsGenerated: 'words generated',
+        generatingText: 'Generating text...',
+        trainingComplete: 'Training completed! Final accuracy:',
+        trainingProgress: 'Training in progress...',
+        examplesCorrect: 'examples correct',
+        transformingTrainingData: 'Transforming training data... Position'
+    },
+    pt: {
+        pageTitle: 'Como a GenAI Aprende',
+        headerTitle: 'Como a GenAI Aprende?',
+        headerSubtitle: 'Como os Modelos de Linguagem Aprendem Mascarando e Adivinhando a Proxima Palavra',
+        sourceTextTitle: 'Texto Fonte',
+        sourceTextSources: '(Internet, Livros, Codigo,...)',
+        predictTitle: 'Prever usando LLM treinado',
+        trainingExamples: 'Exemplos de Treino',
+        examples: 'Exemplos',
+        predictionAccuracy: 'Precisao da Previsao',
+        correct: 'Corretos',
+        position: 'Posicao',
+        progress: 'Progresso',
+        transformingData: 'A Transformar Dados',
+        trainingModel: 'A Treinar Modelo',
+        transformData: 'Transformar Dados',
+        trainLLM: 'Treinar LLM',
+        predictLLM: 'Prever usando LLM',
+        transformingDataBtn: 'A Transformar Dados...',
+        trainingLLMBtn: 'A Treinar LLM...',
+        predictingLLMBtn: 'A Prever usando LLM...',
+        complete: 'Concluido!',
+        textGenComplete: 'Geracao de texto concluida!',
+        wordsGenerated: 'palavras geradas',
+        generatingText: 'A gerar texto...',
+        trainingComplete: 'Treino concluido! Precisao final:',
+        trainingProgress: 'Treino em progresso...',
+        examplesCorrect: 'exemplos corretos',
+        transformingTrainingData: 'A transformar dados de treino... Posicao'
+    }
+};
+
+const sourceTexts = {
+    en: 'Generative Artificial Intelligence represents a revolutionary breakthrough in machine learning that has fundamentally transformed how we interact with technology. Unlike traditional AI systems that were designed for specific tasks like image recognition or data analysis, generative AI models can create new content across multiple modalities including text, images, audio, and video. These sophisticated systems are built on neural network architectures such as transformers, which process and understand patterns in vast amounts of training data to generate human-like responses.',
+    pt: 'A Inteligencia Artificial Generativa representa um avanco revolucionario na aprendizagem automatica que transformou fundamentalmente a forma como interagimos com a tecnologia. Ao contrario dos sistemas tradicionais de IA que foram concebidos para tarefas especificas como reconhecimento de imagens ou analise de dados, os modelos de IA generativa podem criar novos conteudos em multiplas modalidades incluindo texto, imagens, audio e video. Estes sistemas sofisticados sao construidos sobre arquiteturas de redes neuronais como os transformers, que processam e compreendem padroes em vastas quantidades de dados de treino para gerar respostas semelhantes as humanas.'
+};
+
+const predictionTexts = {
+    en: 'The future of artificial intelligence lies in creating systems that can understand and generate human-like responses across multiple domains. Advanced language models demonstrate remarkable capabilities in reasoning, creativity, and problem-solving. These systems will revolutionize how we interact with computers and process information. Machine learning algorithms continue to evolve, becoming more sophisticated and efficient with each iteration. The integration of AI into everyday applications will transform industries ranging from healthcare to education.',
+    pt: 'O futuro da inteligencia artificial esta na criacao de sistemas que consigam compreender e gerar respostas semelhantes as humanas em multiplos dominios. Os modelos de linguagem avancados demonstram capacidades notaveis em raciocinio, criatividade e resolucao de problemas. Estes sistemas irao revolucionar a forma como interagimos com computadores e processamos informacao. Os algoritmos de aprendizagem automatica continuam a evoluir, tornando-se mais sofisticados e eficientes a cada iteracao. A integracao da IA em aplicacoes do quotidiano ira transformar industrias desde a saude ate a educacao.'
+};
 
 function maskPredictApp() {
     return {
         // Theme and UI state
         isDark: true,
         isFullscreen: false,
+        lang: 'en',
         
         // Training configuration
         windowSize: 10,
@@ -33,9 +109,9 @@ function maskPredictApp() {
         currentPosition: 0,
         totalPositions: 0,
         
-        // Source text - shortened paragraph about GenAI (50% of original size)
-        sourceText: `Generative Artificial Intelligence represents a revolutionary breakthrough in machine learning that has fundamentally transformed how we interact with technology. Unlike traditional AI systems that were designed for specific tasks like image recognition or data analysis, generative AI models can create new content across multiple modalities including text, images, audio, and video. These sophisticated systems are built on neural network architectures such as transformers, which process and understand patterns in vast amounts of training data to generate human-like responses.`,
-        
+        // Source text - will be set based on language
+        sourceText: '',
+
         // Training data
         sourceWords: [],
         trainingExamples: [],
@@ -49,8 +125,8 @@ function maskPredictApp() {
         // Common words for random attempts
         commonWords: ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'among', 'throughout', 'alongside', 'within', 'without', 'towards', 'upon', 'beneath', 'behind', 'beyond', 'across', 'against', 'along', 'around', 'inside', 'outside', 'over', 'under', 'near', 'far', 'here', 'there', 'where', 'when', 'how', 'why', 'what', 'which', 'who', 'whom', 'whose', 'this', 'that', 'these', 'those', 'some', 'any', 'all', 'each', 'every', 'many', 'much', 'few', 'little', 'more', 'most', 'less', 'least', 'very', 'too', 'quite', 'rather', 'so', 'such', 'just', 'only', 'even', 'also', 'still', 'already', 'yet', 'now', 'then', 'soon', 'later', 'again', 'once', 'twice', 'often', 'always', 'never', 'sometimes', 'usually', 'generally', 'particularly', 'especially', 'specifically', 'mainly', 'mostly', 'partly', 'completely', 'entirely', 'fully', 'quite', 'rather', 'extremely', 'highly', 'deeply', 'widely', 'clearly', 'obviously', 'certainly', 'probably', 'possibly', 'perhaps', 'maybe', 'definitely', 'absolutely', 'really', 'truly', 'actually', 'basically', 'essentially', 'fundamentally', 'originally', 'initially', 'finally', 'eventually', 'recently', 'currently', 'previously', 'formerly', 'subsequently', 'consequently', 'therefore', 'however', 'nevertheless', 'nonetheless', 'furthermore', 'moreover', 'additionally', 'similarly', 'likewise', 'conversely', 'alternatively', 'otherwise', 'meanwhile', 'simultaneously', 'immediately', 'instantly', 'gradually', 'suddenly', 'quickly', 'slowly', 'carefully', 'easily', 'hardly', 'nearly', 'almost', 'quite', 'rather', 'pretty', 'fairly', 'relatively', 'particularly', 'especially', 'specifically', 'exactly', 'precisely', 'approximately', 'roughly', 'generally', 'typically', 'normally', 'usually', 'commonly', 'frequently', 'regularly', 'occasionally', 'rarely', 'seldom', 'never', 'always', 'constantly', 'continuously', 'repeatedly', 'consistently', 'persistently', 'permanently', 'temporarily', 'briefly', 'shortly', 'recently', 'lately', 'currently', 'presently', 'previously', 'formerly', 'originally', 'initially', 'eventually', 'finally', 'ultimately', 'completely', 'entirely', 'fully', 'totally', 'perfectly', 'absolutely', 'definitely', 'certainly', 'surely', 'obviously', 'clearly', 'apparently', 'seemingly', 'presumably', 'supposedly', 'allegedly', 'reportedly', 'actually', 'really', 'truly', 'genuinely', 'honestly', 'frankly', 'seriously', 'literally', 'virtually', 'practically', 'basically', 'essentially', 'fundamentally', 'primarily', 'mainly', 'mostly', 'largely', 'generally', 'typically', 'usually', 'normally', 'commonly', 'frequently', 'often', 'sometimes', 'occasionally', 'rarely', 'seldom', 'hardly', 'barely', 'scarcely', 'nearly', 'almost', 'quite', 'rather', 'very', 'extremely', 'highly', 'deeply', 'greatly', 'significantly', 'considerably', 'substantially', 'remarkably', 'incredibly', 'amazingly', 'surprisingly', 'unexpectedly', 'unfortunately', 'fortunately', 'hopefully', 'thankfully', 'luckily', 'sadly', 'regrettably', 'disappointingly', 'shockingly', 'alarmingly', 'worryingly', 'encouragingly', 'reassuringly', 'refreshingly', 'interestingly', 'surprisingly', 'notably', 'importantly', 'significantly', 'particularly', 'especially', 'specifically', 'precisely', 'exactly', 'directly', 'immediately', 'instantly', 'promptly', 'quickly', 'rapidly', 'swiftly', 'speedily', 'efficiently', 'effectively', 'successfully', 'properly', 'correctly', 'accurately', 'precisely', 'carefully', 'cautiously', 'wisely', 'sensibly', 'reasonably', 'logically', 'rationally', 'intelligently', 'cleverly', 'skillfully', 'expertly', 'professionally', 'competently', 'adequately', 'sufficiently', 'thoroughly', 'comprehensively', 'extensively', 'broadly', 'widely', 'globally', 'universally', 'internationally', 'nationally', 'locally', 'regionally', 'domestically', 'internally', 'externally', 'publicly', 'privately', 'personally', 'individually', 'collectively', 'jointly', 'mutually', 'reciprocally', 'alternatively', 'optionally', 'voluntarily', 'willingly', 'reluctantly', 'hesitantly', 'eagerly', 'enthusiastically', 'passionately', 'devotedly', 'loyally', 'faithfully', 'honestly', 'sincerely', 'genuinely', 'authentically', 'legitimately', 'legally', 'officially', 'formally', 'informally', 'casually', 'naturally', 'artificially', 'manually', 'automatically', 'mechanically', 'electronically', 'digitally', 'technologically', 'scientifically', 'mathematically', 'statistically', 'economically', 'financially', 'commercially', 'industrially', 'academically', 'educationally', 'culturally', 'socially', 'politically', 'historically', 'traditionally', 'conventionally', 'unconventionally', 'innovatively', 'creatively', 'imaginatively', 'originally', 'uniquely', 'distinctively', 'characteristically', 'typically', 'normally', 'usually', 'commonly', 'frequently', 'regularly', 'consistently', 'constantly', 'continuously', 'perpetually', 'permanently', 'temporarily', 'briefly', 'momentarily', 'instantly', 'immediately', 'promptly', 'quickly', 'rapidly', 'swiftly', 'slowly', 'gradually', 'progressively', 'steadily', 'consistently', 'reliably', 'dependably', 'predictably', 'unexpectedly', 'surprisingly', 'shockingly', 'amazingly', 'incredibly', 'remarkably', 'extraordinarily', 'exceptionally', 'unusually', 'particularly', 'especially', 'specifically', 'precisely', 'exactly', 'approximately', 'roughly', 'generally', 'broadly', 'widely', 'extensively', 'comprehensively', 'thoroughly', 'completely', 'entirely', 'fully', 'totally', 'absolutely', 'perfectly', 'ideally', 'optimally', 'maximally', 'minimally', 'adequately', 'sufficiently', 'insufficiently', 'inadequately', 'poorly', 'badly', 'terribly', 'horribly', 'awfully', 'extremely', 'very', 'quite', 'rather', 'fairly', 'relatively', 'comparatively', 'proportionally', 'correspondingly', 'accordingly', 'consequently', 'therefore', 'thus', 'hence', 'so', 'then', 'next', 'afterwards', 'subsequently', 'later', 'eventually', 'finally', 'ultimately', 'eventually', 'sooner', 'earlier', 'previously', 'formerly', 'originally', 'initially', 'firstly', 'secondly', 'thirdly', 'lastly', 'finally', 'additionally', 'furthermore', 'moreover', 'besides', 'also', 'too', 'as', 'well', 'likewise', 'similarly', 'equally', 'comparably', 'correspondingly', 'respectively', 'individually', 'separately', 'independently', 'jointly', 'collectively', 'together', 'simultaneously', 'concurrently', 'meanwhile', 'simultaneously', 'at', 'once', 'immediately', 'instantly', 'promptly', 'quickly', 'rapidly', 'swiftly', 'speedily', 'efficiently', 'effectively', 'successfully', 'properly', 'correctly', 'accurately', 'precisely', 'carefully', 'cautiously', 'wisely', 'sensibly', 'reasonably', 'logically', 'rationally', 'intelligently', 'cleverly', 'skillfully', 'expertly', 'professionally', 'competently', 'adequately', 'sufficiently', 'thoroughly', 'comprehensively', 'extensively', 'broadly', 'widely', 'globally', 'universally', 'internationally', 'nationally', 'locally', 'regionally', 'domestically', 'internally', 'externally', 'publicly', 'privately', 'personally', 'individually', 'collectively', 'jointly', 'mutually', 'reciprocally', 'alternatively', 'optionally', 'voluntarily', 'willingly', 'reluctantly', 'hesitantly', 'eagerly', 'enthusiastically', 'passionately', 'devotedly', 'loyally', 'faithfully', 'honestly', 'sincerely', 'genuinely', 'authentically', 'legitimately', 'legally', 'officially', 'formally', 'informally', 'casually', 'naturally', 'artificially', 'manually', 'automatically', 'mechanically', 'electronically', 'digitally', 'technologically', 'scientifically', 'mathematically', 'statistically', 'economically', 'financially', 'commercially', 'industrially', 'academically', 'educationally', 'culturally', 'socially', 'politically', 'historically', 'traditionally', 'conventionally', 'unconventionally', 'innovatively', 'creatively', 'imaginatively', 'originally', 'uniquely', 'distinctively', 'characteristically', 'typically', 'normally', 'usually', 'commonly', 'frequently', 'regularly', 'consistently', 'constantly', 'continuously', 'perpetually', 'permanently', 'temporarily', 'briefly', 'momentarily', 'instantly', 'immediately', 'promptly', 'quickly', 'rapidly', 'swiftly', 'slowly', 'gradually', 'progressively', 'steadily', 'consistently', 'reliably', 'dependably', 'predictably', 'unexpectedly', 'surprisingly', 'shockingly', 'amazingly', 'incredibly', 'remarkably', 'extraordinarily', 'exceptionally', 'unusually', 'particularly', 'especially', 'specifically', 'precisely', 'exactly', 'approximately', 'roughly', 'generally', 'broadly', 'widely', 'extensively', 'comprehensively', 'thoroughly', 'completely', 'entirely', 'fully', 'totally', 'absolutely', 'perfectly', 'ideally', 'optimally', 'maximally', 'minimally', 'adequately', 'sufficiently', 'insufficiently', 'inadequately', 'poorly', 'badly', 'terribly', 'horribly', 'awfully', 'extremely', 'very', 'quite', 'rather', 'fairly', 'relatively', 'comparatively', 'proportionally', 'correspondingly', 'accordingly', 'consequently', 'therefore', 'thus', 'hence', 'so'],
         
-        // Add new prediction text
-        predictionText: `The future of artificial intelligence lies in creating systems that can understand and generate human-like responses across multiple domains. Advanced language models demonstrate remarkable capabilities in reasoning, creativity, and problem-solving. These systems will revolutionize how we interact with computers and process information. Machine learning algorithms continue to evolve, becoming more sophisticated and efficient with each iteration. The integration of AI into everyday applications will transform industries ranging from healthcare to education.`,
+        // Prediction text - will be set based on language
+        predictionText: '',
         
         // Add prediction state variables
         predictionWords: [],
@@ -89,11 +165,56 @@ function maskPredictApp() {
             });
         },
         
-        init() {
+        t(key) {
+            return translations[this.lang]?.[key] || translations.en[key] || key;
+        },
+
+        toggleLang() {
+            this.lang = this.lang === 'en' ? 'pt' : 'en';
+            localStorage.setItem('genai-lang', this.lang);
+            document.title = this.t('pageTitle');
+
+            // Reset and reload texts
+            this.sourceText = sourceTexts[this.lang];
+            this.predictionText = predictionTexts[this.lang];
+
+            // Reset state
+            this.isPreparingData = false;
+            this.isTraining = false;
+            this.isComplete = false;
+            this.isDataPrepared = false;
+            this.isPredicting = false;
+            this.isPredictionComplete = false;
+            this.currentPosition = 0;
+            this.correctPredictions = 0;
+            this.totalAttempts = 0;
+            this.accuracy = 0;
+            this.visibleExamples = [];
+            this.generatedText = [];
+
+            // Re-tokenize with new language
             this.tokenizeText();
             this.createTrainingExamples();
             this.tokenizePredictionText();
-            
+        },
+
+        init() {
+            // Load saved language
+            const savedLang = localStorage.getItem('genai-lang');
+            if (savedLang) {
+                this.lang = savedLang;
+            }
+
+            // Set texts based on language
+            this.sourceText = sourceTexts[this.lang];
+            this.predictionText = predictionTexts[this.lang];
+
+            this.tokenizeText();
+            this.createTrainingExamples();
+            this.tokenizePredictionText();
+
+            document.title = this.t('pageTitle');
+
             // Apply theme based on isDark state
             this.applyTheme();
         },
@@ -413,16 +534,16 @@ function maskPredictApp() {
         },
         
         getMainButtonText() {
-            if (this.isPreparingData) return 'Transforming Data...';
-            if (this.isTraining) return 'Training LLM...';
-            if (this.isPredicting) return 'Predicting using LLM...';
-            if (this.isPredictionComplete) return 'Complete!';
-            
-            if (!this.isDataPrepared) return 'Transform Data';
-            if (this.isDataPrepared && !this.isComplete) return 'Train LLM';
-            if (this.isComplete && !this.isPredictionComplete) return 'Predict using LLM';
-            
-            return 'Complete!';
+            if (this.isPreparingData) return this.t('transformingDataBtn');
+            if (this.isTraining) return this.t('trainingLLMBtn');
+            if (this.isPredicting) return this.t('predictingLLMBtn');
+            if (this.isPredictionComplete) return this.t('complete');
+
+            if (!this.isDataPrepared) return this.t('transformData');
+            if (this.isDataPrepared && !this.isComplete) return this.t('trainLLM');
+            if (this.isComplete && !this.isPredictionComplete) return this.t('predictLLM');
+
+            return this.t('complete');
         },
         
         isMainButtonDisabled() {
@@ -457,20 +578,20 @@ function maskPredictApp() {
         
         getStatusMessage() {
             if (this.isPredictionComplete) {
-                return `Text generation completed! Generated ${this.generatedText.length} words.`;
+                return `${this.t('textGenComplete')} ${this.generatedText.length} ${this.t('wordsGenerated')}.`;
             }
             if (this.isPredicting) {
-                return `Generating text... ${this.generatedText.length} words generated`;
+                return `${this.t('generatingText')} ${this.generatedText.length} ${this.t('wordsGenerated')}`;
             }
             if (this.isComplete) {
-                return `Training completed! Final accuracy: ${Math.round(this.accuracy)}%`;
+                return `${this.t('trainingComplete')} ${Math.round(this.accuracy)}%`;
             }
             if (this.isTraining) {
                 const correctCount = this.visibleExamples.filter(ex => ex.isCorrect).length;
-                return `Training in progress... ${correctCount}/${this.visibleExamples.length} examples correct`;
+                return `${this.t('trainingProgress')} ${correctCount}/${this.visibleExamples.length} ${this.t('examplesCorrect')}`;
             }
             if (this.isPreparingData) {
-                return `Transforming training data... Position ${this.currentPosition + 1}/${this.totalPositions}`;
+                return `${this.t('transformingTrainingData')} ${this.currentPosition + 1}/${this.totalPositions}`;
             }
             return '';
         },

@@ -50,6 +50,7 @@ backdrop-filter:blur(10px)
 .control-btn:hover{background:rgba(255,255,255,0.2);transform:scale(1.05)}
 .control-btn i{width:20px;height:20px}
 .home-btn{background:var(--blue-600);border-color:var(--blue-400)}
+.lang-btn{font-weight:600;font-size:0.8rem;min-width:40px}
 .main-container{padding:20px;max-width:100%;margin:0 auto;height:calc(100vh - 40px);display:flex;flex-direction:column}
 .section-headers{display:flex;margin-bottom:20px;padding-top:80px}
 .header-section{flex:1;text-align:center;padding:0 20px}

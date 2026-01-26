@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self';">
     <title>How LLMs Work - Interactive Visualization</title>
-    <!-- 
+    <!--
     Functional Requirements:
     - Interactive visualization showing how Large Language Models process inputs to generate outputs
     - Three main sections: Context Window (inputs), Foundation Model (processing), Generated Outputs
@@ -14,47 +14,31 @@
     - Multiple output types: Text, Code, Tool Usage, Visual Content, Video/Sound
     - Responsive design with dark theme
     - Full screen and dark/light mode toggles
+    - Language toggle (English/Portuguese) with persistent preference
     - Home navigation button
     - Animated elements with CSS keyframes for visual engagement
     -->
     <link rel="stylesheet" href="how-llms-work.css">
     <script src="https://unpkg.com/lucide@0.525.0/dist/umd/lucide.js" integrity="sha384-asiwCor7sOBJob29wQLPg/VzoqDrbqMSCYqXSioQmz12mZdUuucrgWdk8hTOs6dW" crossorigin="anonymous"></script>
-    <script src="how-llms-work.js?v=2025-07-27.1"></script>
+    <script src="how-llms-work.js?v=2025-01-26.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js" integrity="sha384-9Ax3MmS9AClxJyd5/zafcXXjxmwFhZCdsT6HJoJjarvCaAkJlk5QDzjLJm+Wdx5F" crossorigin="anonymous" defer></script>
 </head>
-<body x-data="{ 
-    isDark: true, 
+<body x-data="{
+    isDark: true,
     isFullscreen: false,
+    lang: 'en',
     patternNodes: [],
     init() {
         const data = llmVisualization();
         Object.assign(this, data);
-    },
-    toggleTheme() { 
-        this.isDark = !this.isDark;
-        localStorage.setItem('llm-theme', this.isDark ? 'dark' : 'light');
-        document.body.classList.toggle('light', !this.isDark);
-        setTimeout(() => {
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }, 100);
-    },
-    toggleFullscreen() { 
-        this.isFullscreen = !this.isFullscreen;
-        if (this.isFullscreen) {
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            }
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
+        this.init();
     }
 }" :class="{ 'dark': isDark, 'fullscreen': isFullscreen }">
     <!-- Controls -->
     <div class="controls">
+        <button @click.stop="toggleLang()" class="control-btn lang-btn" title="Toggle Language">
+            <span x-text="lang.toUpperCase()"></span>
+        </button>
         <button @click.stop="toggleFullscreen()" class="control-btn" title="Toggle Fullscreen">
             <i data-lucide="maximize-2" x-show="!isFullscreen"></i>
             <i data-lucide="minimize-2" x-show="isFullscreen"></i>
@@ -72,16 +56,16 @@
         <!-- Section Headers -->
         <div class="section-headers">
             <div class="header-section">
-                <h2 class="section-title context-title">Context Window</h2>
-                <p class="section-desc">Multiple layers of input combined and sent to the AI model</p>
+                <h2 class="section-title context-title" x-text="t('contextWindow')"></h2>
+                <p class="section-desc" x-text="t('contextDesc')"></p>
             </div>
             <div class="header-section">
-                <h2 class="section-title model-title">Foundation Model<br/>(ex. Claude, GPT-4o)</h2>
-                <p class="section-desc">Frozen learned patterns of language/public knowledge</p>
+                <h2 class="section-title model-title"><span x-text="t('foundationModel')"></span><br/><span x-text="t('foundationModelEx')"></span></h2>
+                <p class="section-desc" x-text="t('modelDesc')"></p>
             </div>
             <div class="header-section">
-                <h2 class="section-title outputs-title">Generated Outputs</h2>
-                <p class="section-desc">Generated responses in multiple formats</p>
+                <h2 class="section-title outputs-title" x-text="t('generatedOutputs')"></h2>
+                <p class="section-desc" x-text="t('outputsDesc')"></p>
             </div>
         </div>
 
@@ -93,8 +77,8 @@
                     <div class="layer-content">
                         <i data-lucide="user"></i>
                         <div class="layer-text">
-                            <h4>User Prompt</h4>
-                            <p>"Write a professional email to decline a meeting"</p>
+                            <h4 x-text="t('userPrompt')"></h4>
+                            <p x-text="t('userPromptEx')"></p>
                         </div>
                     </div>
                 </div>
@@ -107,8 +91,8 @@
                     <div class="layer-content">
                         <i data-lucide="message-square"></i>
                         <div class="layer-text">
-                            <h4>Conversation Thread</h4>
-                            <p>Previous messages and context</p>
+                            <h4 x-text="t('conversationThread')"></h4>
+                            <p x-text="t('conversationDesc')"></p>
                         </div>
                     </div>
                 </div>
@@ -117,8 +101,8 @@
                     <div class="layer-content">
                         <i data-lucide="file-text"></i>
                         <div class="layer-text">
-                            <h4>Additional Files</h4>
-                            <p>Documents, data, and references</p>
+                            <h4 x-text="t('additionalFiles')"></h4>
+                            <p x-text="t('filesDesc')"></p>
                         </div>
                     </div>
                 </div>
@@ -127,8 +111,8 @@
                     <div class="layer-content">
                         <i data-lucide="settings"></i>
                         <div class="layer-text">
-                            <h4>System Instructions</h4>
-                            <p>Behavior and response guidelines</p>
+                            <h4 x-text="t('systemInstructions')"></h4>
+                            <p x-text="t('systemDesc')"></p>
                         </div>
                     </div>
                 </div>
@@ -170,18 +154,18 @@
 
 
                     <!-- Flow Arrows -->
-                    <div class="flow-text left">Input</div>
+                    <div class="flow-text left" x-text="t('input')"></div>
                     <div class="flow-arrow left">
                         <i data-lucide="chevron-right"></i>
                     </div>
                     <div class="flow-arrow right">
                         <i data-lucide="chevron-right"></i>
                     </div>
-                    <div class="flow-text right">Output</div>
+                    <div class="flow-text right" x-text="t('output')"></div>
                 </div>
 
                 <div class="frozen-notice">
-                    <p>🔒 FROZEN PATTERNS<br/>Learned knowledge cannot be changed during inference</p>
+                    <p><span x-text="t('frozenPatterns')"></span><br/><span x-text="t('frozenDesc')"></span></p>
                 </div>
             </div>
 
@@ -190,48 +174,48 @@
                 <div class="output-card text-output">
                     <div class="card-content">
                         <i data-lucide="message-square"></i>
-                        <h4>Text</h4>
+                        <h4 x-text="t('text')"></h4>
                     </div>
-                    <p>Writing, summarization, translation, Q&A, analysis</p>
+                    <p x-text="t('textDesc')"></p>
                 </div>
 
                 <div class="output-card code-output">
                     <div class="card-content">
                         <i data-lucide="code"></i>
-                        <h4>Code</h4>
+                        <h4 x-text="t('code')"></h4>
                     </div>
-                    <p>Programming, debugging, automation, scripts</p>
+                    <p x-text="t('codeDesc')"></p>
                 </div>
 
                 <div class="output-card tools-output">
                     <div class="card-content">
                         <i data-lucide="wrench"></i>
-                        <h4>Tool Usage</h4>
+                        <h4 x-text="t('toolUsage')"></h4>
                     </div>
-                    <p>Gmail, Calendar, CRM, databases, web search</p>
+                    <p x-text="t('toolDesc')"></p>
                 </div>
 
                 <div class="output-card visual-output">
                     <div class="card-content">
                         <i data-lucide="image"></i>
-                        <h4>Visual Content</h4>
+                        <h4 x-text="t('visualContent')"></h4>
                     </div>
-                    <p>Generated images and diagrams</p>
+                    <p x-text="t('visualDesc')"></p>
                 </div>
 
                 <div class="output-card video-output">
                     <div class="card-content">
                         <i data-lucide="video"></i>
-                        <h4>Video and Sound</h4>
+                        <h4 x-text="t('videoSound')"></h4>
                     </div>
-                    <p>Multimedia content and audio generation</p>
+                    <p x-text="t('videoDesc')"></p>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Version -->
-    <div class="version">v2025-07-19.1</div>
+    <div class="version">v2025-01-26.1</div>
 
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>

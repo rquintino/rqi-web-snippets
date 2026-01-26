@@ -12,7 +12,7 @@
 <body>
     <!--
     How Does GenAI Learn - Visualization
-    
+
     Features:
     - Interactive sliding window demonstration
     - Real-time text masking and prediction
@@ -27,7 +27,8 @@
     - LLM prediction simulation phase
     - Recursive text generation with context window
     - Blue context words and green predictions
-    
+    - Language toggle (English/Portuguese) with persistent preference
+
     Technical Implementation:
     - Text tokenization and windowing
     - Sliding animation through source text
@@ -43,12 +44,17 @@
     <div class="app-container" x-data="maskPredictApp()">
         <!-- Home Button -->
         <a href="../index.html" class="home-btn">🏠</a>
-        
+
+        <!-- Language Toggle -->
+        <button @click="toggleLang()" class="control-btn lang-btn">
+            <span x-text="lang.toUpperCase()"></span>
+        </button>
+
         <!-- Full Screen Toggle -->
         <button @click="toggleFullscreen()" class="control-btn fullscreen-btn">
             <span x-text="isFullscreen ? '🗗' : '🗖'"></span>
         </button>
-        
+
         <!-- Dark/Light Toggle -->
         <button @click="toggleTheme()" class="control-btn theme-btn">
             <span x-text="isDark ? '☀️' : '🌙'"></span>
@@ -56,8 +62,8 @@
 
         <!-- Header -->
         <div class="header">
-            <h1>How Does GenAI Learn?</h1>
-            <p>How Language Models Learn by Masking and Guessing the Next Word</p>
+            <h1 x-text="t('headerTitle')"></h1>
+            <p x-text="t('headerSubtitle')"></p>
         </div>
 
         <!-- Controls -->
@@ -70,7 +76,7 @@
         <div class="training-area">
             <!-- Source Text Panel -->
             <div class="source-panel">
-                <h3 x-text="isPredicting || isPredictionComplete ? 'Predict using trained LLM' : 'Source Text \n(Internet 🌐, Books📚, Code 📃,...)'"></h3>
+                <h3 x-text="isPredicting || isPredictionComplete ? t('predictTitle') : t('sourceTextTitle') + ' ' + t('sourceTextSources')"></h3>
                 
                 <!-- Training Mode: Source Text -->
                 <div class="source-text" x-show="!isPredicting && !isPredictionComplete">
@@ -98,21 +104,21 @@
                 
                 <div class="progress-info" x-show="isPreparingData || isTraining || isComplete">
                     <div class="progress-stats">
-                        <span>Position: <strong x-text="currentPosition + 1"></strong> / <strong x-text="totalPositions"></strong></span>
-                        <span>Progress: <strong x-text="Math.round((currentPosition / totalPositions) * 100)"></strong>%</span>
-                        <span x-show="isPreparingData" class="phase-indicator">� Transforming Data</span>
-                        <span x-show="isTraining" class="phase-indicator">🎯 Training Model</span>
+                        <span><span x-text="t('position')"></span>: <strong x-text="currentPosition + 1"></strong> / <strong x-text="totalPositions"></strong></span>
+                        <span><span x-text="t('progress')"></span>: <strong x-text="Math.round((currentPosition / totalPositions) * 100)"></strong>%</span>
+                        <span x-show="isPreparingData" class="phase-indicator" x-text="t('transformingData')"></span>
+                        <span x-show="isTraining" class="phase-indicator" x-text="t('trainingModel')"></span>
                     </div>
                 </div>
             </div>
 
             <!-- Training Examples Panel -->
             <div class="examples-panel">
-                <h3>Training Examples</h3>
+                <h3 x-text="t('trainingExamples')"></h3>
                 <div class="examples-stats" x-show="visibleExamples.length > 0">
-                    <span>Examples: <strong x-text="visibleExamples.length"></strong></span>
-                    <span x-show="isTraining || isComplete">Prediction Accuracy: <strong x-text="Math.round(accuracy)" :style="getAccuracyColor()"></strong>%</span>
-                    <span x-show="isTraining || isComplete">Correct: <strong x-text="correctPredictions"></strong></span>
+                    <span><span x-text="t('examples')"></span>: <strong x-text="visibleExamples.length"></strong></span>
+                    <span x-show="isTraining || isComplete"><span x-text="t('predictionAccuracy')"></span>: <strong x-text="Math.round(accuracy)" :style="getAccuracyColor()"></strong>%</span>
+                    <span x-show="isTraining || isComplete"><span x-text="t('correct')"></span>: <strong x-text="correctPredictions"></strong></span>
                 </div>
                 
                 <div class="examples-container">
@@ -157,10 +163,10 @@
         </div>
 
         <!-- Version -->
-        <div class="version">v2025-07-27.1</div>
+        <div class="version">v2025-01-26.1</div>
     </div>
 
-    <script src="how-does-genai-learn.js?v=2025-07-27.2"></script>
+    <script src="how-does-genai-learn.js?v=2025-01-26.4"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>

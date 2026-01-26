@@ -94,6 +94,12 @@ body {
     z-index: 1000;
 }
 
+.lang-btn {
+    right: 140px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
 .fullscreen-btn {
     right: 80px;
 }
