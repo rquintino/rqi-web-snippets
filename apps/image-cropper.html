@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Cropper</title>
+<link rel="stylesheet" href="image-cropper.css">
+</head>
+<body>
+<!-- 
+FUNCTIONAL REQUIREMENTS:
+- Upload image from local file system
+- Interactive crop area selection with mouse drag
+- Real-time crop preview
+- Adjust crop area by dragging corners/edges
+- Download cropped image
+- Dark/Light mode toggle
+- Fullscreen mode toggle
+- Responsive design
+- Clear/Reset functionality
+-->
+<div x-data="imageCropper()" x-init="init()" :class="{'dark': isDark, 'fullscreen': isFullscreen}">
+<!-- Top Controls -->
+<div class="top-controls">
+<button @click="window.location.href='../index.html'" class="home-btn" title="Home">🏠</button>
+<button @click="toggleTheme()" class="theme-btn" title="Toggle Theme">
+<span x-show="isDark">☀️</span>
+<span x-show="!isDark">🌙</span>
+</button>
+<button @click="toggleFullscreen()" class="fullscreen-btn" title="Toggle Fullscreen">
+<span x-show="isFullscreen">⊗</span>
+<span x-show="!isFullscreen">⊕</span>
+</button>
+</div>
+
+<!-- Main Container -->
+<div class="container">
+<h1>Image Cropper</h1>
+
+<!-- Upload Section -->
+<div class="upload-section" x-show="!imageLoaded">
+<label for="imageInput" class="upload-label">
+<span>📁 Choose Image</span>
+<input type="file" id="imageInput" @change="handleImageUpload" accept="image/*" hidden>
+</label>
+</div>
+
+<!-- Crop Area -->
+<div class="crop-section" x-show="imageLoaded">
+<div class="crop-container">
+<canvas x-ref="canvas" class="crop-canvas"
+@mousedown="startCrop($event)"
+@mousemove="updateCrop($event)"
+@mouseup="endCrop($event)"
+@mouseleave="endCrop($event)"></canvas>
+<div class="crop-overlay" x-show="isCropping || cropRect"
+:style="{
+left: cropRect ? cropRect.x + 'px' : '0',
+top: cropRect ? cropRect.y + 'px' : '0',
+width: cropRect ? cropRect.width + 'px' : '0',
+height: cropRect ? cropRect.height + 'px' : '0'
+}"></div>
+</div>
+
+<!-- Preview and Controls -->
+<div class="preview-section" x-show="cropRect">
+<h3>Preview</h3>
+<canvas x-ref="previewCanvas" class="preview-canvas"></canvas>
+<div class="crop-info">
+<span>Width: <span x-text="cropRect ? Math.round(cropRect.width) : 0"></span>px</span>
+<span>Height: <span x-text="cropRect ? Math.round(cropRect.height) : 0"></span>px</span>
+</div>
+</div>
+
+<!-- Action Buttons -->
+<div class="action-buttons">
+<button @click="downloadCropped()" class="btn-primary" :disabled="!cropRect">
+💾 Download Crop
+</button>
+<button @click="resetCrop()" class="btn-secondary">
+🔄 Reset Crop
+</button>
+<button @click="clearImage()" class="btn-secondary">
+🗑️ Clear Image
+</button>
+</div>
+</div>
+</div>
+
+<!-- Version -->
+<div class="version">v2026-02-16.1</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js" defer></script>
+<script src="image-cropper.js?v=2026-02-16.1"></script>
+<script src="shared/footer.js?v=2026-02-16.1"></script>
+</body>
+</html>
