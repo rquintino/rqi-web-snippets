@@ -259,7 +259,7 @@
                         <h5 style="margin:0 0 0.75rem 0;color:#4ca754;">Fastest Words</h5>
                         <div class="outlier-words-list">
                             <template x-for="(entry, index) in ledgerLeaderboard.fastest" :key="'fast-' + index">
-                                <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #4ca754;">
+                                <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #4ca754;cursor:pointer;" @mouseenter="showWordTrend($event, entry.word)" @mouseleave="hideWordTrend()">
                                     <span x-text="entry.word + ' (' + entry.occurrences + 'x)'" style="font-weight:600;"></span>
                                     <span x-text="Math.round(entry.effectiveWpm) + ' wpm' + (entry.standardDeviation > 0 ? ' (±' + entry.standardDeviation.toFixed(0) + ')' : '')" style="color:#4ca754;font-weight:700;"></span>
                                 </div>
@@ -271,7 +271,7 @@
                         <h5 style="margin:0 0 0.75rem 0;color:#ff5722;">Slowest Words</h5>
                         <div class="outlier-words-list">
                             <template x-for="(entry, index) in ledgerLeaderboard.slowest" :key="'slow-' + index">
-                                <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #ff5722;">
+                                <div class="outlier-word-item" style="background:var(--bg-primary);padding:0.5rem 0.75rem;border-radius:0.375rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #ff5722;cursor:pointer;" @mouseenter="showWordTrend($event, entry.word)" @mouseleave="hideWordTrend()">
                                     <span x-text="entry.word + ' (' + entry.occurrences + 'x)'" style="font-weight:600;"></span>
                                     <span x-text="Math.round(entry.effectiveWpm) + ' wpm' + (entry.standardDeviation > 0 ? ' (±' + entry.standardDeviation.toFixed(0) + ')' : '')" style="color:#ff5722;font-weight:700;"></span>
                                 </div>
@@ -293,10 +293,16 @@
         </div>
     </div>
     
-    <div class="version">v2026-04-04.4</div>
+    <div class="version">v2026-04-04.5</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
-    
+
+    <!-- Word Trend Sparkline Tooltip -->
+    <div x-show="trendTooltip.visible" x-cloak class="trend-tooltip" :style="trendTooltip.style">
+        <div class="trend-tooltip-header" x-text="trendTooltip.word"></div>
+        <canvas x-ref="trendCanvas" width="200" height="80"></canvas>
+    </div>
+
     <!-- Chart Modal -->
     <div x-show="showChartModal" x-transition.opacity x-cloak class="modal-overlay">
         <div class="modal-panel">
@@ -309,7 +315,7 @@
     <canvas id="confetti-canvas" width="1200" height="800" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2000;"></canvas>
     
     <script src="typing-speed-test.jsdata"></script>
-    <script src="typing-speed-test.js?v=2026-04-04.4"></script>
+    <script src="typing-speed-test.js?v=2026-04-04.5"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>

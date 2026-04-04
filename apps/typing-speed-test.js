@@ -68,6 +68,11 @@ function typingApp() {
     const ledgerStoreName = 'wordLedger';
     const LEDGER_MAX_SAMPLES = 20;
 
+    /** Extract WPM from ledger entry (handles legacy number or {wpm, ts} object) */
+    function ledgerWpm(entry) {
+        return typeof entry === 'number' ? entry : entry.wpm;
+    }
+
     function openDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(dbName, dbVersion);
@@ -96,7 +101,7 @@ function typingApp() {
     /**
      * Loads the full word ledger for a given dictionary from IndexedDB.
      * @param {string} dictionary - Dictionary key (e.g. 'english-100')
-     * @returns {Object} Map of word -> { effectiveWpms: number[], lastUpdated: number }
+     * @returns {Object} Map of word -> { effectiveWpms: Array<number|{wpm,ts}>, lastUpdated: number }
      */
     async function loadWordLedger(dictionary) {
         const db = await openDB();
@@ -1038,6 +1043,12 @@ function typingApp() {
             text: '',
             style: ''
         },
+        trendTooltip: {
+            visible: false,
+            style: '',
+            word: '',
+            _chart: null
+        },
         
         bestScore: null,
         previousBestScore: null,
@@ -1331,7 +1342,7 @@ function typingApp() {
                 if (!ledger[word]) {
                     ledger[word] = { effectiveWpms: [], lastUpdated: now };
                 }
-                ledger[word].effectiveWpms.push(effectiveWpm);
+                ledger[word].effectiveWpms.push({ wpm: effectiveWpm, ts: now });
                 // Keep only last N samples
                 if (ledger[word].effectiveWpms.length > LEDGER_MAX_SAMPLES) {
                     ledger[word].effectiveWpms = ledger[word].effectiveWpms.slice(-LEDGER_MAX_SAMPLES);
@@ -1358,7 +1369,8 @@ function typingApp() {
             const entries = Object.entries(ledger)
                 .filter(([, v]) => v.effectiveWpms && v.effectiveWpms.length > 0)
                 .map(([word, v]) => {
-                    const wpms = v.effectiveWpms;
+                    const raw = v.effectiveWpms;
+                    const wpms = raw.map(ledgerWpm);
                     const mean = wpms.reduce((s, x) => s + x, 0) / wpms.length;
                     let sd = 0;
                     if (wpms.length > 1) {
@@ -1967,6 +1979,94 @@ function typingApp() {
         hideWordTooltip() {
             this.tooltip.visible = false;
         },
+
+        /**
+         * Shows a sparkline trend chart for a word when hovering over leaderboard items.
+         * Reads timestamped history from the word ledger in IndexedDB.
+         */
+        async showWordTrend(event, word) {
+            const tt = this.trendTooltip;
+            // Position near mouse, prefer above-right
+            const x = event.clientX;
+            const y = event.clientY;
+            const chartW = 220, chartH = 100, pad = 12;
+            const left = Math.min(x + pad, window.innerWidth - chartW - pad);
+            const top = y - chartH - pad < 0 ? y + pad : y - chartH - pad;
+            tt.style = `left:${left}px;top:${top}px;`;
+            tt.word = word;
+            tt.visible = true;
+
+            // Load ledger data for this word
+            let samples = [];
+            try {
+                const ledger = await loadWordLedger(this.selectedDictionary) || {};
+                const entry = ledger[word];
+                if (entry && entry.effectiveWpms) {
+                    samples = entry.effectiveWpms.map(e => ({
+                        wpm: ledgerWpm(e),
+                        ts: typeof e === 'object' && e.ts ? e.ts : null
+                    }));
+                }
+            } catch (_) { /* ignore */ }
+
+            if (samples.length === 0 || !tt.visible || tt.word !== word) return;
+
+            // Render sparkline after DOM update
+            this.$nextTick(() => {
+                const canvas = this.$refs.trendCanvas;
+                if (!canvas || typeof Chart === 'undefined') return;
+
+                if (tt._chart) { tt._chart.destroy(); tt._chart = null; }
+
+                const labels = samples.map((s, i) => {
+                    if (s.ts) {
+                        const d = new Date(s.ts);
+                        return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                    }
+                    return `#${i+1}`;
+                });
+                const data = samples.map(s => Math.round(s.wpm));
+                const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#e2b714';
+
+                tt._chart = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data,
+                            borderColor: accent,
+                            backgroundColor: accent + '22',
+                            borderWidth: 2,
+                            pointRadius: samples.length <= 10 ? 3 : 1,
+                            pointBackgroundColor: accent,
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: false,
+                        animation: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                        scales: {
+                            x: { display: false },
+                            y: {
+                                display: true,
+                                ticks: { font: { size: 9 }, color: '#888', maxTicksLimit: 3 },
+                                grid: { color: 'rgba(128,128,128,0.15)' },
+                                title: { display: false }
+                            }
+                        }
+                    }
+                });
+            });
+        },
+
+        hideWordTrend() {
+            const tt = this.trendTooltip;
+            tt.visible = false;
+            if (tt._chart) { tt._chart.destroy(); tt._chart = null; }
+        },
+
         async resetBestScore() {
             try {
                 const storageKey = this.getBestScoreStorageKey();
