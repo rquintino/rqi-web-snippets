@@ -85,13 +85,13 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
             return {
                 adaptiveDifficulty: app.adaptiveDifficulty,
                 wordCount: app.words.length,
-                hasSlowOutliers: app.previousSlowOutliers ? app.previousSlowOutliers.length : 0
+                hasSlowWords: app.previousSlowWords ? app.previousSlowWords.length : 0
             };
         });
         
         expect(appData.adaptiveDifficulty).toBe(25);
         expect(appData.wordCount).toBe(50);
-        expect(appData.hasSlowOutliers).toBe(0); // No previous outliers
+        expect(appData.hasSlowWords).toBe(0); // No previous slow words
         
         // Check no errors
         expect(pageErrors).toEqual([]);
@@ -153,13 +153,13 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
             const app = window.typingAppInstance;
             return {
                 adaptiveDifficulty: app.adaptiveDifficulty,
-                previousSlowOutliers: app.previousSlowOutliers ? app.previousSlowOutliers.length : 0,
-                shouldActivate: app.previousSlowOutliers && app.previousSlowOutliers.length >= 3,
+                previousSlowWords: app.previousSlowWords ? app.previousSlowWords.length : 0,
+                shouldActivate: app.previousSlowWords && app.previousSlowWords.length > 0,
                 firstFewWords: app.words.slice(0, 10)
             };
         });
         
-        if (adaptiveState.previousSlowOutliers >= 3) {
+        if (adaptiveState.previousSlowWords > 0) {
             expect(adaptiveState.shouldActivate).toBe(true);
             // Should have some influence from previous outliers
         } else {
@@ -204,10 +204,10 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
         // Simulate having outlier data
         await page.evaluate(() => {
             const app = window.typingAppInstance;
-            app.previousSlowOutliers = [
-                { word: 'test', wpm: 20 },
-                { word: 'slow', wpm: 15 },
-                { word: 'words', wpm: 18 }
+            app.previousSlowWords = [
+                { word: 'test', effectiveWpm: 20 },
+                { word: 'slow', effectiveWpm: 15 },
+                { word: 'words', effectiveWpm: 18 }
             ];
         });
         
@@ -220,12 +220,12 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
         const clearedData = await page.evaluate(() => {
             const app = window.typingAppInstance;
             return {
-                previousSlowOutliers: app.previousSlowOutliers ? app.previousSlowOutliers.length : 0,
+                previousSlowWords: app.previousSlowWords ? app.previousSlowWords.length : 0,
                 adaptiveDifficulty: app.adaptiveDifficulty // Should still be preserved
             };
         });
         
-        expect(clearedData.previousSlowOutliers).toBe(0);
+        expect(clearedData.previousSlowWords).toBe(0);
         expect(clearedData.adaptiveDifficulty).toBe(25); // Should preserve difficulty setting
         
         // Check no errors
@@ -233,36 +233,33 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
         expect(errors).toEqual([]);
     });
 
-    test('adaptive mode falls back to random selection when insufficient outliers', async ({ page }) => {
+    test('adaptive mode activates with any number of slow words (no minimum gate)', async ({ page }) => {
         // Set adaptive difficulty
         const slider = page.locator('.adaptive-control input[type="range"]');
         await slider.fill('40');
-        
-        // Simulate having only 2 outliers (below minimum of 3)
+
+        // Simulate having even just 1 slow word — should activate
         await page.evaluate(() => {
             const app = window.typingAppInstance;
-            app.previousSlowOutliers = [
-                { word: 'test', wpm: 20 },
-                { word: 'slow', wpm: 15 }
+            app.previousSlowWords = [
+                { word: 'test', effectiveWpm: 20 }
             ];
-            // Trigger word generation
             app.generateWords();
         });
-        
-        // Check that it fell back to random selection
-        const fallbackData = await page.evaluate(() => {
+
+        const data = await page.evaluate(() => {
             const app = window.typingAppInstance;
             return {
                 wordCount: app.words.length,
-                adaptiveDifficulty: app.adaptiveDifficulty,
-                outlierCount: app.previousSlowOutliers ? app.previousSlowOutliers.length : 0
+                adaptiveWordCount: app.adaptiveWordCount,
+                slowWordsCount: app.previousSlowWords ? app.previousSlowWords.length : 0
             };
         });
-        
-        expect(fallbackData.wordCount).toBe(50);
-        expect(fallbackData.adaptiveDifficulty).toBe(40);
-        expect(fallbackData.outlierCount).toBe(2); // Less than minimum of 3
-        
+
+        expect(data.wordCount).toBe(50);
+        expect(data.adaptiveWordCount).toBeGreaterThan(0); // Should have adaptive words
+        expect(data.slowWordsCount).toBe(1);
+
         // Check no errors
         expect(pageErrors).toEqual([]);
         expect(errors).toEqual([]);
@@ -281,15 +278,15 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
                 const app = window.typingAppInstance;
                 app.adaptiveDifficulty = diff;
                 if (diff > 0) {
-                    app.previousSlowOutliers = [
-                        { word: 'slow1', wpm: 20 },
-                        { word: 'slow2', wpm: 15 },
-                        { word: 'slow3', wpm: 18 },
-                        { word: 'slow4', wpm: 22 },
-                        { word: 'slow5', wpm: 16 }
+                    app.previousSlowWords = [
+                        { word: 'slow1', effectiveWpm: 20 },
+                        { word: 'slow2', effectiveWpm: 15 },
+                        { word: 'slow3', effectiveWpm: 18 },
+                        { word: 'slow4', effectiveWpm: 22 },
+                        { word: 'slow5', effectiveWpm: 16 }
                     ];
                 } else {
-                    app.previousSlowOutliers = [];
+                    app.previousSlowWords = [];
                 }
                 app.generateWords();
             }, difficulty);
@@ -317,10 +314,10 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
         for (let i = 0; i < 3; i++) {
             await page.evaluate(() => {
                 const app = window.typingAppInstance;
-                app.previousSlowOutliers = [
-                    { word: 'slow1', wpm: 20 },
-                    { word: 'slow2', wpm: 15 },
-                    { word: 'slow3', wpm: 18 }
+                app.previousSlowWords = [
+                    { word: 'slow1', effectiveWpm: 20 },
+                    { word: 'slow2', effectiveWpm: 15 },
+                    { word: 'slow3', effectiveWpm: 18 }
                 ];
                 app.generateWords();
             });
@@ -356,10 +353,10 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
             const app = window.typingAppInstance;
             
             // Set outliers with very different WPM values
-            app.previousSlowOutliers = [
-                { word: 'very_slow', wpm: 10 },    // Should get highest weight
-                { word: 'medium_slow', wpm: 30 },  // Should get medium weight  
-                { word: 'less_slow', wpm: 50 }     // Should get lowest weight
+            app.previousSlowWords = [
+                { word: 'very_slow', effectiveWpm: 10 },    // Should get highest weight
+                { word: 'medium_slow', effectiveWpm: 30 },  // Should get medium weight
+                { word: 'less_slow', effectiveWpm: 50 }     // Should get lowest weight
             ];
             
             // Sample many times to test weight distribution
@@ -367,7 +364,7 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
             const iterations = 1000;
             
             for (let i = 0; i < iterations; i++) {
-                const selectedWord = app.selectWeightedOutlierWord();
+                const selectedWord = app.selectWeightedSlowWord();
                 if (results.hasOwnProperty(selectedWord)) {
                     results[selectedWord]++;
                 }
@@ -477,7 +474,7 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
             
             const outliersPreserved = await page.evaluate(() => {
                 const app = window.typingAppInstance;
-                return app.previousSlowOutliers && app.previousSlowOutliers.length >= 3;
+                return app.previousSlowWords && app.previousSlowWords.length > 0;
             });
             
             expect(outliersPreserved).toBe(true);

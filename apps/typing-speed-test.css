@@ -56,6 +56,10 @@ body.light-mode .dict-arrow{color:#d4a017}
 .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center}
 .modal-panel{position:relative;background:var(--bg-secondary);border-radius:1.5rem;padding:2rem;box-shadow:0 4px 32px #0008;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .previous-best-display{color:var(--text-secondary);font-size:.75rem;margin-top:.25rem;font-weight:400}
+.word.adaptive-word{border-bottom:2px dotted #f59e0b;padding-bottom:0}
+.adaptive-badge{font-size:.85rem;color:#f59e0b;font-weight:600;padding:.2rem .5rem;background:rgba(245,158,11,.12);border-radius:.375rem;white-space:nowrap}
+body.light-mode .adaptive-badge{background:rgba(245,158,11,.15);color:#b45309}
+body.light-mode .word.adaptive-word{border-bottom-color:#b45309}
 .penalty-explanation{margin-top:1rem;display:flex;justify-content:center}
 .export-controls{margin-top:1.5rem;display:flex;gap:1rem;justify-content:center}
 .export-btn{background:var(--bg-secondary);border:2px solid var(--accent);color:var(--accent);padding:.5rem 1rem;border-radius:.5rem;cursor:pointer;font-family:inherit;font-size:.9rem;transition:all .2s}

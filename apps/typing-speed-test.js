@@ -63,28 +63,65 @@ function typingApp() {
     
     // IndexedDB helper functions
     const dbName = 'typingSpeedTestDB';
-    const dbVersion = 1;
+    const dbVersion = 2;
     const storeName = 'settings';
-    
+    const ledgerStoreName = 'wordLedger';
+    const LEDGER_MAX_SAMPLES = 20;
+
     function openDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(dbName, dbVersion);
-            
+
             request.onerror = (event) => {
                 console.warn('IndexedDB error:', event.target.error);
                 reject(event.target.error);
             };
-            
+
             request.onsuccess = (event) => {
                 resolve(event.target.result);
             };
-            
+
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
                 if (!db.objectStoreNames.contains(storeName)) {
                     db.createObjectStore(storeName, { keyPath: 'id' });
                 }
+                if (!db.objectStoreNames.contains(ledgerStoreName)) {
+                    db.createObjectStore(ledgerStoreName, { keyPath: 'id' });
+                }
             };
+        });
+    }
+
+    /**
+     * Loads the full word ledger for a given dictionary from IndexedDB.
+     * @param {string} dictionary - Dictionary key (e.g. 'english-100')
+     * @returns {Object} Map of word -> { effectiveWpms: number[], lastUpdated: number }
+     */
+    async function loadWordLedger(dictionary) {
+        const db = await openDB();
+        const tx = db.transaction(ledgerStoreName, 'readonly');
+        const store = tx.objectStore(ledgerStoreName);
+        return new Promise((resolve) => {
+            const request = store.get(`ledger-${dictionary}`);
+            request.onsuccess = () => resolve(request.result ? request.result.value : {});
+            request.onerror = () => resolve({});
+        });
+    }
+
+    /**
+     * Saves the full word ledger for a given dictionary to IndexedDB.
+     * @param {string} dictionary - Dictionary key
+     * @param {Object} ledger - Map of word -> { effectiveWpms, lastUpdated }
+     */
+    async function saveWordLedger(dictionary, ledger) {
+        const db = await openDB();
+        const tx = db.transaction(ledgerStoreName, 'readwrite');
+        const store = tx.objectStore(ledgerStoreName);
+        return new Promise((resolve, reject) => {
+            const request = store.put({ id: `ledger-${dictionary}`, value: ledger });
+            request.onsuccess = () => resolve(true);
+            request.onerror = (event) => reject(event.target.error);
         });
     }
     
@@ -162,6 +199,8 @@ function typingApp() {
     window.saveToIndexedDB = saveToIndexedDB;
     window.getFromIndexedDB = getFromIndexedDB;
     window.removeFromIndexedDB = removeFromIndexedDB;
+    window.loadWordLedger = loadWordLedger;
+    window.saveWordLedger = saveWordLedger;
     
     // Create error sound using Web Audio API
     function playErrorSound() {
@@ -1010,7 +1049,12 @@ function typingApp() {
         
         // Adaptive difficulty mode
         adaptiveDifficulty: 0,
-        previousSlowOutliers: [],
+        previousSlowWords: [],
+        adaptiveWordIndices: new Set(),
+        adaptiveWordCount: 0,
+
+        // Ledger-based leaderboard (fastest/slowest from all-time data)
+        ledgerLeaderboard: { fastest: [], slowest: [], totalWords: 0 },
         
         showChartModal: false,
         
@@ -1086,7 +1130,17 @@ function typingApp() {
             if (window.typingWordLists && window.typingWordLists[this.selectedDictionary]) {
                 window.typingWordList = window.typingWordLists[this.selectedDictionary];
             }
-            
+
+            // Load word ledger for adaptive mode (works from first test of session)
+            try {
+                const ledger = await loadWordLedger(this.selectedDictionary);
+                if (ledger && Object.keys(ledger).length > 0) {
+                    this.computeSlowWordsFromLedger(ledger);
+                }
+            } catch (e) {
+                console.warn('Failed to load word ledger:', e);
+            }
+
             this.generateWords();
             this.$refs.input.focus();
             document.body.classList.toggle('light-mode', !this.isDarkMode);
@@ -1146,52 +1200,49 @@ function typingApp() {
         },
         
         /**
-         * Generates 50 words for the typing test, with optional adaptive difficulty
-         * that increases the probability of including slow words from previous test.
-         * 
-         * Adaptive mode requirements:
-         * - adaptiveDifficulty > 0 (0-50%)
-         * - At least 3 valid slow outliers from previous test
-         * 
-         * Algorithm:
-         * - Calculate outlier count based on difficulty percentage
-         * - Fill with outlier words (with wraparound if needed)
-         * - Fill remaining slots with random words
-         * - Shuffle to avoid predictable patterns
+         * Generates 50 words for the typing test, with optional adaptive difficulty.
+         * Adaptive mode mixes in the worst-performing words from the persistent word ledger.
+         * No minimum count gate — activates whenever slider > 0 and slow words exist.
+         * Tracks which word indices are adaptive for visual marking.
          */
         generateWords() {
-            // Load from selected dictionary
             this.words = [];
+            this.adaptiveWordIndices = new Set();
             const list = window.typingWordList || (window.typingWordLists ? window.typingWordLists['english-100'] : []);
-            
-            // Check if adaptive mode should be active
-            if (this.adaptiveDifficulty > 0 && this.previousSlowOutliers && this.previousSlowOutliers.length >= 3) {
-                const outlierCount = Math.floor(50 * (this.adaptiveDifficulty / 100));
-                const randomCount = 50 - outlierCount;
-                
-                // Add outlier words using weighted sampling (slower words get higher probability)
-                for (let i = 0; i < outlierCount; i++) {
-                    const selectedWord = this.selectWeightedOutlierWord();
-                    if (selectedWord && typeof selectedWord === 'string' && selectedWord.length > 0) {
-                        this.words.push(selectedWord);
+
+            if (this.adaptiveDifficulty > 0 && this.previousSlowWords && this.previousSlowWords.length > 0) {
+                const adaptiveCount = Math.floor(50 * (this.adaptiveDifficulty / 100));
+                const randomCount = 50 - adaptiveCount;
+
+                // Build word list with adaptive markers
+                const adaptiveWords = [];
+                for (let i = 0; i < adaptiveCount; i++) {
+                    const selected = this.selectWeightedSlowWord();
+                    if (selected) {
+                        adaptiveWords.push({ word: selected, isAdaptive: true });
                     } else {
-                        // Fallback to random word if outlier selection fails
-                        this.words.push(list[Math.floor(Math.random() * list.length)]);
+                        adaptiveWords.push({ word: list[Math.floor(Math.random() * list.length)], isAdaptive: false });
                     }
                 }
-                
-                // Fill remaining with random words
+
+                const randomWords = [];
                 for (let i = 0; i < randomCount; i++) {
-                    this.words.push(list[Math.floor(Math.random() * list.length)]);
+                    randomWords.push({ word: list[Math.floor(Math.random() * list.length)], isAdaptive: false });
                 }
-                
-                // Shuffle to avoid predictable patterns
-                this.words = this.shuffleArray(this.words);
+
+                // Combine and shuffle
+                const combined = this.shuffleArray([...adaptiveWords, ...randomWords]);
+                combined.forEach((item, index) => {
+                    this.words.push(item.word);
+                    if (item.isAdaptive) this.adaptiveWordIndices.add(index);
+                });
+
+                this.adaptiveWordCount = adaptiveWords.filter(w => w.isAdaptive).length;
             } else {
-                // Current behavior (random selection)
                 for (let i = 0; i < 50; i++) {
                     this.words.push(list[Math.floor(Math.random() * list.length)]);
                 }
+                this.adaptiveWordCount = 0;
             }
         },
 
@@ -1210,64 +1261,134 @@ function typingApp() {
         },
 
         /**
-         * Selects a word from previousSlowOutliers using weighted sampling.
-         * Slower words (lower WPM) get exponentially higher probability of selection.
-         * 
-         * Weight calculation: weight = 1 / (wpm^2)
-         * This gives much higher weight to very slow words.
-         * 
-         * @returns {string|null} Selected outlier word, or null if no valid outliers
+         * Selects a word from previousSlowWords using weighted sampling.
+         * Uses 1/effectiveWpm² weighting so the worst words appear most often.
+         * @returns {string|null} Selected word, or null if no slow words
          */
-        selectWeightedOutlierWord() {
-            if (!this.previousSlowOutliers || this.previousSlowOutliers.length === 0) {
+        selectWeightedSlowWord() {
+            if (!this.previousSlowWords || this.previousSlowWords.length === 0) {
                 return null;
             }
 
-            // Calculate weights for each outlier (inverse square of WPM)
-            const weights = this.previousSlowOutliers.map(outlier => {
-                const wpm = Math.max(outlier.wpm, 1); // Prevent division by zero
-                return 1 / (wpm * wpm); // Exponential weighting - slower words get much higher weight
+            const weights = this.previousSlowWords.map(w => {
+                const wpm = Math.max(w.effectiveWpm, 1);
+                return 1 / (wpm * wpm);
             });
 
-            // Calculate total weight
-            const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-            
-            // Select random point in weight distribution
+            const totalWeight = weights.reduce((sum, w) => sum + w, 0);
             const randomValue = Math.random() * totalWeight;
-            
-            // Find which outlier corresponds to this random point
-            let cumulativeWeight = 0;
-            for (let i = 0; i < this.previousSlowOutliers.length; i++) {
-                cumulativeWeight += weights[i];
-                if (randomValue <= cumulativeWeight) {
-                    return this.previousSlowOutliers[i].word;
+
+            let cumulative = 0;
+            for (let i = 0; i < this.previousSlowWords.length; i++) {
+                cumulative += weights[i];
+                if (randomValue <= cumulative) {
+                    return this.previousSlowWords[i].word;
                 }
             }
-            
-            // Fallback to last outlier (shouldn't happen with proper math)
-            return this.previousSlowOutliers[this.previousSlowOutliers.length - 1].word;
+
+            return this.previousSlowWords[this.previousSlowWords.length - 1].word;
         },
 
         /**
-         * Stores validated slow outlier data from current test for use in next test.
-         * Filters out any invalid entries to prevent runtime errors.
-         * Called automatically when test completes.
+         * Stores the bottom 25% worst-performing words from current test for adaptive mode.
+         * Uses effectiveWpm = rawWpm × accuracy to rank words, so errors penalize ranking.
+         * No minimum count gate — always works when there are completed words.
          */
-        storeOutlierDataForNextTest() {
-            // Store slow outliers for adaptive mode in next test
-            if (this.outlierStats && this.outlierStats.hasOutliers && this.outlierStats.slowest && this.outlierStats.slowest.length > 0) {
-                // Filter out any undefined or invalid outlier entries
-                this.previousSlowOutliers = this.outlierStats.slowest.filter(outlier => 
-                    outlier && 
-                    outlier.word && 
-                    typeof outlier.word === 'string' && 
-                    outlier.word.length > 0 &&
-                    typeof outlier.wpm === 'number' && 
-                    !isNaN(outlier.wpm)
-                );
-            } else {
-                this.previousSlowOutliers = [];
+        /**
+         * Merges current test word stats into the persistent word ledger (IndexedDB),
+         * then recomputes previousSlowWords from the full ledger.
+         * Each word keeps a sliding window of the last LEDGER_MAX_SAMPLES effective WPMs.
+         * Scoped per dictionary.
+         */
+        async storeOutlierDataForNextTest() {
+            if (!this.wordStats || this.wordStats.length === 0) {
+                return;
             }
+
+            // Build per-occurrence effective WPM from this test
+            const perOccurrence = this.wordStats.map((stat, index) => {
+                const word = stat.word;
+                const rawWpm = stat.wpm;
+                const charStates = this.wordCharStates[index] || {};
+                const wordLen = word ? word.length : 1;
+                let correctChars = 0;
+                for (let c = 0; c < wordLen; c++) {
+                    if (charStates[c] === true) correctChars++;
+                }
+                const accuracy = wordLen > 0 ? correctChars / wordLen : 1;
+                return { word, effectiveWpm: rawWpm * accuracy };
+            }).filter(w => w.word && typeof w.word === 'string' && w.word.length > 0);
+
+            // Load existing ledger for current dictionary
+            let ledger = {};
+            try {
+                ledger = await loadWordLedger(this.selectedDictionary) || {};
+            } catch (e) { /* start fresh */ }
+
+            // Merge new samples into ledger (sliding window)
+            const now = Date.now();
+            perOccurrence.forEach(({ word, effectiveWpm }) => {
+                if (!ledger[word]) {
+                    ledger[word] = { effectiveWpms: [], lastUpdated: now };
+                }
+                ledger[word].effectiveWpms.push(effectiveWpm);
+                // Keep only last N samples
+                if (ledger[word].effectiveWpms.length > LEDGER_MAX_SAMPLES) {
+                    ledger[word].effectiveWpms = ledger[word].effectiveWpms.slice(-LEDGER_MAX_SAMPLES);
+                }
+                ledger[word].lastUpdated = now;
+            });
+
+            // Save updated ledger
+            try {
+                await saveWordLedger(this.selectedDictionary, ledger);
+            } catch (e) {
+                console.warn('Failed to save word ledger:', e);
+            }
+
+            // Recompute slow words from full ledger
+            this.computeSlowWordsFromLedger(ledger);
+        },
+
+        /**
+         * Computes previousSlowWords and ledgerLeaderboard from a ledger object.
+         * Bottom 25% by mean effective WPM for adaptive, top/bottom 10 for leaderboard.
+         */
+        computeSlowWordsFromLedger(ledger) {
+            const entries = Object.entries(ledger)
+                .filter(([, v]) => v.effectiveWpms && v.effectiveWpms.length > 0)
+                .map(([word, v]) => {
+                    const wpms = v.effectiveWpms;
+                    const mean = wpms.reduce((s, x) => s + x, 0) / wpms.length;
+                    let sd = 0;
+                    if (wpms.length > 1) {
+                        const variance = wpms.reduce((s, x) => Math.pow(x - mean, 2), 0) / wpms.length;
+                        sd = Math.sqrt(variance);
+                    }
+                    return { word, effectiveWpm: mean, occurrences: wpms.length, standardDeviation: sd };
+                });
+
+            // Sort ascending by effectiveWpm (slowest first)
+            entries.sort((a, b) => a.effectiveWpm - b.effectiveWpm);
+
+            // Adaptive: bottom 25%
+            const bottomCount = Math.max(1, Math.ceil(entries.length * 0.25));
+            this.previousSlowWords = entries.slice(0, bottomCount);
+
+            // Leaderboard: slowest 10 and fastest 10
+            const showCount = Math.min(10, entries.length);
+            this.ledgerLeaderboard = {
+                slowest: entries.slice(0, showCount),
+                fastest: entries.slice(-showCount).reverse(),
+                totalWords: entries.length
+            };
+        },
+
+        /**
+         * Returns true if the word at the given index is an adaptive (slow practice) word.
+         */
+        isAdaptiveWord(wordIndex) {
+            return this.adaptiveWordIndices && this.adaptiveWordIndices.has(wordIndex);
         },
 
         /**
@@ -1674,7 +1795,7 @@ function typingApp() {
             this.finalAccuracy = this.accuracy;
             
             // Store outlier data for next test (adaptive mode)
-            this.storeOutlierDataForNextTest();
+            await this.storeOutlierDataForNextTest();
             
             // Update chart one final time to ensure label consistency
             setTimeout(() => updateWpmChart(this.isDarkMode), 100);
@@ -1697,7 +1818,7 @@ function typingApp() {
             this.finalAccuracy = this.accuracy;
             
             // Store outlier data for next test (adaptive mode)
-            this.storeOutlierDataForNextTest();
+            await this.storeOutlierDataForNextTest();
             
             // Update chart one final time to ensure label consistency
             setTimeout(() => updateWpmChart(this.isDarkMode), 100);
@@ -1733,9 +1854,9 @@ function typingApp() {
                 this.wpmUpdateTimer = null;
             }
             
-            // Ensure previousSlowOutliers is always an array
-            if (!this.previousSlowOutliers) {
-                this.previousSlowOutliers = [];
+            // Ensure previousSlowWords is always an array
+            if (!this.previousSlowWords) {
+                this.previousSlowWords = [];
             }
             
             this.words = [];
@@ -1858,19 +1979,28 @@ function typingApp() {
         async changeDictionary(event) {
             this.selectedDictionary = event.target.value;
             
-            // Clear previous outliers when changing dictionary
-            this.previousSlowOutliers = [];
-            
+            // Load ledger for the new dictionary (or clear if none)
+            try {
+                const ledger = await loadWordLedger(this.selectedDictionary);
+                if (ledger && Object.keys(ledger).length > 0) {
+                    this.computeSlowWordsFromLedger(ledger);
+                } else {
+                    this.previousSlowWords = [];
+                }
+            } catch (e) {
+                this.previousSlowWords = [];
+            }
+
             // Save selected dictionary to IndexedDB
             try {
                 await saveToIndexedDB('typing-selected-dictionary', this.selectedDictionary);
             } catch (error) {
                 console.warn('Failed to save dictionary setting:', error);
             }
-            
+
             if (window.typingWordLists && window.typingWordLists[this.selectedDictionary]) {
                 window.typingWordList = window.typingWordLists[this.selectedDictionary];
-                await this.loadBestScore(); // Load the best score for the new dictionary
+                await this.loadBestScore();
                 this.restart();
             }
         },
