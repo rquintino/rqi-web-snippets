@@ -88,7 +88,7 @@ test.describe('How LLMs Work Visualization', () => {
   });
 
   test('theme toggle works', async ({ page }) => {
-    const themeButton = page.locator(SELECTORS.controlBtn).nth(1);
+    const themeButton = page.locator('button[title="Toggle Theme"]');
     await expect(page.locator('body')).not.toHaveClass(/light/);
     await themeButton.click();
     await expect(page.locator('body')).toHaveClass(/light/);

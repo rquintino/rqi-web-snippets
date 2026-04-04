@@ -20,7 +20,7 @@
     -->
     <link rel="stylesheet" href="how-llms-work.css">
     <script src="https://unpkg.com/lucide@0.525.0/dist/umd/lucide.js" integrity="sha384-asiwCor7sOBJob29wQLPg/VzoqDrbqMSCYqXSioQmz12mZdUuucrgWdk8hTOs6dW" crossorigin="anonymous"></script>
-    <script src="how-llms-work.js?v=2025-01-26.2"></script>
+    <script src="how-llms-work.js?v=2026-04-04.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js" integrity="sha384-9Ax3MmS9AClxJyd5/zafcXXjxmwFhZCdsT6HJoJjarvCaAkJlk5QDzjLJm+Wdx5F" crossorigin="anonymous" defer></script>
 </head>
 <body x-data="llmVisualization()" :class="{ 'dark': isDark, 'fullscreen': isFullscreen }">
@@ -30,12 +30,12 @@
             <span x-text="lang.toUpperCase()"></span>
         </button>
         <button @click.stop="toggleFullscreen()" class="control-btn" title="Toggle Fullscreen">
-            <i data-lucide="maximize-2" x-show="!isFullscreen"></i>
-            <i data-lucide="minimize-2" x-show="isFullscreen"></i>
+            <span x-show="!isFullscreen"><i data-lucide="maximize-2"></i></span>
+            <span x-show="isFullscreen"><i data-lucide="minimize-2"></i></span>
         </button>
         <button @click.stop="toggleTheme()" class="control-btn" title="Toggle Theme">
-            <i data-lucide="sun" x-show="isDark"></i>
-            <i data-lucide="moon" x-show="!isDark"></i>
+            <span x-show="isDark"><i data-lucide="sun"></i></span>
+            <span x-show="!isDark"><i data-lucide="moon"></i></span>
         </button>
         <button @click="window.location.href='../index.html'" class="control-btn home-btn" title="Home">
             <i data-lucide="home"></i>
@@ -205,7 +205,7 @@
     </div>
 
     <!-- Version -->
-    <div class="version">v2025-01-26.1</div>
+    <div class="version">v2026-04-04.1</div>
 
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
