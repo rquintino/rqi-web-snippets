@@ -1421,9 +1421,11 @@ function typingApp() {
             }
             
             const now = Date.now();
+            // Use event.target.value for reliable access regardless of x-model timing
+            const inputValue = event.target.value;
             
             // Start word timing on first keypress of the word
-            if (this.typedWord.length === 1 && !this.wordFirstKeypressTime) {
+            if (inputValue.length === 1 && !this.wordFirstKeypressTime) {
                 this.wordFirstKeypressTime = now;
                 this.wordStartTime = now;
                 // Start the continuous WPM update timer
@@ -1440,11 +1442,11 @@ function typingApp() {
             // Character-level accuracy tracks FIRST ATTEMPT at each position
             // Once a character position has been attempted, its state is locked in
             // This follows industry standard (Monkeytype/Keybr) behavior
-            for (let charIndex = 0; charIndex < this.typedWord.length; charIndex++) {
+            for (let charIndex = 0; charIndex < inputValue.length; charIndex++) {
                 if (charIndex < currentWord.length) {
                     // Only record the state if this position hasn't been attempted yet
                     if (this.wordCharStates[this.currentWordIndex][charIndex] === undefined) {
-                        const isCorrect = this.typedWord[charIndex] === currentWord[charIndex];
+                        const isCorrect = inputValue[charIndex] === currentWord[charIndex];
                         this.wordCharStates[this.currentWordIndex][charIndex] = isCorrect;
                         
                         // Play sound and add penalty only for incorrect characters
@@ -1690,9 +1692,14 @@ function typingApp() {
                     } else if (charState === false) {
                         classes.push('incorrect');
                     } else {
-                        // If no state stored, check if the word was typed correctly overall
-                        if (!this.wordErrors[wordIndex]) {
+                        // No state stored - compare against stored typed word for accurate coloring
+                        const typedWord = this.typedWords[wordIndex] || '';
+                        if (charIndex < typedWord.length && typedWord[charIndex] === this.words[wordIndex][charIndex]) {
                             classes.push('correct');
+                        } else if (!this.wordErrors[wordIndex]) {
+                            classes.push('correct');
+                        } else {
+                            classes.push('incorrect');
                         }
                     }
                 }
