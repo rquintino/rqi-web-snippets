@@ -1068,8 +1068,24 @@ function typingApp() {
         ledgerLeaderboard: { fastest: [], slowest: [], totalWords: 0 },
         
         showChartModal: false,
-        
-        
+
+        // Pace ghost cursor
+        paceTargetWpm: 0,
+        paceActiveTime: 0,
+        paceBaseChars: 0,
+        paceLastKeystroke: null,
+        pacePaused: true,
+        pacePauseTimer: null,
+        paceAnimFrame: null,
+        paceGhostCharIndex: 0,
+        paceGhostWordIndex: 0,
+        liveWpm: 0,
+        paceAlignedSince: null,
+        paceSparksActive: false,
+        paceSparkParticles: [],
+        paceSparkFrame: null,
+
+
         // Computed property for outlier statistics
         get outlierStats() {
             const stats = calculateWordWpmStatistics(this);
@@ -1128,6 +1144,12 @@ function typingApp() {
                     this.selectedDictionary = savedDictionary;
                 }
                 
+                // Load pace target setting
+                const savedPaceTarget = await getFromIndexedDB('typing-pace-target');
+                if (savedPaceTarget !== null) {
+                    this.paceTargetWpm = parseInt(savedPaceTarget, 10) || 0;
+                }
+
                 // Load adaptive difficulty setting
                 const savedAdaptiveDifficulty = await getFromIndexedDB('typing-adaptive-difficulty');
                 if (savedAdaptiveDifficulty !== null) {
@@ -1464,6 +1486,7 @@ function typingApp() {
             }
 
             this.updateActiveStats();
+            this.updateLiveWpm();
             this.$nextTick(() => this.updateCursor());
         },
         
@@ -1472,9 +1495,17 @@ function typingApp() {
                 event.preventDefault(); // Prevent default tab behavior
                 this.restart();
                 return;
-            } else if (event.key === ' ') {
+            }
+            // Signal pace cursor: forward keys advance time, backspace just keeps it alive
+            if (this.started && event.key.length === 1 && event.key !== ' ') {
+                this.paceKeystroke(false);
+            } else if (this.started && event.key === 'Backspace') {
+                this.paceRebase();
+            }
+            if (event.key === ' ') {
                 event.preventDefault();
                 if (this.typedWord.length > 0) {  // Only check word if something was typed
+                    this.paceKeystroke(false);
                     this.checkWord();
                 }
             } else if (event.key === 'Backspace') {
@@ -1541,15 +1572,28 @@ function typingApp() {
         
         updateCurrentWordWpm() {
             if (!this.wordFirstKeypressTime || !this.started) return;
-            
+
             const now = Date.now();
             const wordTime = (now - this.wordFirstKeypressTime) / 1000 / 60; // Convert to minutes
             const charsTyped = this.typedWord.length;
-            
+
             if (wordTime > 0.001) {
                 this.currentWordWpm = Math.round((charsTyped / 5) / wordTime);
             } else {
                 this.currentWordWpm = 0;
+            }
+            this.updateLiveWpm();
+        },
+
+        updateLiveWpm() {
+            // Blend completed word averages with current word WPM
+            const completedCount = this.wordStats.length;
+            if (completedCount === 0) {
+                this.liveWpm = this.currentWordWpm;
+            } else {
+                const completedAvg = this.wordStats.reduce((s, st) => s + st.wpm, 0) / completedCount;
+                // Weight current word as 1 additional sample
+                this.liveWpm = Math.round((completedAvg * completedCount + this.currentWordWpm) / (completedCount + 1));
             }
         },
         
@@ -1778,6 +1822,7 @@ function typingApp() {
         start() {
             this.started = true;
             this.$nextTick(() => this.updateCursor());
+            this.startPaceCursor();
         },
         
         async finish() {
@@ -1787,6 +1832,8 @@ function typingApp() {
                 this.wpmUpdateTimer = null;
             }
             
+            this.stopPaceCursor();
+
             // If blind mode was active, save the setting for display and future restoration
             const wasBlindMode = this.blindMode;
             this.blindModeOriginal = wasBlindMode;
@@ -1899,6 +1946,8 @@ function typingApp() {
             this.wordCharStates = {};
             this.errorPenalties = 0;
             this.showPreviousBest = false;
+            this.liveWpm = 0;
+            this.stopPaceCursor();
             
             // Restore blind mode from blindModeSelected or IndexedDB if needed
             try {
@@ -2114,6 +2163,303 @@ function typingApp() {
                 this.restart();
             }
         },
+        startPaceCursor() {
+            if (this.paceTargetWpm <= 0) return;
+            this.paceActiveTime = 0;
+            this.paceBaseChars = 0;
+            this.paceLastKeystroke = null;
+            this.pacePaused = true;
+            this.paceGhostCharIndex = 0;
+            this.paceGhostWordIndex = 0;
+            this.tickPaceCursor();
+        },
+
+        stopPaceCursor() {
+            if (this.paceAnimFrame) {
+                cancelAnimationFrame(this.paceAnimFrame);
+                this.paceAnimFrame = null;
+            }
+            if (this.pacePauseTimer) {
+                clearTimeout(this.pacePauseTimer);
+                this.pacePauseTimer = null;
+            }
+            this.paceLastKeystroke = null;
+            this.pacePaused = true;
+            this.paceAlignedSince = null;
+            if (this.paceSparksActive) {
+                this.paceSparksActive = false;
+                this.stopPaceSparks();
+            }
+            const ghost = document.getElementById('pace-ghost');
+            if (ghost) ghost.remove();
+        },
+
+        paceKeystroke(pauseOnly) {
+            if (this.paceTargetWpm <= 0) return;
+            const now = Date.now();
+
+            if (!pauseOnly) {
+                // Resuming after pause — reset ghost to user's current position
+                if (this.pacePaused) {
+                    let userChars = 0;
+                    for (let w = 0; w < this.currentWordIndex; w++) {
+                        userChars += this.words[w].length + 1;
+                    }
+                    userChars += this.typedWord.length;
+                    this.paceBaseChars = userChars;
+                    this.paceActiveTime = 0;
+                } else if (this.paceLastKeystroke) {
+                    this.paceActiveTime += now - this.paceLastKeystroke;
+                }
+                this.paceLastKeystroke = now;
+                this.pacePaused = false;
+            }
+
+            // Auto-pause after 1.5s of no input
+            if (this.pacePauseTimer) clearTimeout(this.pacePauseTimer);
+            this.pacePauseTimer = setTimeout(() => {
+                if (this.paceLastKeystroke) {
+                    this.paceActiveTime += Date.now() - this.paceLastKeystroke;
+                }
+                this.pacePaused = true;
+                this.paceLastKeystroke = null;
+            }, 600);
+        },
+
+        paceRebase() {
+            if (this.paceTargetWpm <= 0) return;
+            // Snap ghost to user's current position after backspace
+            this.$nextTick(() => {
+                let userChars = 0;
+                for (let w = 0; w < this.currentWordIndex; w++) {
+                    userChars += this.words[w].length + 1;
+                }
+                userChars += this.typedWord.length;
+                this.paceBaseChars = userChars;
+                this.paceActiveTime = 0;
+                this.paceLastKeystroke = Date.now();
+                this.pacePaused = false;
+
+                // Refresh pause timer
+                if (this.pacePauseTimer) clearTimeout(this.pacePauseTimer);
+                this.pacePauseTimer = setTimeout(() => {
+                    if (this.paceLastKeystroke) {
+                        this.paceActiveTime += Date.now() - this.paceLastKeystroke;
+                    }
+                    this.pacePaused = true;
+                    this.paceLastKeystroke = null;
+                }, 600);
+            });
+        },
+
+        tickPaceCursor() {
+            if (!this.started || this.showResults || this.paceTargetWpm <= 0) {
+                this.stopPaceCursor();
+                return;
+            }
+
+            // Compute total active milliseconds including current live segment
+            let totalMs = this.paceActiveTime;
+            if (!this.pacePaused && this.paceLastKeystroke) {
+                totalMs += Date.now() - this.paceLastKeystroke;
+            }
+
+            const elapsed = totalMs / 1000 / 60; // minutes
+            const targetChars = this.paceBaseChars + this.paceTargetWpm * 5 * elapsed;
+
+            // Walk through words to find ghost position
+            let charsSoFar = 0;
+            let ghostWord = 0;
+            let ghostChar = 0;
+            for (let w = 0; w < this.words.length; w++) {
+                const wordLen = this.words[w].length + 1; // +1 for space
+                if (charsSoFar + wordLen > targetChars) {
+                    ghostWord = w;
+                    ghostChar = Math.floor(targetChars - charsSoFar);
+                    break;
+                }
+                charsSoFar += wordLen;
+                if (w === this.words.length - 1) {
+                    ghostWord = w;
+                    ghostChar = this.words[w].length;
+                }
+            }
+
+            this.paceGhostWordIndex = ghostWord;
+            this.paceGhostCharIndex = ghostChar;
+            this.updatePaceGhost();
+
+            this.paceAnimFrame = requestAnimationFrame(() => this.tickPaceCursor());
+        },
+
+        updatePaceGhost() {
+            const wordEls = document.querySelectorAll('.text-display .word');
+            if (!wordEls[this.paceGhostWordIndex]) return;
+
+            const wordEl = wordEls[this.paceGhostWordIndex];
+            const chars = wordEl.querySelectorAll('.char');
+            const container = document.querySelector('.text-display');
+            if (!container) return;
+
+            let ghost = document.getElementById('pace-ghost');
+            if (!ghost) {
+                ghost = document.createElement('span');
+                ghost.id = 'pace-ghost';
+                ghost.className = 'pace-ghost';
+                container.appendChild(ghost);
+            }
+
+            const containerRect = container.getBoundingClientRect();
+            let left, top;
+
+            if (this.paceGhostCharIndex < chars.length) {
+                const charEl = chars[this.paceGhostCharIndex];
+                const rect = charEl.getBoundingClientRect();
+                left = rect.left - containerRect.left;
+                top = rect.top - containerRect.top;
+            } else {
+                const lastChar = chars[chars.length - 1] || wordEl;
+                const rect = lastChar.getBoundingClientRect();
+                left = rect.right - containerRect.left;
+                top = rect.top - containerRect.top;
+            }
+
+            ghost.style.left = left + 'px';
+            ghost.style.top = top + 'px';
+
+            // Color based on user position vs ghost: green=ahead, amber=on pace, red=behind
+            // Count total chars the user has typed (completed words + current word)
+            let userChars = 0;
+            for (let w = 0; w < this.currentWordIndex; w++) {
+                userChars += this.words[w].length + 1; // +1 for space
+            }
+            userChars += this.typedWord.length;
+
+            let ghostChars = 0;
+            for (let w = 0; w < this.paceGhostWordIndex; w++) {
+                ghostChars += this.words[w].length + 1;
+            }
+            ghostChars += this.paceGhostCharIndex;
+
+            // Threshold colors: green (ahead) → blue (on pace) → red (behind)
+            const diff = userChars - ghostChars;
+            const aligned = Math.abs(diff) < 1.5;
+            let color;
+
+            if (aligned) {
+                color = '#42a5f5';
+                ghost.style.color = color;
+                ghost.classList.add('pace-aligned');
+
+                // Track sustained alignment for sparks
+                if (!this.paceAlignedSince) {
+                    this.paceAlignedSince = Date.now();
+                }
+                const alignedMs = Date.now() - this.paceAlignedSince;
+                if (alignedMs >= 2000 && !this.paceSparksActive) {
+                    this.paceSparksActive = true;
+                    ghost.classList.add('pace-sparks');
+                    this.startPaceSparks();
+                }
+            } else {
+                ghost.classList.remove('pace-aligned', 'pace-sparks');
+                this.paceAlignedSince = null;
+                if (this.paceSparksActive) {
+                    this.paceSparksActive = false;
+                    this.stopPaceSparks();
+                }
+
+                if (diff > 1) {
+                    color = '#4ca754';
+                } else if (diff < -1) {
+                    color = '#e53935';
+                } else {
+                    color = '#42a5f5';
+                }
+            }
+
+            ghost.style.background = color;
+            ghost.style.boxShadow = aligned ? `0 0 12px ${color}, 0 0 24px ${color}, 0 0 4px #fff` : `0 0 8px ${color}`;
+
+            // Feed spark positions
+            if (this.paceSparksActive) {
+                const ghostRect = ghost.getBoundingClientRect();
+                this.emitPaceSparks(ghostRect.left + ghostRect.width / 2, ghostRect.top + ghostRect.height / 2);
+            }
+        },
+
+        startPaceSparks() {
+            const canvas = document.getElementById('pace-spark-canvas');
+            if (!canvas) return;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            canvas.style.display = 'block';
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            this.paceSparkParticles = [];
+
+            const animate = () => {
+                if (!this.paceSparksActive) return;
+                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+                this.paceSparkParticles = this.paceSparkParticles.filter(p => p.life > 0);
+                this.paceSparkParticles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.15; // gravity
+                    p.life -= 1;
+                    const alpha = p.life / p.maxLife;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r * alpha, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, ${alpha})`;
+                    ctx.fill();
+                });
+                this.paceSparkFrame = requestAnimationFrame(animate);
+            };
+            this.paceSparkFrame = requestAnimationFrame(animate);
+        },
+
+        stopPaceSparks() {
+            if (this.paceSparkFrame) {
+                cancelAnimationFrame(this.paceSparkFrame);
+                this.paceSparkFrame = null;
+            }
+            const canvas = document.getElementById('pace-spark-canvas');
+            if (canvas) {
+                canvas.style.display = 'none';
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            this.paceSparkParticles = [];
+        },
+
+        emitPaceSparks(x, y) {
+            // Emit 2-3 particles per frame when actively sparking
+            const count = 2 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1.5 + Math.random() * 3;
+                const maxLife = 20 + Math.floor(Math.random() * 20);
+                this.paceSparkParticles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 2, // bias upward
+                    r: 2 + Math.random() * 2,
+                    hue: 190 + Math.random() * 40, // cyan-blue range
+                    life: maxLife,
+                    maxLife
+                });
+            }
+        },
+
+        async savePaceTarget() {
+            try {
+                await saveToIndexedDB('typing-pace-target', this.paceTargetWpm.toString());
+            } catch (e) { /* ignore */ }
+        },
+
         showChartModalHandler,
         hideChartModalHandler,
         

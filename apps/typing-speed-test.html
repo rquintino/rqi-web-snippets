@@ -18,6 +18,7 @@
     - Stats tracking and local storage
     - Real-time WPM calculation per word
     - Word-by-word performance visualization
+    - Ghost pace cursor: adjustable target WPM ghost marker that advances through the text as a pacing guide
     -->
     
     <link rel="stylesheet" href="typing-speed-test.css">
@@ -149,6 +150,20 @@
                 <span class="adaptive-value" style="font-size: 0.9rem; color: var(--text-secondary); min-width: 30px;" x-text="adaptiveDifficulty + '%'"></span>
                 <span class="adaptive-badge" x-show="adaptiveWordCount > 0" x-text="'🔄 ' + adaptiveWordCount" title="Adaptive words in this test"></span>
             </div>
+            <div class="pace-control" title="Ghost cursor advances through text at this WPM target">
+                <label for="pace-slider" style="font-size: 0.9rem; color: var(--text-secondary);">Pace:</label>
+                <input
+                    id="pace-slider"
+                    type="range"
+                    min="0"
+                    max="150"
+                    step="5"
+                    x-model.number="paceTargetWpm"
+                    @input="savePaceTarget()"
+                    style="width: 60px; margin: 0 0.5rem;"
+                />
+                <span style="font-size: 0.9rem; color: var(--text-secondary); min-width: 50px;" x-text="paceTargetWpm > 0 ? paceTargetWpm + ' wpm' : 'off'"></span>
+            </div>
             <div class="penalty-indicator" x-show="errorPenalties > 0" title="WPM Penalties">
                 <span class="penalty-icon">⚠️</span>
                 <span class="penalty-count" x-text="errorPenalties"></span>
@@ -157,7 +172,10 @@
         <div x-show="showBlindReveal" class="blind-reveal-header">
             <h3>Your Typing Results</h3>
         </div>
-        <div class="text-display" x-show="!showResults" @click="$refs.input.focus()">
+        <div class="text-area-wrapper" x-show="!showResults">
+        <!-- Live WPM watermark -->
+        <div class="wpm-watermark" x-show="started" x-text="liveWpm" x-cloak></div>
+        <div class="text-display" @click="$refs.input.focus()">
             <template x-for="(word, wordIndex) in words" :key="wordIndex">
                 <span
                     class="word"
@@ -191,6 +209,7 @@
                     </template>
                 </span>
             </template>
+        </div>
         </div>
         <div x-show="showBlindReveal" class="blind-reveal-continue">
             <button class="continue-btn" @click="continueFromBlindReveal()">
@@ -293,7 +312,7 @@
         </div>
     </div>
     
-    <div class="version">v2026-04-08.2</div>
+    <div class="version">v2026-04-08.23</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
 
@@ -311,11 +330,14 @@
         </div>
     </div>
     
+    <!-- Pace spark particles -->
+    <canvas id="pace-spark-canvas" class="pace-spark-canvas" style="display:none;"></canvas>
+
     <!-- Confetti and celebration overlay for new best score -->
     <canvas id="confetti-canvas" width="1200" height="800" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2000;"></canvas>
     
     <script src="typing-speed-test.jsdata"></script>
-    <script src="typing-speed-test.js?v=2026-04-08.2"></script>
+    <script src="typing-speed-test.js?v=2026-04-08.6"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>
