@@ -1476,7 +1476,10 @@ function typingApp() {
                     this.checkWord();
                 }
             } else if (event.key === 'Backspace') {
-                if (this.currentCharIndex > 0) {
+                if (event.ctrlKey) {
+                    // Ctrl+Backspace: browser deletes entire word, sync charIndex to 0
+                    this.currentCharIndex = 0;
+                } else if (this.currentCharIndex > 0) {
                     this.currentCharIndex--;
                 }
             } else if (event.key.length === 1) {
