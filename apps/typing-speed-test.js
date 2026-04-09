@@ -2379,10 +2379,11 @@ function typingApp() {
                 }
                 const alignedMs = Date.now() - this.paceAlignedSince;
 
-                // Streak tiers: 2s=1(sparks), 4s=2x, 8s=3x, 15s=4x
+                // Streak tiers: 2s=1(sparks), 4s=2x, 8s=3x, 15s=4x, then +8s per tier uncapped
                 let newTier = 0;
-                if (alignedMs >= 15000) newTier = 4;
-                else if (alignedMs >= 8000) newTier = 3;
+                if (alignedMs >= 15000) {
+                    newTier = 4 + Math.floor((alignedMs - 15000) / 8000);
+                } else if (alignedMs >= 8000) newTier = 3;
                 else if (alignedMs >= 4000) newTier = 2;
                 else if (alignedMs >= 2000) newTier = 1;
 
@@ -2451,7 +2452,7 @@ function typingApp() {
                     const alpha = p.life / p.maxLife;
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.r * alpha, 0, Math.PI * 2);
-                    ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, ${alpha})`;
+                    ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, ${alpha * 0.4})`;
                     ctx.fill();
                 });
                 this.paceSparkFrame = requestAnimationFrame(animate);
@@ -2511,19 +2512,20 @@ function typingApp() {
         },
 
         showStreakNotification(tier) {
-            const labels = { 2: '2x', 3: '3x', 4: '4x' };
-            const colors = { 2: '#4ca754', 3: '#e2b714', 4: '#e53935' };
-            const text = labels[tier] || '';
-            if (!text) return;
+            if (tier < 2) return;
+            const text = tier + 'x';
+            // Color cycles: 2=green, 3=gold, 4+=rainbow hue based on tier
+            let color;
+            if (tier === 2) color = '#4ca754';
+            else if (tier === 3) color = '#e2b714';
+            else color = `hsl(${(tier * 47) % 360}, 90%, 60%)`;
 
             const el = document.createElement('div');
             el.className = 'streak-notification';
             el.textContent = text;
-            el.style.color = colors[tier];
-            el.style.textShadow = `0 0 12px ${colors[tier]}`;
+            el.style.color = color;
+            el.style.textShadow = `0 0 12px ${color}`;
             document.body.appendChild(el);
-
-            // Remove after animation
             setTimeout(() => el.remove(), 1000);
         },
 
