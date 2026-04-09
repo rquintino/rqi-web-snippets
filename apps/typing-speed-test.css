@@ -69,6 +69,8 @@ body.light-mode .word.adaptive-word{border-bottom-color:#b45309}
 .pace-ghost.pace-sparks::after{width:40px;opacity:.7}
 @keyframes paceFlare{0%{box-shadow:0 0 8px currentColor,0 0 16px currentColor}100%{box-shadow:0 0 14px currentColor,0 0 28px currentColor,0 0 4px #fff}}
 .pace-spark-canvas{position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:6}
+.streak-notification{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);font-size:5rem;font-weight:900;pointer-events:none;z-index:20;animation:streakPop 1s ease-out forwards;opacity:0}
+@keyframes streakPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.3)}30%{transform:translate(-50%,-50%) scale(1)}70%{opacity:1;transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-80%) scale(.8)}}
 .pace-control{display:flex;align-items:center;gap:.5rem;padding:.5rem;background:var(--bg-secondary);border-radius:.5rem;border:1px solid var(--border)}
 .pace-control input[type="range"]{accent-color:var(--accent)}
 .text-area-wrapper{width:100%;position:relative}

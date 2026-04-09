@@ -1084,6 +1084,8 @@ function typingApp() {
         paceSparksActive: false,
         paceSparkParticles: [],
         paceSparkFrame: null,
+        paceStreakTier: 0,
+        paceLastTierNotified: 0,
 
 
         // Computed property for outlier statistics
@@ -2186,6 +2188,8 @@ function typingApp() {
             this.paceLastKeystroke = null;
             this.pacePaused = true;
             this.paceAlignedSince = null;
+            this.paceStreakTier = 0;
+            this.paceLastTierNotified = 0;
             if (this.paceSparksActive) {
                 this.paceSparksActive = false;
                 this.stopPaceSparks();
@@ -2351,19 +2355,35 @@ function typingApp() {
                 ghost.style.color = color;
                 ghost.classList.add('pace-aligned');
 
-                // Track sustained alignment for sparks
+                // Track sustained alignment for sparks + streak tiers
                 if (!this.paceAlignedSince) {
                     this.paceAlignedSince = Date.now();
                 }
                 const alignedMs = Date.now() - this.paceAlignedSince;
-                if (alignedMs >= 2000 && !this.paceSparksActive) {
+
+                // Streak tiers: 2s=1(sparks), 4s=2x, 8s=3x, 15s=4x
+                let newTier = 0;
+                if (alignedMs >= 15000) newTier = 4;
+                else if (alignedMs >= 8000) newTier = 3;
+                else if (alignedMs >= 4000) newTier = 2;
+                else if (alignedMs >= 2000) newTier = 1;
+
+                if (newTier >= 1 && !this.paceSparksActive) {
                     this.paceSparksActive = true;
                     ghost.classList.add('pace-sparks');
                     this.startPaceSparks();
                 }
+                // Notify on tier change
+                if (newTier > this.paceStreakTier && newTier >= 2 && newTier > this.paceLastTierNotified) {
+                    this.paceLastTierNotified = newTier;
+                    this.showStreakNotification(newTier);
+                }
+                this.paceStreakTier = newTier;
             } else {
                 ghost.classList.remove('pace-aligned', 'pace-sparks');
                 this.paceAlignedSince = null;
+                this.paceStreakTier = 0;
+                this.paceLastTierNotified = 0;
                 if (this.paceSparksActive) {
                     this.paceSparksActive = false;
                     this.stopPaceSparks();
@@ -2436,22 +2456,57 @@ function typingApp() {
         },
 
         emitPaceSparks(x, y) {
-            // Emit 2-3 particles per frame when actively sparking
-            const count = 2 + Math.floor(Math.random() * 2);
+            const tier = this.paceStreakTier;
+            // More particles and bigger as tier increases
+            const count = 1 + tier + Math.floor(Math.random() * (1 + tier));
+            const baseSpeed = 1.5 + tier * 0.5;
+            const baseSize = 2 + tier * 0.5;
+            const baseLife = 20 + tier * 5;
+
             for (let i = 0; i < count; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 1.5 + Math.random() * 3;
-                const maxLife = 20 + Math.floor(Math.random() * 20);
+                const speed = baseSpeed + Math.random() * 3;
+                const maxLife = baseLife + Math.floor(Math.random() * 20);
+
+                // Hue by tier: 1=cyan(190-230), 2=green(100-150), 3=gold(35-55), 4=rainbow
+                let hue;
+                if (tier >= 4) {
+                    hue = Math.random() * 360;
+                } else if (tier === 3) {
+                    hue = 35 + Math.random() * 20;
+                } else if (tier === 2) {
+                    hue = 100 + Math.random() * 50;
+                } else {
+                    hue = 190 + Math.random() * 40;
+                }
+
                 this.paceSparkParticles.push({
                     x, y,
                     vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 2, // bias upward
-                    r: 2 + Math.random() * 2,
-                    hue: 190 + Math.random() * 40, // cyan-blue range
+                    vy: Math.sin(angle) * speed - 2,
+                    r: baseSize + Math.random() * 2,
+                    hue,
                     life: maxLife,
                     maxLife
                 });
             }
+        },
+
+        showStreakNotification(tier) {
+            const labels = { 2: '2x', 3: '3x', 4: '4x' };
+            const colors = { 2: '#4ca754', 3: '#e2b714', 4: '#e53935' };
+            const text = labels[tier] || '';
+            if (!text) return;
+
+            const el = document.createElement('div');
+            el.className = 'streak-notification';
+            el.textContent = text;
+            el.style.color = colors[tier];
+            el.style.textShadow = `0 0 12px ${colors[tier]}`;
+            document.body.appendChild(el);
+
+            // Remove after animation
+            setTimeout(() => el.remove(), 1000);
         },
 
         async savePaceTarget() {
