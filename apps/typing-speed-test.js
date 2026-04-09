@@ -2219,7 +2219,7 @@ function typingApp() {
                 this.pacePaused = false;
             }
 
-            // Auto-pause after 1.5s of no input
+            // Auto-pause after 600ms of no input
             if (this.pacePauseTimer) clearTimeout(this.pacePauseTimer);
             this.pacePauseTimer = setTimeout(() => {
                 if (this.paceLastKeystroke) {
@@ -2227,6 +2227,15 @@ function typingApp() {
                 }
                 this.pacePaused = true;
                 this.paceLastKeystroke = null;
+                this.paceAlignedSince = null;
+                this.paceStreakTier = 0;
+                this.paceLastTierNotified = 0;
+                if (this.paceSparksActive) {
+                    this.paceSparksActive = false;
+                    this.stopPaceSparks();
+                    const ghost = document.getElementById('pace-ghost');
+                    if (ghost) ghost.classList.remove('pace-aligned', 'pace-sparks');
+                }
             }, 600);
         },
 
@@ -2252,6 +2261,15 @@ function typingApp() {
                     }
                     this.pacePaused = true;
                     this.paceLastKeystroke = null;
+                    this.paceAlignedSince = null;
+                    this.paceStreakTier = 0;
+                    this.paceLastTierNotified = 0;
+                    if (this.paceSparksActive) {
+                        this.paceSparksActive = false;
+                        this.stopPaceSparks();
+                        const ghost = document.getElementById('pace-ghost');
+                        if (ghost) ghost.classList.remove('pace-aligned', 'pace-sparks');
+                    }
                 }, 600);
             });
         },
