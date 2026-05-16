@@ -22,6 +22,7 @@ test.describe('Typing Speed Test - Word Grouping in Outliers', () => {
 
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
     });
 
     test('page loads without errors', async ({ page }) => {

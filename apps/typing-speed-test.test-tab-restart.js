@@ -21,6 +21,7 @@ test.beforeEach(async ({ page }) => {
 
   await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
   await page.waitForLoadState('networkidle');
+  await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 });
 
 test.describe('Typing Speed Test - Tab Key Restart Functionality', () => {

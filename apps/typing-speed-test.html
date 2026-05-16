@@ -121,7 +121,7 @@
                 <button class="icon-btn" @click="resetBestScore()" title="Reset Best Score" style="font-size:1.2rem;">🔄</button>
             </div>
         </div>
-        <div class="dict-select-bar" x-show="settingsOpen" @mouseenter="clearTimeout(closeTimer)" @mouseleave="closeTimer = setTimeout(() => { settingsOpen = false; $refs.input && $refs.input.focus(); }, 400)" x-cloak>
+        <div class="dict-select-bar" x-show="settingsOpen" @mouseenter="clearTimeout(closeTimer)" @mouseleave="if (!_disableAutoClose) closeTimer = setTimeout(() => { settingsOpen = false; $refs.input && $refs.input.focus(); }, 400)" x-cloak>
             <div class="dict-select-wrapper">
                 <select id="dict-select" x-model="selectedDictionary" @change="changeDictionary($event)" class="dict-select">
                     <template x-for="(wordList, key) in availableDictionaries" :key="key">
@@ -346,7 +346,7 @@
         </div>
     </div>
     
-    <div class="version">v2026-05-16.20</div>
+    <div class="version">v2026-05-16.21</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
 
@@ -371,7 +371,7 @@
     <canvas id="confetti-canvas" width="1200" height="800" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2000;"></canvas>
     
     <script src="typing-speed-test.jsdata"></script>
-    <script src="typing-speed-test.js?v=2026-05-16.6"></script>
+    <script src="typing-speed-test.js?v=2026-05-16.8"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>

@@ -21,6 +21,7 @@ test.beforeEach(async ({ page }) => {
 
   await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
   await page.waitForLoadState('networkidle');
+  await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 });
 
 test.describe('Typing Speed Test - Blind Mode Best Score Separation', () => {
@@ -62,6 +63,7 @@ test.describe('Typing Speed Test - Blind Mode Best Score Separation', () => {
     // Reload page and check normal mode loads the existing score
     await page.reload();
     await page.waitForLoadState('networkidle');
+  await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 
     const loadedScore = await page.evaluate(() => {
       const app = window.typingAppInstance;

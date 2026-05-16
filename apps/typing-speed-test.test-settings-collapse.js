@@ -33,17 +33,19 @@ test.describe('Typing Speed Test - Settings pane auto-collapse', () => {
     expect(errors).toEqual([]);
   });
 
-  test('clicking the strip toggles the settings bar open and closed', async ({ page }) => {
+  test('clicking the strip opens the bar; ✖ closes it; strip can reopen it', async ({ page }) => {
     await page.click('.dict-status-strip');
     await page.waitForTimeout(100);
     await expect(page.locator('.dict-select-bar')).toBeVisible();
     await expect(page.locator('.dict-status-strip')).toBeHidden();
 
-    await page.click('.dict-status-strip', { force: true });
+    await page.click('.settings-close-btn');
+    await page.waitForTimeout(100);
+    await expect(page.locator('.dict-select-bar')).toBeHidden();
     await expect(page.locator('.dict-status-strip')).toBeVisible();
+
     await page.click('.dict-status-strip');
     await page.waitForTimeout(100);
-    // Reopen and close via re-clicking strip after it reappears
     await expect(page.locator('.dict-select-bar')).toBeVisible();
 
     expect(pageErrors).toEqual([]);

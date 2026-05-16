@@ -72,9 +72,21 @@ async function setupTestPage(page, filename, waitForAlpine = true) {
   if (waitForAlpine) {
     await waitForAlpineInit(page);
   }
-  
+
   await page.waitForLoadState('networkidle');
-  
+
+  // Auto-expand the typing-speed-test settings pane so existing tests that
+  // interact with controls inside .dict-select-bar (which is collapsed by
+  // default since 2026-05-16) keep working without per-test setup. Also
+  // disable the 400ms mouseleave close timer to prevent Playwright's slow
+  // interactions (e.g. selectOption) from racing with it.
+  await page.evaluate(() => {
+    if (window.typingAppInstance && 'settingsOpen' in window.typingAppInstance) {
+      window.typingAppInstance.settingsOpen = true;
+      window.typingAppInstance._disableAutoClose = true;
+    }
+  });
+
   return errorListeners;
 }
 

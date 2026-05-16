@@ -22,6 +22,7 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
 
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
     });
 
     test('page loads without errors', async ({ page }) => {
@@ -422,6 +423,7 @@ test.describe('Typing Speed Test - Adaptive Difficulty Mode', () => {
         // Reload the page
         await page.reload();
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
         
         // Check that the adaptive difficulty was restored
         const restoredValue = await page.evaluate(() => {

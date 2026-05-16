@@ -1255,6 +1255,7 @@ function typingApp() {
         showResults: false,
         settingsOpen: false,
         closeTimer: null,
+        _disableAutoClose: false,
         wordErrors: {},
         currentWordWpm: 0,
         averageWpm: 0,
@@ -2210,7 +2211,7 @@ function typingApp() {
             this.started = false;
             this.showResults = false;
             this.showBlindReveal = false;
-            this.settingsOpen = false;
+            if (!this._disableAutoClose) this.settingsOpen = false;
             this.typedWords = {};
             this.wordErrors = {};
             this.currentWordWpm = 0;

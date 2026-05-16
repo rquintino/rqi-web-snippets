@@ -20,6 +20,7 @@ test.describe('Typing Speed Test - Previous Best WPM Display', () => {
 
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
         
         // Check no JavaScript page errors
         expect(pageErrors).toEqual([]);
@@ -31,6 +32,7 @@ test.describe('Typing Speed Test - Previous Best WPM Display', () => {
     test('should show previous best WPM alongside new best when achieved', async ({ page }) => {
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 
         // Set a lower best score first (simulate having a previous best)
         await page.evaluate(() => {
@@ -72,6 +74,7 @@ test.describe('Typing Speed Test - Previous Best WPM Display', () => {
     test('should maintain chart reference line at previous best during active test', async ({ page }) => {
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 
         // Set a best score to compare against
         await page.evaluate(() => {
@@ -108,6 +111,7 @@ test.describe('Typing Speed Test - Previous Best WPM Display', () => {
     test('should update chart reference to new best only after test completion', async ({ page }) => {
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 
         // Set initial best score
         await page.evaluate(() => {
@@ -142,6 +146,7 @@ test.describe('Typing Speed Test - Previous Best WPM Display', () => {
     test('should handle previous best display consistently in blind mode', async ({ page }) => {
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 
         // Enable blind mode
         await page.click('.toggle-btn');
@@ -190,6 +195,7 @@ test.describe('Typing Speed Test - Previous Best WPM Display', () => {
     test('should not show previous best display when no new best is achieved', async ({ page }) => {
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 
         // Set a high best score that won't be beaten
         await page.evaluate(() => {
@@ -217,6 +223,7 @@ test.describe('Typing Speed Test - Previous Best WPM Display', () => {
     test('should handle first-time user with no previous best', async ({ page }) => {
         await page.goto(`file://${path.resolve(__dirname, 'typing-speed-test.html')}`);
         await page.waitForLoadState('networkidle');
+        await page.evaluate(() => { if (window.typingAppInstance) { window.typingAppInstance.settingsOpen = true; window.typingAppInstance._disableAutoClose = true; } });
 
         // Ensure no best score exists (first-time user)
         await page.evaluate(() => {
