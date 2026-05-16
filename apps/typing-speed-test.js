@@ -42,6 +42,11 @@
  * - getCharClassForReveal(wordIndex, charIndex) : Returns character class for blind reveal phase
  * - checkAndSaveBestScore()  : Checks and saves new best score if applicable
  * 
+ * === Sound ===
+ * - soundEngine.playSound(type)  : Plays sound for 'key', 'error', 'backspace', 'space' based on active profile
+ * - saveSoundProfile()           : Persists sound profile selection to IndexedDB
+ * - saveSoundVolume()            : Persists volume setting to IndexedDB
+ *
  * === UI Management ===
  * - getCursorElement()       : Creates/positions the typing cursor
  * - updateCursor()           : Updates cursor position based on current typing position
@@ -229,6 +234,243 @@ function typingApp() {
         oscillator.start();
         oscillator.stop(audioContext.currentTime + 0.2);
     }
+
+    // Sound engine — noise-buffer based synthesis for realistic typing sounds
+    const soundEngine = {
+        profile: 'off',
+        volume: 0.5,
+        _buffers: null,
+        _ctx: null,
+
+        _ensureCtx() {
+            if (!this._ctx) {
+                this._ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+                audioContext = this._ctx;
+                this._generateBuffers();
+            }
+            if (this._ctx.state === 'suspended') this._ctx.resume();
+            return this._ctx;
+        },
+
+        _generateBuffers() {
+            const ctx = this._ctx;
+            const sr = ctx.sampleRate;
+            const len = Math.ceil(sr * 0.25); // 250ms max buffer
+
+            // White noise buffer
+            const white = ctx.createBuffer(1, len, sr);
+            const wd = white.getChannelData(0);
+            for (let i = 0; i < len; i++) wd[i] = Math.random() * 2 - 1;
+
+            // Pink noise buffer (Paul Kellet's algorithm)
+            const pink = ctx.createBuffer(1, len, sr);
+            const pd = pink.getChannelData(0);
+            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+            for (let i = 0; i < len; i++) {
+                const w = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + w * 0.0555179;
+                b1 = 0.99332 * b1 + w * 0.0750759;
+                b2 = 0.96900 * b2 + w * 0.1538520;
+                b3 = 0.86650 * b3 + w * 0.3104856;
+                b4 = 0.55000 * b4 + w * 0.5329522;
+                b5 = -0.7616 * b5 - w * 0.0168980;
+                pd[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+                b6 = w * 0.115926;
+            }
+
+            // Brown noise buffer
+            const brown = ctx.createBuffer(1, len, sr);
+            const bd = brown.getChannelData(0);
+            let last = 0;
+            for (let i = 0; i < len; i++) {
+                const w = Math.random() * 2 - 1;
+                last = (last + (0.02 * w)) / 1.02;
+                bd[i] = last * 3.5;
+            }
+
+            this._buffers = { white, pink, brown };
+        },
+
+        _vary(val, pct) {
+            return val * (1 + (Math.random() * 2 - 1) * pct);
+        },
+
+        // Core: play a noise-based click with layers
+        // Each layer supports: delay, lpFreq (post-filter lowpass cutoff to tame hiss)
+        _playClick(layers) {
+            const ctx = this._ensureCtx();
+            const t = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.value = this.volume;
+            master.connect(ctx.destination);
+
+            for (const layer of layers) {
+                const offset = layer.delay || 0;
+                const src = ctx.createBufferSource();
+                src.buffer = this._buffers[layer.noise || 'white'];
+                src.playbackRate.value = this._vary(layer.rate || 1, 0.08);
+
+                const gain = ctx.createGain();
+                const peakGain = this._vary(layer.gain || 0.3, 0.15);
+                const attack = layer.attack || 0.001;
+                const decay = layer.decay || 0.04;
+
+                gain.gain.setValueAtTime(0, t + offset);
+                gain.gain.linearRampToValueAtTime(peakGain, t + offset + attack);
+                gain.gain.setTargetAtTime(0, t + offset + attack, decay);
+
+                // Primary shaping filter
+                const filter = ctx.createBiquadFilter();
+                filter.type = layer.filterType || 'bandpass';
+                filter.frequency.value = this._vary(layer.filterFreq || 2000, 0.1);
+                filter.Q.value = layer.filterQ || 1;
+
+                src.connect(filter);
+
+                // Optional second-stage lowpass to cut harsh high-freq tails
+                let lastNode = filter;
+                if (layer.lpFreq) {
+                    const lp = ctx.createBiquadFilter();
+                    lp.type = 'lowpass';
+                    lp.frequency.value = layer.lpFreq;
+                    lp.Q.value = 0.7;
+                    filter.connect(lp);
+                    lastNode = lp;
+                }
+
+                lastNode.connect(gain);
+                gain.connect(master);
+
+                const dur = offset + attack + decay * 5;
+                src.start(t);
+                src.stop(t + dur);
+            }
+        },
+
+        // Profile definitions: each sound is an array of noise layers
+        profiles: {
+            typewriter: {
+                key: [
+                    // Metal striker hit
+                    { noise: 'pink', gain: 0.5, attack: 0.001, decay: 0.018, filterType: 'bandpass', filterFreq: 3200, filterQ: 1.5, lpFreq: 5000 },
+                    // Platen impact body
+                    { noise: 'brown', gain: 0.3, attack: 0.002, decay: 0.045, filterType: 'bandpass', filterFreq: 1000, filterQ: 0.8, lpFreq: 2500 },
+                    // Carriage rattle
+                    { noise: 'brown', gain: 0.1, attack: 0.004, decay: 0.06, filterType: 'lowpass', filterFreq: 600, filterQ: 0.5 }
+                ],
+                error: [
+                    { noise: 'pink', gain: 0.55, attack: 0.001, decay: 0.06, filterType: 'bandpass', filterFreq: 1800, filterQ: 2.5, lpFreq: 4000 },
+                    { noise: 'brown', gain: 0.35, attack: 0.001, decay: 0.08, filterType: 'lowpass', filterFreq: 600, filterQ: 1.5 }
+                ],
+                backspace: [
+                    { noise: 'pink', gain: 0.3, attack: 0.002, decay: 0.025, filterType: 'bandpass', filterFreq: 2000, filterQ: 1.2, lpFreq: 4000 },
+                    { noise: 'brown', gain: 0.15, attack: 0.003, decay: 0.035, filterType: 'lowpass', filterFreq: 700, filterQ: 0.5 }
+                ],
+                space: [
+                    // Space bar lever
+                    { noise: 'pink', gain: 0.35, attack: 0.001, decay: 0.025, filterType: 'bandpass', filterFreq: 2200, filterQ: 1, lpFreq: 4000 },
+                    // Carriage thud
+                    { noise: 'brown', gain: 0.35, attack: 0.002, decay: 0.07, filterType: 'bandpass', filterFreq: 700, filterQ: 0.8, lpFreq: 1800 },
+                    { noise: 'brown', gain: 0.15, attack: 0.003, decay: 0.08, filterType: 'lowpass', filterFreq: 400, filterQ: 0.5 }
+                ]
+            },
+            // Mechanical #1 — bright, airy soft tap (the original "soft" profile)
+            'mechanical-1': {
+                key: [
+                    { noise: 'pink', gain: 0.18, attack: 0.003, decay: 0.03, filterType: 'bandpass', filterFreq: 1800, filterQ: 0.7 },
+                    { noise: 'brown', gain: 0.08, attack: 0.005, decay: 0.05, filterType: 'lowpass', filterFreq: 600, filterQ: 0.5 }
+                ],
+                error: [
+                    { noise: 'pink', gain: 0.28, attack: 0.002, decay: 0.07, filterType: 'bandpass', filterFreq: 1200, filterQ: 2 },
+                    { noise: 'brown', gain: 0.15, attack: 0.003, decay: 0.09, filterType: 'lowpass', filterFreq: 400, filterQ: 1 }
+                ],
+                backspace: [
+                    { noise: 'pink', gain: 0.12, attack: 0.004, decay: 0.025, filterType: 'bandpass', filterFreq: 1400, filterQ: 0.5 }
+                ],
+                space: [
+                    { noise: 'pink', gain: 0.15, attack: 0.003, decay: 0.04, filterType: 'bandpass', filterFreq: 1600, filterQ: 0.7 },
+                    { noise: 'brown', gain: 0.06, attack: 0.005, decay: 0.06, filterType: 'lowpass', filterFreq: 500, filterQ: 0.5 }
+                ]
+            },
+            // Mechanical #2 — slightly deeper, thockier tap
+            'mechanical-2': {
+                key: [
+                    { noise: 'pink', gain: 0.18, attack: 0.003, decay: 0.035, filterType: 'bandpass', filterFreq: 1400, filterQ: 0.8 },
+                    { noise: 'brown', gain: 0.11, attack: 0.005, decay: 0.06, filterType: 'lowpass', filterFreq: 500, filterQ: 0.6 }
+                ],
+                error: [
+                    { noise: 'pink', gain: 0.28, attack: 0.002, decay: 0.08, filterType: 'bandpass', filterFreq: 1000, filterQ: 2 },
+                    { noise: 'brown', gain: 0.18, attack: 0.003, decay: 0.1, filterType: 'lowpass', filterFreq: 350, filterQ: 1 }
+                ],
+                backspace: [
+                    { noise: 'pink', gain: 0.12, attack: 0.004, decay: 0.028, filterType: 'bandpass', filterFreq: 1200, filterQ: 0.6 }
+                ],
+                space: [
+                    { noise: 'pink', gain: 0.15, attack: 0.003, decay: 0.045, filterType: 'bandpass', filterFreq: 1300, filterQ: 0.8 },
+                    { noise: 'brown', gain: 0.09, attack: 0.005, decay: 0.075, filterType: 'lowpass', filterFreq: 420, filterQ: 0.6 }
+                ]
+            },
+            // Mechanical #3 — slightly snappier, crisper tap
+            'mechanical-3': {
+                key: [
+                    { noise: 'pink', gain: 0.17, attack: 0.002, decay: 0.025, filterType: 'bandpass', filterFreq: 2300, filterQ: 0.8, lpFreq: 4500 },
+                    { noise: 'brown', gain: 0.07, attack: 0.004, decay: 0.04, filterType: 'lowpass', filterFreq: 700, filterQ: 0.5 }
+                ],
+                error: [
+                    { noise: 'pink', gain: 0.28, attack: 0.002, decay: 0.06, filterType: 'bandpass', filterFreq: 1500, filterQ: 2.2, lpFreq: 4000 },
+                    { noise: 'brown', gain: 0.13, attack: 0.003, decay: 0.08, filterType: 'lowpass', filterFreq: 450, filterQ: 1 }
+                ],
+                backspace: [
+                    { noise: 'pink', gain: 0.12, attack: 0.003, decay: 0.022, filterType: 'bandpass', filterFreq: 1800, filterQ: 0.6, lpFreq: 4000 }
+                ],
+                space: [
+                    { noise: 'pink', gain: 0.15, attack: 0.002, decay: 0.035, filterType: 'bandpass', filterFreq: 2000, filterQ: 0.8, lpFreq: 4500 },
+                    { noise: 'brown', gain: 0.06, attack: 0.004, decay: 0.05, filterType: 'lowpass', filterFreq: 580, filterQ: 0.5 }
+                ]
+            },
+            bubble: {
+                key: [
+                    { noise: 'pink', gain: 0.3, attack: 0.001, decay: 0.025, filterType: 'bandpass', filterFreq: 2500, filterQ: 6, lpFreq: 4000, rate: 1.3 },
+                    { noise: 'brown', gain: 0.2, attack: 0.002, decay: 0.04, filterType: 'bandpass', filterFreq: 800, filterQ: 4, lpFreq: 2000 }
+                ],
+                error: [
+                    { noise: 'pink', gain: 0.35, attack: 0.001, decay: 0.05, filterType: 'bandpass', filterFreq: 1500, filterQ: 5, lpFreq: 3500 },
+                    { noise: 'brown', gain: 0.25, attack: 0.002, decay: 0.07, filterType: 'bandpass', filterFreq: 400, filterQ: 4, lpFreq: 1500 }
+                ],
+                backspace: [
+                    { noise: 'pink', gain: 0.2, attack: 0.002, decay: 0.02, filterType: 'bandpass', filterFreq: 2000, filterQ: 5, lpFreq: 3500, rate: 0.8 }
+                ],
+                space: [
+                    { noise: 'pink', gain: 0.28, attack: 0.001, decay: 0.035, filterType: 'bandpass', filterFreq: 3000, filterQ: 5, lpFreq: 4500, rate: 1.5 },
+                    { noise: 'brown', gain: 0.15, attack: 0.003, decay: 0.05, filterType: 'bandpass', filterFreq: 1000, filterQ: 3, lpFreq: 2500 }
+                ]
+            },
+            noctua: {
+                key: [
+                    { noise: 'brown', gain: 0.06, attack: 0.003, decay: 0.012, filterType: 'bandpass', filterFreq: 2000, filterQ: 0.5 }
+                ],
+                error: [
+                    { noise: 'pink', gain: 0.12, attack: 0.002, decay: 0.04, filterType: 'bandpass', filterFreq: 1200, filterQ: 1.5 }
+                ],
+                backspace: [
+                    { noise: 'brown', gain: 0.04, attack: 0.004, decay: 0.01, filterType: 'bandpass', filterFreq: 1800, filterQ: 0.5 }
+                ],
+                space: [
+                    { noise: 'brown', gain: 0.07, attack: 0.003, decay: 0.015, filterType: 'bandpass', filterFreq: 2200, filterQ: 0.7 }
+                ]
+            }
+        },
+
+        playSound(type) {
+            if (this.profile === 'off' || !this.profiles[this.profile]) return;
+            const layers = this.profiles[this.profile][type];
+            if (!layers) return;
+            this._playClick(layers);
+        },
+
+        setProfile(name) { this.profile = name; },
+        setVolume(v) { this.volume = v; }
+    };
 
     // Centralized function to calculate consistent average WPM from wordStats
     // This is the single source of truth for all average calculations
@@ -1011,6 +1253,8 @@ function typingApp() {
         typedWord: '',
         started: false,
         showResults: false,
+        settingsOpen: false,
+        closeTimer: null,
         wordErrors: {},
         currentWordWpm: 0,
         averageWpm: 0,
@@ -1087,6 +1331,9 @@ function typingApp() {
         paceStreakTier: 0,
         paceLastTierNotified: 0,
 
+        // Sound profile
+        soundProfile: 'off',
+        soundVolume: 0.5,
 
         // Computed property for outlier statistics
         get outlierStats() {
@@ -1157,6 +1404,21 @@ function typingApp() {
                 if (savedAdaptiveDifficulty !== null) {
                     this.adaptiveDifficulty = parseInt(savedAdaptiveDifficulty, 10) || 0;
                 }
+
+                // Load sound profile settings
+                const savedSoundProfile = await getFromIndexedDB('typing-sound-profile');
+                if (savedSoundProfile !== null) {
+                    // Migrate removed profile names (soft / MX variants) to mechanical-1
+                    const legacyProfiles = ['soft', 'mechanical', 'mech-linear', 'mech-tactile', 'mech-heavy'];
+                    const profile = legacyProfiles.includes(savedSoundProfile) ? 'mechanical-1' : savedSoundProfile;
+                    this.soundProfile = profile;
+                    soundEngine.setProfile(profile);
+                }
+                const savedSoundVolume = await getFromIndexedDB('typing-sound-volume');
+                if (savedSoundVolume !== null) {
+                    this.soundVolume = parseFloat(savedSoundVolume);
+                    soundEngine.setVolume(this.soundVolume);
+                }
             } catch (error) {
                 console.warn('Failed to load settings:', error);
             }
@@ -1190,6 +1452,12 @@ function typingApp() {
                     event.preventDefault();
                     this.restart();
                 }
+            });
+
+            // Refocus input when clicking anywhere outside interactive controls
+            document.addEventListener('click', (event) => {
+                const isControl = event.target.closest('select, input[type="range"], button, .export-btn, .outlier-word-item, a');
+                if (!isControl) this.refocusInput();
             });
             
             // Modal chart event binding
@@ -1437,6 +1705,7 @@ function typingApp() {
             } catch (error) {
                 console.warn('Failed to save adaptive difficulty setting:', error);
             }
+            this.refocusInput();
         },
         
         handleInput(event) {
@@ -1475,13 +1744,15 @@ function typingApp() {
                         
                         // Play sound and add penalty only for incorrect characters
                         if (!isCorrect) {
-                            playErrorSound();
+                            soundEngine.playSound('error');
                             this.errorPenalties++;
                             // Show WPM penalty animation
                             this.showWpmPenalty = true;
                             setTimeout(() => {
                                 this.showWpmPenalty = false;
                             }, 1000);
+                        } else {
+                            soundEngine.playSound('key');
                         }
                     }
                 }
@@ -1508,9 +1779,11 @@ function typingApp() {
                 event.preventDefault();
                 if (this.typedWord.length > 0) {  // Only check word if something was typed
                     this.paceKeystroke(false);
+                    soundEngine.playSound('space');
                     this.checkWord();
                 }
             } else if (event.key === 'Backspace') {
+                soundEngine.playSound('backspace');
                 if (event.ctrlKey) {
                     // Ctrl+Backspace: browser deletes entire word, sync charIndex to 0
                     this.currentCharIndex = 0;
@@ -1937,6 +2210,7 @@ function typingApp() {
             this.started = false;
             this.showResults = false;
             this.showBlindReveal = false;
+            this.settingsOpen = false;
             this.typedWords = {};
             this.wordErrors = {};
             this.currentWordWpm = 0;
@@ -1989,12 +2263,16 @@ function typingApp() {
             // Load the correct best score for the current mode
             await this.loadBestScore();
             
-            // Return focus to the input field
+            this.refocusInput();
+        },
+
+        refocusInput() {
+            if (this.showResults || this.showBlindReveal || this.showChartModal) return;
             this.$nextTick(() => {
                 this.$refs.input.focus();
             });
         },
-        
+
         async toggleDarkMode() {
             this.isDarkMode = !this.isDarkMode;
             
@@ -2007,14 +2285,16 @@ function typingApp() {
             
             document.body.classList.toggle('light-mode', !this.isDarkMode);
             setTimeout(() => updateWpmChart(this.isDarkMode), 100);
+            this.refocusInput();
         },
-        
+
         toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
             } else {
                 document.exitFullscreen();
             }
+            this.refocusInput();
         },
         
         showWordTooltip(wordIndex, event) {
@@ -2136,6 +2416,7 @@ function typingApp() {
             } catch (error) {
                 console.warn('Failed to reset best score:', error);
             }
+            this.refocusInput();
         },
         async changeDictionary(event) {
             this.selectedDictionary = event.target.value;
@@ -2533,6 +2814,23 @@ function typingApp() {
             try {
                 await saveToIndexedDB('typing-pace-target', this.paceTargetWpm.toString());
             } catch (e) { /* ignore */ }
+            this.refocusInput();
+        },
+
+        async saveSoundProfile() {
+            soundEngine.setProfile(this.soundProfile);
+            try {
+                await saveToIndexedDB('typing-sound-profile', this.soundProfile);
+            } catch (e) { /* ignore */ }
+            this.refocusInput();
+        },
+
+        async saveSoundVolume() {
+            soundEngine.setVolume(this.soundVolume);
+            try {
+                await saveToIndexedDB('typing-sound-volume', this.soundVolume.toString());
+            } catch (e) { /* ignore */ }
+            this.refocusInput();
         },
 
         showChartModalHandler,

@@ -19,6 +19,7 @@
     - Real-time WPM calculation per word
     - Word-by-word performance visualization
     - Ghost pace cursor: adjustable target WPM ghost marker that advances through the text as a pacing guide
+    - Sound profiles: immersive typing sounds (typewriter, mechanical #1/#2/#3, bubble, noctua) with volume control, persisted via IndexedDB
     -->
     
     <link rel="stylesheet" href="typing-speed-test.css">
@@ -120,7 +121,7 @@
                 <button class="icon-btn" @click="resetBestScore()" title="Reset Best Score" style="font-size:1.2rem;">🔄</button>
             </div>
         </div>
-        <div class="dict-select-bar">            
+        <div class="dict-select-bar" x-show="settingsOpen" @mouseenter="clearTimeout(closeTimer)" @mouseleave="closeTimer = setTimeout(() => { settingsOpen = false; $refs.input && $refs.input.focus(); }, 400)" x-cloak>
             <div class="dict-select-wrapper">
                 <select id="dict-select" x-model="selectedDictionary" @change="changeDictionary($event)" class="dict-select">
                     <template x-for="(wordList, key) in availableDictionaries" :key="key">
@@ -150,6 +151,7 @@
                 <span class="adaptive-value" style="font-size: 0.9rem; color: var(--text-secondary); min-width: 30px;" x-text="adaptiveDifficulty + '%'"></span>
                 <span class="adaptive-badge" x-show="adaptiveWordCount > 0" x-text="'🔄 ' + adaptiveWordCount" title="Adaptive words in this test"></span>
             </div>
+            <div class="dict-bar-break"></div>
             <div class="pace-control" title="Ghost cursor advances through text at this WPM target">
                 <label for="pace-slider" style="font-size: 0.9rem; color: var(--text-secondary);">Pace:</label>
                 <input
@@ -164,10 +166,42 @@
                 />
                 <span style="font-size: 0.9rem; color: var(--text-secondary); min-width: 50px;" x-text="paceTargetWpm > 0 ? paceTargetWpm + ' wpm' : 'off'"></span>
             </div>
+            <div class="sound-control" title="Typing sound profile">
+                <div class="dict-select-wrapper">
+                    <select x-model="soundProfile" @change="saveSoundProfile()" class="dict-select">
+                        <option value="off">🔇 Off</option>
+                        <option value="typewriter">⌨️ Typewriter</option>
+                        <option value="mechanical-1">⌨️ Mechanical #1</option>
+                        <option value="mechanical-2">⌨️ Mechanical #2</option>
+                        <option value="mechanical-3">⌨️ Mechanical #3</option>
+                        <option value="bubble">🫧 Bubble</option>
+                        <option value="noctua">🌙 Noctua</option>
+                    </select>
+                    <span class="dict-arrow">▼</span>
+                </div>
+            </div>
+            <div class="volume-control" x-show="soundProfile !== 'off'" title="Sound volume">
+                <label for="volume-slider" style="font-size:0.9rem;color:var(--text-secondary)">Vol:</label>
+                <input id="volume-slider" type="range" min="0" max="1" step="0.05"
+                       x-model.number="soundVolume" @input="saveSoundVolume()"
+                       style="width:50px;margin:0 .5rem"/>
+                <span style="font-size:0.9rem;color:var(--text-secondary);min-width:30px"
+                      x-text="Math.round(soundVolume * 100) + '%'"></span>
+            </div>
             <div class="penalty-indicator" x-show="errorPenalties > 0" title="WPM Penalties">
                 <span class="penalty-icon">⚠️</span>
                 <span class="penalty-count" x-text="errorPenalties"></span>
             </div>
+            <button class="icon-btn settings-close-btn" @click.stop="settingsOpen = false" title="Close settings" style="font-size:1rem;padding:.2rem .5rem">✖</button>
+        </div>
+        <div class="dict-status-strip clickable" x-show="!settingsOpen" @click.stop="settingsOpen = !settingsOpen" title="Click to change settings">
+            <span x-text="selectedDictionary"></span>
+            <span x-show="blindModeSelected">· 👁</span>
+            <span x-show="adaptiveDifficulty > 0" x-text="'· ⚡' + adaptiveDifficulty + '%'"></span>
+            <span x-show="paceTargetWpm > 0" x-text="'· 🎯' + paceTargetWpm"></span>
+            <span x-show="soundProfile !== 'off'">· 🔊</span>
+            <span x-show="errorPenalties > 0" x-text="'· ⚠️' + errorPenalties" style="color:var(--error)"></span>
+            <span>· ⚙</span>
         </div>
         <div x-show="showBlindReveal" class="blind-reveal-header">
             <h3>Your Typing Results</h3>
@@ -312,7 +346,7 @@
         </div>
     </div>
     
-    <div class="version">v2026-04-09.2</div>
+    <div class="version">v2026-05-16.20</div>
     
     <div x-show="tooltip.visible" x-ref="tooltip" class="word-tooltip" :style="tooltip.style" x-text="tooltip.text" x-cloak></div>
 
@@ -337,7 +371,7 @@
     <canvas id="confetti-canvas" width="1200" height="800" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2000;"></canvas>
     
     <script src="typing-speed-test.jsdata"></script>
-    <script src="typing-speed-test.js?v=2026-04-08.6"></script>
+    <script src="typing-speed-test.js?v=2026-05-16.6"></script>
     <script src="shared/app-navigation.js?v=2025-07-27.1"></script>
     <script src="shared/footer.js?v=2025-07-27.1"></script>
 </body>
