@@ -1,0 +1,24 @@
+# Normalize all text files to LF in the repository.
+# Working tree gets LF on checkout (no CRLF conversion) so this
+# repo stays consistent across Windows / WSL2 / macOS / Linux editors.
+* text=auto eol=lf
+
+# Common binary types — never normalize, never diff as text.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.webp   binary
+*.pdf    binary
+*.zip    binary
+*.gz     binary
+*.tar    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.eot    binary
+*.mp3    binary
+*.mp4    binary
+*.wav    binary
