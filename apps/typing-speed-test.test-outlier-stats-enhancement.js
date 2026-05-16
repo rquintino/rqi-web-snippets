@@ -357,15 +357,17 @@ test.describe('Typing Speed Test - Outlier Statistics Enhancement', () => {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
     
-    // Check main title statistics formatting
-    const mainTitle = await page.textContent('h4:has-text("Performance Outliers")');
-    const statsMatch = mainTitle.match(/Performance Outliers \(3σ, (\d+\.\d)±(\d+\.\d)\)/);
-    
-    if (statsMatch) {
-      const [, mean, std] = statsMatch;
-      // Verify exactly 1 decimal place
-      expect(mean.split('.')[1]).toHaveLength(1);
-      expect(std.split('.')[1]).toHaveLength(1);
+    // Word Leaderboard replaced the Performance Outliers heading; the (3σ, X.X±Y.Y)
+    // stats are no longer rendered in the title. Skip title-stat formatting check if absent.
+    const leaderboardTitle = page.locator('h4:has-text("Word Leaderboard")').first();
+    if (await leaderboardTitle.isVisible()) {
+      const titleText = await leaderboardTitle.textContent();
+      const statsMatch = titleText.match(/\(3σ, (\d+\.\d)±(\d+\.\d)\)/);
+      if (statsMatch) {
+        const [, mean, std] = statsMatch;
+        expect(mean.split('.')[1]).toHaveLength(1);
+        expect(std.split('.')[1]).toHaveLength(1);
+      }
     }
     
     // Check bound values formatting in section titles

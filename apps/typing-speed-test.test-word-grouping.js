@@ -65,8 +65,8 @@ test.describe('Typing Speed Test - Word Grouping in Outliers', () => {
         // Wait for test completion and outlier calculation
         await page.waitForTimeout(1000);
 
-        // Check that outlier highlights section exists
-        const outlierSection = page.locator('[x-show="outlierStats.hasOutliers"]');
+        // Check that word leaderboard section exists (replaced outlierStats UI)
+        const outlierSection = page.locator('[x-show="ledgerLeaderboard.totalWords > 0"]');
         await expect(outlierSection).toBeVisible();
 
         // Get grouped outlier data from the app
@@ -188,8 +188,8 @@ test.describe('Typing Speed Test - Word Grouping in Outliers', () => {
         if (await firstFastWord.isVisible()) {
             const outlierText = await firstFastWord.textContent();
             
-            // Expected format: "word (Nx) X.X wpm (±Y.Y)"
-            expect(outlierText).toMatch(/\w+\s*\(\d+x\)\s*\d+\.?\d*\s*wpm\s*\(±\d+\.?\d*\)/);
+            // Expected format: "word (Nx) X wpm" with optional "(±Y)" — std only shown when count > 1
+            expect(outlierText).toMatch(/\w+\s*\(\d+x\)\s*\d+\.?\d*\s*wpm(\s*\(±\d+\.?\d*\))?/);
         }
 
         // Check no JavaScript page errors
