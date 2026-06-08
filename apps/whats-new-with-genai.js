@@ -141,7 +141,7 @@ class NetworkBackground {
 // Translations
 const translations = {
     en: {
-        mainTitle: "What's New with GenAI?",
+        mainTitle: "What's New with GenAI? (LLMs and Foundation Models) ",
         subtitle: "Traditional AI vs Generative AI",
         traditionalAI: "Traditional AI",
         generativeAI: "Generative AI",
@@ -149,7 +149,7 @@ const translations = {
         generativePeriod: "(2022+)",
         oneModelPerTask: "One Model Per Very Specific Task",
         oneFoundationModel: "One Foundation Model, Multiple Tasks",
-        foundationModel: "Foundation Model",
+        foundationModel: "Large Language Model/Foundation Model",
         tasks: {
             detectFraud: "Detect Credit Card Fraud",
             recognizeFaces: "Recognize Faces in Photos",
@@ -194,7 +194,7 @@ const translations = {
         }
     },
     pt: {
-        mainTitle: "O que há de novo na GenAI?",
+        mainTitle: "O que há de novo na IA Generativa? (Large Language Models e Foundation Models)",
         subtitle: "IA Tradicional vs IA Generativa",
         traditionalAI: "IA Tradicional",
         generativeAI: "IA Generativa",
@@ -202,7 +202,7 @@ const translations = {
         generativePeriod: "(2022+)",
         oneModelPerTask: "Um Modelo Por Tarefa Muito Específica",
         oneFoundationModel: "Um Modelo Base, Múltiplas Tarefas",
-        foundationModel: "Modelo Base",
+        foundationModel: "Large Language Model/Foundation Model",
         tasks: {
             detectFraud: "Detetar Fraude de Cartão de Crédito",
             recognizeFaces: "Reconhecer Rostos em Fotos",
